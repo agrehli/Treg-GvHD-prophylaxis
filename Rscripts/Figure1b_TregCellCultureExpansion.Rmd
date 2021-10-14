@@ -1,0 +1,51 @@
+---
+title: "Figure1b_TregCellCutureExpansion"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+## Figure showing expansion rates of allo and ploy Treg expansion cultures
+
+R packages
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(scales)
+```
+
+data formating 
+
+```{r}
+table.exp <- read.delim("./data/TregExpansionExp.txt", header=TRUE)
+data <- gather(table.exp, key = "timepoint", value = "counts", d0, d7, d12)
+data$timepoint <- factor(data$timepoint,levels = c("d0","d7","d12"))
+```
+
+generating the plot for Figure 1B
+
+```{r}
+p <- ggplot(data, aes(x=timepoint, y=counts, color=type, fill=type, group=experiment))
+p <- p + scale_y_log10(breaks = c(1,10,100),labels = trans_format("log10", math_format(10^.x)), limits = c(1,100)) 
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+p <- p + annotation_logticks(sides="l")  
+p <- p + scale_color_manual(values = c("darkorange2","steelblue"))
+p <- p + scale_fill_manual(values = c("darkorange2","steelblue"))
+p <- p + geom_line()
+p <- p + geom_point(shape = 21, colour = "black")
+p <- p + labs(title="Treg expansion",x="days in culture", y = "x-fold expansion")
+p
+pdf("./figures/TregExpansionExp.pdf", height=2.5, width=3.2)
+p
+dev.off()
+
+```
+
+```{r}
+sessionInfo(package = NULL)
+```
+
