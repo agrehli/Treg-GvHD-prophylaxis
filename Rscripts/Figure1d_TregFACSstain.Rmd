@@ -1,0 +1,91 @@
+---
+title: "Figure1d_BarchartsFACSdata"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+## Bar charts showing the percentage of positive cells in allo and poly Treg expansion cultures
+
+R packages
+
+```{r}
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(pzfx)
+```
+
+### data FoxP3
+
+```{r}
+stain.data <- read_pzfx("./data/Fig1_FoxP3_DataTable.xml")
+rownames(stain.data) <- stain.data$ROWTITLE
+data <- data.frame(t(as.matrix(stain.data[ ,2:11])))
+data$type <-c(rep("allo",5), rep("poly",5))
+
+p <- ggplot(data, aes(x=type, y=FoxP3, fill=type)) + coord_cartesian(ylim = c(0,105))
+p <- p + stat_summary(fun = mean, geom = "bar", position = "dodge")
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=5, stackratio = 1, binwidth=.75) 
+p <- p + stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, , position = "dodge")
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+p <- p + scale_fill_manual(values = c("darkorange2","steelblue"))
+p <- p + scale_y_continuous(expand=c(0,0))
+p <- p + labs(y="% of FoxP3+ cells among CD4+")
+p
+pdf("./figures/FoxP3stain_percentPos.pdf", height=2.5, width=2.5)
+p
+dev.off()
+```
+### data Helios
+
+```{r}
+stain.data <- read_pzfx("./data/Fig1_Helios_DataTable.xml")
+rownames(stain.data) <- stain.data$ROWTITLE
+data <- data.frame(t(as.matrix(stain.data[ ,2:11])))
+data$type <-c(rep("allo",5), rep("poly",5))
+
+p <- ggplot(data, aes(x=type, y=Helios, fill=type)) + coord_cartesian(ylim = c(0,105))
+p <- p + stat_summary(fun = mean, geom = "bar", position = "dodge")
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=5, stackratio = 1, binwidth=.75) 
+p <- p + stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, , position = "dodge")
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+p <- p + scale_fill_manual(values = c("darkorange2","steelblue"))
+p <- p + scale_y_continuous(expand=c(0,0))
+p <- p + labs(y="% of Helios+ cells among CD4+")
+p
+pdf("./figures/Heliosstain_percentPos.pdf", height=2.5, width=2.5)
+p
+dev.off()
+```
+### data Ki-67
+
+```{r}
+stain.data <- read_pzfx("./data/Fig1_Ki-67_DataTable.xml")
+rownames(stain.data) <- "Ki67"
+data <- data.frame(t(as.matrix(stain.data[ ,2:11])))
+data$type <-c(rep("allo",5), rep("poly",5))
+
+p <- ggplot(data, aes(x=type, y=Ki67, fill=type)) + coord_cartesian(ylim = c(0,105))
+p <- p + stat_summary(fun = mean, geom = "bar", position = "dodge")
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=5, stackratio = 1, binwidth=.75) 
+p <- p + stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, , position = "dodge")
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+p <- p + scale_fill_manual(values = c("darkorange2","steelblue"))
+p <- p + scale_y_continuous(expand=c(0,0))
+p <- p + labs(y="% of Ki-67+ cells among CD4+")
+p
+pdf("./figures/Ki67stain_percentPos.pdf", height=2.5, width=2.5)
+p
+dev.off()
+```
+
+```{r}
+sessionInfo(package = NULL)
+```
+
+
+

@@ -8,7 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 ```
 
-## Figure showing expansion rates of allo and ploy Treg expansion cultures
+## Figure showing expansion rates of allo and poly Treg expansion cultures
 
 R packages
 
