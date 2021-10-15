@@ -6,6 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::write_bib(.packages(), "packages.bib")
 ```
 
 ## Bar charts showing the percentage of positive cells in allo and poly Treg expansion cultures
@@ -85,6 +86,7 @@ dev.off()
 
 ```{r}
 sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure1d_TregFACSstain_SessionInfo.txt")
 ```
 
 

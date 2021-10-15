@@ -5,6 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::write_bib(.packages(), "packages.bib")
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 ```
 
@@ -16,6 +17,7 @@ R packages
 library(ggplot2)
 library(tidyr)
 library(scales)
+library(edgeR)
 ```
 
 data formating 
@@ -47,5 +49,7 @@ dev.off()
 
 ```{r}
 sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure1b_TregCellCultureExpansion_SessionInfo.txt")
 ```
+
 
