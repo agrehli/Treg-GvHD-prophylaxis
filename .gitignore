@@ -1,0 +1,10 @@
+# ignore R related stuff that we don't keep
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+# ignore figures folder
+figures/
+# ignore .html & .bib files in the Rscript folder
+*.bib
+*.html
