@@ -17,7 +17,6 @@ R packages
 library(ggplot2)
 library(tidyr)
 library(scales)
-library(edgeR)
 ```
 
 data formating 

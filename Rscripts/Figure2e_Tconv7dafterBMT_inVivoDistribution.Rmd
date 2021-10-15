@@ -1,0 +1,182 @@
+---
+title: "Figure2e_Tconv7dafterBMT_inVivoDistribution"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::write_bib(.packages(), "packages.bib")
+```
+
+## Bar charts showing the cell counts for re-isolated Treg 
+
+R packages
+
+```{r}
+library(ggplot2)
+library(scales)
+library(car)
+```
+
+data formating 
+
+```{r}
+Tconv.data <- read.delim("./data/TconvDistribution.txt", header=TRUE)
+Tconv.data$organ <- factor(Tconv.data$organ,levels = c("BM","Spleen","Liver","mLN","Colon"))
+Tconv.data$category <- factor(Tconv.data$category,levels = c("organ_resident","allo_Tx","poly_Tx","noTreg_Tx"))
+```
+
+generating the plot for Figure 2e
+
+```{r}
+p <- ggplot(Tconv.data, aes(x=category, y=count, fill=category)) + coord_cartesian(ylim = c(10000,100000000))
+p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
+p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=6.5, stackratio = 1, binwidth=.02) 
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + scale_y_log10(breaks = c(10000,100000,1000000,10000000,100000000),labels = trans_format("log10", math_format(10^.x)),expand = c(0, 0)) 
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90), text = element_text(size = 24))
+p <- p + scale_fill_manual(values = c("gray","darkorange","steelblue3","firebrick4"))
+p <- p + annotation_logticks(sides="l", short = unit(.25,"mm"), mid = unit(.5,"mm"),   long = unit(1,"mm"))  
+p <- p + labs(title="re-isolated Tconv (GvHD)",x="organ", y = "cells per organ")
+p <- p + facet_wrap(~organ, nrow=1)
+p
+pdf("./figures/TconvOrganDist.pdf", height=5.5, width=8.5)
+p
+dev.off()
+
+```
+
+## Statistics
+
+running statistical testing 
+homogeneity of variance assumption: levene
+normality assumpttion: shapiro
+Anova with Tukey
+
+(adding corresponding bars and asterisks to the plot in Adobe Illustrator)
+
+```{r}
+Tconv.data$category <- factor(Tconv.data$category,levels = c("organ_resident","allo_Tx","poly_Tx","noTreg_Tx"))
+Tconv.dataLiver <- Tconv.data[ which(Tconv.data$organ=='Liver' & Tconv.data$type=='Tx'), ]
+Tconv.dataColon <- Tconv.data[ which(Tconv.data$organ=='Colon' & Tconv.data$type=='Tx'), ]
+Tconv.dataSpleen <- Tconv.data[ which(Tconv.data$organ=='Spleen' & Tconv.data$type=='Tx'), ]
+Tconv.dataBM <- Tconv.data[ which(Tconv.data$organ=='BM' & Tconv.data$type=='Tx'), ]
+Tconv.datamLN <- Tconv.data[ which(Tconv.data$organ=='mLN' & Tconv.data$type=='Tx'), ]
+```
+
+### Tconv.data liver
+
+```{r}
+leveneTest(count~category, data=Tconv.dataLiver, center=mean)  # n.s.
+shapiro.test(Tconv.dataLiver$count[1:4]) 						 # n.s.
+shapiro.test(Tconv.dataLiver$count[5:8])						 # n.s.
+shapiro.test(Tconv.dataLiver$count[9:12])                      # n.s.
+```
+
+```{r}
+Tconv.liver.res.aov <- aov(count~category, data=Tconv.dataLiver)
+summary (Tconv.liver.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.liver.res.aov)
+```
+
+noTreg_Tx-allo_Tx p < 0.001 ***
+noTreg_Tx-poly_Tx p < 0.01 ** 
+
+
+### Tconv.data colon
+
+```{r}
+leveneTest(count~category, data=Tconv.dataColon, center=mean)  # n.s.
+shapiro.test(Tconv.dataColon$count[1:4]) 						 # n.s.
+shapiro.test(Tconv.dataColon$count[5:8])						 # n.s.
+shapiro.test(Tconv.dataColon$count[9:12])                      # n.s.
+```
+
+```{r}
+Tconv.colon.res.aov <- aov(count~category, data=Tconv.dataColon)
+summary (Tconv.colon.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.colon.res.aov)
+```
+
+noTreg_Tx-allo_Tx p < 0.05 *
+noTreg_Tx-poly_Tx p < 0.05 *
+
+
+### Tconv.data spleen
+
+```{r}
+leveneTest(count~category, data=Tconv.dataSpleen, center=mean)  # n.s.
+shapiro.test(Tconv.dataSpleen$count[1:4]) 						 # n.s.
+shapiro.test(Tconv.dataSpleen$count[5:8])						 # n.s.
+shapiro.test(Tconv.dataSpleen$count[9:12])                      # n.s.
+```
+
+```{r}
+Tconv.spleen.res.aov <- aov(count~category, data=Tconv.dataSpleen)
+summary (Tconv.spleen.res.aov)
+```
+
+not significant
+
+### Tconv.data BM
+
+```{r}
+leveneTest(count~category, data=Tconv.dataBM, center=mean)  # n.s.
+shapiro.test(Tconv.dataBM$count[1:4]) 						 # n.s.
+shapiro.test(Tconv.dataBM$count[5:8])						 # n.s.
+shapiro.test(Tconv.dataBM$count[9:12])                      # n.s.
+```
+
+```{r}
+Tconv.BM.res.aov <- aov(count~category, data=Tconv.dataBM)
+summary (Tconv.BM.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.BM.res.aov)
+```
+
+poly_Tx-allo_Tx   p < 0.01 ** 
+noTreg_Tx-allo_Tx  p < 0.001 ***
+noTreg_Tx-poly_Tx p < 0.01 ** 
+
+
+### Tconv.data mLN
+
+```{r}
+leveneTest(count~category, data=Tconv.datamLN, center=mean)  # significant
+shapiro.test(Tconv.datamLN$count[1:4]) 						 # n.s.
+shapiro.test(Tconv.datamLN$count[5:8])						 # n.s.
+shapiro.test(Tconv.datamLN$count[9:12])                      # n.s.
+```
+
+```{r}
+Tconv.mLN.res.aov <- aov(count~category, data=Tconv.datamLN)
+summary (Tconv.mLN.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.mLN.res.aov)
+```
+
+noTreg_Tx-allo_Tx  p < 0.05 *
+
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2e_Tconv7dafterBMT_inVivoDistribution_SessionInfo.txt")
+```
+
+
+
+
+
