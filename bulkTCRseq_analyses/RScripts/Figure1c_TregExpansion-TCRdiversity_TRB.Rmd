@@ -1,0 +1,69 @@
+---
+title: "Figure1c_TregExpansion-TCRdiversity_TRB"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::write_bib(.packages(), "packages.bib")
+```
+
+This Rscript is called in the CommandsB07_bulkTCR_TregExpansion.sh script 
+
+## Figure showing TRB TCR diversities of allo and poly Treg expansion cultures compared to d0 Treg isolated from spleen
+
+R packages
+
+```{r, warning=FALSE, message=FALSE}
+library("immunarch")
+```
+
+data loading
+
+```{r, warning=FALSE, message=FALSE}
+file_path = "./MixcrData/Treg_TRB_donors_merged"
+immdata <- repLoad(file_path)
+```
+
+extracting clone counts
+
+```{r}
+exp_umi <- repExplore(immdata$data, .method = "clones")
+exp_umi
+```
+
+calculating diversity (Simpson Index)
+
+```{r}
+down <- repSample(immdata$data, .method = "downsample")
+sapply(down, nrow)
+div_simp <- repDiversity(down, "inv.simp")
+div_simp$Type <- c(rep("adonor",6),rep("allo",6),rep("poly",6))
+div_simp
+```
+
+generating the plot for Figure 1C
+
+```{r, fig.width=1.75, fig.height=3}
+p <- ggplot(div_simp , aes(Type, Value, fill=Type)) 
+p <- p + theme_classic() + theme(panel.grid.major.y = element_line(linetype="dashed", color = "gray")) + theme(legend.position = "none")
+p <- p + geom_bar(stat = "summary", fun = "mean", colour="black", size = .5) 
+p <- p + scale_fill_manual(values = c("gray50", "orange", "steelblue"))
+p <- p + ggtitle("TRA Clonotype\nDiversity",subtitle = "downsampled (n=33K)") + ylim(0,25000)
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(1), dotsize=2.0, colour="black", binwidth=500) 
+p <- p + stat_summary(fun.data = mean_se, geom = "errorbar", width=.6)
+p <- p + theme(axis.text = element_text(size=12, colour="black"), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+p <- p + ylab("Inverse Simpson index") + xlab("")
+p
+pdf(file="./figures/Treg_TRB_donors_merged_diversity_invSimp_33K.pdf", height=3, width=1.75)
+p
+dev.off()
+```
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "Figure1c_TregExpansion-TCRdiversity_TRB_SessionInfo.txt")
+```
+
+

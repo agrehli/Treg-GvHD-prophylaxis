@@ -12,7 +12,6 @@
 ##########################################################################################
 ##########################################################################################
 
-
 # setting basic path
 
 DIR_DATA="/misc/data"
@@ -20,6 +19,8 @@ DIR_DATA="/misc/data"
 # defining directories
 RAWDATADIR="${DIR_DATA}/rawData/RNA/RepSeq"
 MAPPINGDIR="${DIR_DATA}/processedData/mapping/RNA/RepSeq/MIXCRv3" #(automatically set in TCRmixcrV3.1.pl)
+
+
 
 
 
