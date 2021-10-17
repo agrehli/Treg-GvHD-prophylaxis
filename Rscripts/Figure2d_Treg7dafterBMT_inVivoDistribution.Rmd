@@ -13,7 +13,7 @@ knitr::write_bib(.packages(), "packages.bib")
 
 R packages
 
-```{r}
+```{r, message=FALSE, warnings=FALSE}
 library(ggplot2)
 library(scales)
 library(car)
@@ -29,7 +29,7 @@ Treg.data$category <- factor(Treg.data$category,levels = c("organ_resident","all
 
 generating the plot for Figure 2d
 
-```{r}
+```{r, fig.width=9, fig.height=5.5, warning=FALSE}
 p <- ggplot(Treg.data, aes(x=category, y=count, fill=category)) + coord_cartesian(ylim = c(1000,30000000))
 p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
 p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=6.5, stackratio = 1, binwidth=.02) 

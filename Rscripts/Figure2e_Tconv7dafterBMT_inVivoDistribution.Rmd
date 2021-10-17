@@ -14,7 +14,7 @@ knitr::write_bib(.packages(), "packages.bib")
 
 R packages
 
-```{r}
+```{r, message=FALSE, warnings=FALSE}
 library(ggplot2)
 library(scales)
 library(car)
@@ -30,7 +30,7 @@ Tconv.data$category <- factor(Tconv.data$category,levels = c("organ_resident","a
 
 generating the plot for Figure 2e
 
-```{r}
+```{r, fig.width=8.5, fig.height=5.5}
 p <- ggplot(Tconv.data, aes(x=category, y=count, fill=category)) + coord_cartesian(ylim = c(10000,100000000))
 p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
 p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=6.5, stackratio = 1, binwidth=.02) 

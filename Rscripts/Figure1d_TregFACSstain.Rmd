@@ -1,5 +1,5 @@
 ---
-title: "Figure1d_BarchartsFACSdata"
+title: "Figure1d_BarChartsFACSdata"
 output: html_document
 ---
 
@@ -13,7 +13,7 @@ knitr::write_bib(.packages(), "packages.bib")
 
 R packages
 
-```{r}
+```{r, message=FALSE, warnings=FALSE}
 library(tidyr)
 library(ggplot2)
 library(scales)
@@ -22,7 +22,7 @@ library(pzfx)
 
 ### data FoxP3
 
-```{r}
+```{r, fig.width=2.5, fig.height=2.5}
 stain.data <- read_pzfx("./data/Fig1_FoxP3_DataTable.xml")
 rownames(stain.data) <- stain.data$ROWTITLE
 data <- data.frame(t(as.matrix(stain.data[ ,2:11])))
@@ -43,7 +43,7 @@ dev.off()
 ```
 ### data Helios
 
-```{r}
+```{r, fig.width=2.5, fig.height=2.5}
 stain.data <- read_pzfx("./data/Fig1_Helios_DataTable.xml")
 rownames(stain.data) <- stain.data$ROWTITLE
 data <- data.frame(t(as.matrix(stain.data[ ,2:11])))
@@ -64,7 +64,7 @@ dev.off()
 ```
 ### data Ki-67
 
-```{r}
+```{r, fig.width=2.5, fig.height=2.5}
 stain.data <- read_pzfx("./data/Fig1_Ki-67_DataTable.xml")
 rownames(stain.data) <- "Ki67"
 data <- data.frame(t(as.matrix(stain.data[ ,2:11])))
