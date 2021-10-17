@@ -718,22 +718,6 @@ TCRmixcrV3.1.pl /misc/data/rawData/RNA/RepSeq/MiSeq_102018/1_176_r0-1B_S1_L001_R
 
 
 
-
-
-
-
-
-
-testrun for mixcr 
-# sample name: colonTreg_2-1_GvHD
-# sample ID: Tx198-1-293-C-ra
-TCRmixcrV3.1.pl /misc/data/rawData/RNA/RepSeq/MiSeq_122018/29-293-C-ra-1A_S13_L001_R1_001.fastq.gz,/misc/data/rawData/RNA/RepSeq/MiSeq_042021_2/29-293-C-ra-1A_S35_L001_R1_001.fastq.gz /misc/data/rawData/RNA/RepSeq/MiSeq_122018/29-293-C-ra-1A_S13_L001_R2_001.fastq.gz,/misc/data/rawData/RNA/RepSeq/MiSeq_042021_2/29-293-C-ra-1A_S35_L001_R2_001.fastq.gz /misc/data/rawData/RNA/RepSeq/MiSeq_122018/29-293-C-ra-2A_S15_L001_R1_001.fastq.gz,/misc/data/rawData/RNA/RepSeq/MiSeq_042021_2/29-293-C-ra-2A_S36_L001_R1_001.fastq.gz /misc/data/rawData/RNA/RepSeq/MiSeq_122018/29-293-C-ra-2A_S15_L001_R2_001.fastq.gz,/misc/data/rawData/RNA/RepSeq/MiSeq_042021_2/29-293-C-ra-2A_S36_L001_R2_001.fastq.gz mTRA_Tx198-1-293-C-ra_ABX -species mouse -t 24 -TRA -UMI ; 
-
-
-
-
-
-
 # sample name: spleenCD62LposTreg_6_resident
 # sample ID: 196_Treg_d0_allo
 TCRmixcrV3.1.pl /misc/data/rawData/RNA/RepSeq/MiSeq_112018/mk196_r0-1B_S18_L001_R1_001.fastq.gz /misc/data/rawData/RNA/RepSeq/MiSeq_112018/mk196_r0-1B_S18_L001_R2_001.fastq.gz /misc/data/rawData/RNA/RepSeq/MiSeq_112018/mk196_r0-2B_S20_L001_R1_001.fastq.gz /misc/data/rawData/RNA/RepSeq/MiSeq_112018/mk196_r0-2B_S20_L001_R2_001.fastq.gz mTRB_196_Treg_d0_allo_A -species mouse -t 12 -UMI ; 
