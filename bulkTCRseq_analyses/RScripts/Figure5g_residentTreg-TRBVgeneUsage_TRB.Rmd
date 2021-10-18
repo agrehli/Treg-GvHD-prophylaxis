@@ -1,0 +1,90 @@
+---
+title: "Figure5g_residentTREG_TRBVgeneUsage"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::write_bib(.packages(), "packages.bib")
+```
+
+This Rscript is called in the CommandsB07_bulkTCR_TregExpansion.sh script 
+
+## Figure showing TRB TCR diversities of allo and poly Treg expansion cultures compared to d0 Treg isolated from spleen
+
+R packages
+
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(reshape2)
+library(ggrepel)
+library("immunarch")
+```
+
+data loading
+
+```{r, warning=FALSE, message=FALSE}
+file_path = "./MixcrData/Treg_TRB_noTX_merged"
+immdatatrb <- repLoad(file_path)
+```
+
+extracting clone counts (MIGs)
+
+```{r}
+exp_umi <- repExplore(immdatatrb$data, .method = "clones")
+exp_umi
+```
+
+retrieving counts for TRBV families (get_genes("musmus.trbv")
+
+```{r}
+imm_gu <- geneUsage(immdatatrb$data , "musmus.trbv", .type = "segment", .ambig = "exc", .norm = T)
+imm_gu[is.na(imm_gu)] <- 0
+imm_gu_red <- imm_gu[c(2,3,16), ]
+imm_gu_red$Names
+```
+
+defining groups and colors
+
+```{r}
+celltype <- factor(c(rep("c-n",4), rep("l-n",4), rep("l-p",4), rep("s-n",4), rep("s-p",4)))
+colors2 <- c(rep("sienna3",4), rep("skyblue3",4), rep("cadetblue3",4), rep("deeppink",4), rep("mediumvioletred",4))
+```
+
+reformating for plotting with ggplot
+
+```{r}
+gu_red <- data.frame(t(as.matrix(imm_gu_red[, -1])))
+colnames(gu_red) <- c("TRBV12-1","TRBV12-2","TRBV26")
+gu_red$Class <- as.factor(celltype)
+gu_red$Color <- as.factor(colors2)
+gu_red$Names <- rownames(gu_red)
+melted_gu <- melt(gu_red, id.vars = c('Names', 'Color', 'Class'))
+melted_gu$Class <- factor(melted_gu$Class, levels= c('c-n','l-p','l-n','s-p','s-n'))
+melted_gu$Colorlevels <- factor(melted_gu$Color, levels= c("sienna3","skyblue4","cadetblue3","deeppink","mediumvioletred"))
+gu_red
+```
+
+generating the plot for Figure 5g
+
+```{r, fig.width=6, fig.height=4}
+p <- ggplot(melted_gu, aes(x= Class, y= value))
+p <- p + stat_summary(fun = mean, geom = "bar", position=position_dodge(.9), aes(fill=Color))
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=2,  stackratio = 1, binwidth=.0015,  aes(fill=Color), show.legend=T) 
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + scale_fill_identity(guide = "legend", labels = levels(melted_gu$Class), breaks = levels(melted_gu$Colorlevels)) + scale_y_continuous(limits = c(0, .125), expand = c(0, 0))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1), text = element_text(size = 12))
+p <- p + facet_wrap(~variable, nrow=1)
+p
+pdf(file="./figures/noBMT_barplot_TRBV.pdf", height=4, width=6)
+plot(p)
+dev.off()
+```
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "Figure5g_residentTreg-TRBVgeneUsage_TRB_SessionInfo.txt")
+```
+
+

@@ -29,12 +29,10 @@ MIXDATA="${WORKDIR_TCR}/MixcrData"
 IADATA="${WORKDIR_TCR}/immunArchData"
 DATAREFORM="${IADATA}/reformated"
 
-# creating novel directories
+# creating novel directories 
 
 mkdir -p ${WORKDIR_TCR}/figures
 mkdir ${MIXDATA}
-mkdir -p ${IADATA}/reformated
-mkdir ${ANALYSISDIR}
 
 
 
@@ -113,7 +111,7 @@ COUNT=$((COUNT+=1))
 done
 
 
-# creating metadata tables for TRA and TRB datq in each directory
+# creating metadata tables for TRA and TRB data in each directory
 
 TAB=$(echo -e "\t")
 cat >"${MIXDATA}/Treg_TRA_donors_merged/metadata.txt" <<EOF
