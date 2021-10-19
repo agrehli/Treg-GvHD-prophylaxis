@@ -1,11 +1,11 @@
 ---
-title: "Figure5g_residentTREG_TRBVgeneUsage"
+title: "Figure5g_residentTreg-TRBVgeneUsage"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::write_bib(.packages(), "packages.bib")
+knitr::write_bib(.packages(), "Figure5g_residentTreg-TRBVgeneUsage.packages.bib")
 ```
 
 This Rscript is called in the CommandsB07_bulkTCR_TregExpansion.sh script 

@@ -7,7 +7,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "packages.bib")
+knitr::write_bib(.packages(), "Figure2e_Tconv7dafterBMT_inVivoDistribution.packages.bib")
 ```
 
 ## Bar charts showing the cell counts for re-isolated Treg 
