@@ -1,0 +1,319 @@
+---
+title: "Figure1e_TregDGEScatter_avp_invitro"
+subtitle: "Scatter plot indicating genes differentially expressed *in invitro* expanded allo versus polyTreg (as measured by RNAseq, n=6 independent experiments each). Treg-signature genes defined by Aubert et al. 2020 are labeled."
+author: "David Dittmar"
+date: "`r Sys.Date()`"
+bibliography: characterization-of-a-regulatory-t-cells-molecular-meta-signature-identifies-the-pro-enkephalin-gene-as-a-novel-marker-in-mice.bib
+nocite: '@*'
+output:
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide 
+---
+
+***
+
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+knitr::write_bib(.packages(), "Figure1e_TregDGEScatter_avp_invitro_packages.bib")
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+```{r}
+# Load required counts, metadata and annotaion RDS files
+counts.m.rm<-readRDS(file.path(getwd(),"RCTDIR/counts.m.rm.2021-06-09.rds"))
+metad.m.rm<-readRDS(file.path(getwd(),"METADIR/metad.m.rm.2021-06-09.rds"))
+stid<-readRDS(file.path(getwd(),"METADIR/stid_2020-12-21.rds"))
+```
+
+```{r, include=FALSE}
+# Load required libraries
+library(edgeR)
+library(AnnotationDbi)
+library(org.Mm.eg.db) #for mouse
+library(ggplot2)
+library(ggrepel)
+```
+* First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
+* This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
+
+***
+
+## Data Preparation
+* For the analysis, the data and metadata have to be prepared and properly annotated.
+
+### Annotation Data Frame
+* An annotation data frame with 4 columns is constructed.
+* The additional EntrezID column is required for compatibility with the "goana" package.
+```{r}
+genes.df<-as.data.frame(strsplit2(stid,"[$]"))
+colnames(genes.df)<-c("EnsemblID","GeneSymbol","Length","GeneType")
+genes.df$EnsemblID<-as.character(genes.df$EnsemblID)
+genes.df$GeneSymbol<-as.character(genes.df$GeneSymbol)
+genes.df$Length<-as.numeric(as.character(genes.df$Length))
+genes.df$GeneType<-as.character(genes.df$GeneType)
+genes.df$EntrezID<- mapIds(org.Mm.eg.db,
+                    keys=genes.df$GeneSymbol,
+                    column="ENTREZID",
+                    keytype="SYMBOL",
+                    multiVals="first")
+rownames(genes.df)<-stid
+head(genes.df, n=5L)
+#See if the gene length values are still as they should, so this should yield an empty vector
+which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
+```
+
+### Subsetting Index
+* In this analysis, we focus on *in vitro* expanded Treg (allo and poly).
+```{r, include=FALSE}
+avp.ivt.ind<-grepl("d",metad.m.rm$org)
+avp.ivt.ind
+```
+
+### Counts Data Frame
+* Here, the comprehensive counts data frame is reduced using the subsetting index.
+```{r}
+#Subsetting the respective counts object (counts.m.rm)
+counts.ivt<-counts.m.rm[,avp.ivt.ind]
+paste(ncol(counts.ivt),"samples are selected:")
+colnames(counts.ivt)
+```
+
+### Metadata Data Frame
+* The metadata has to be reduced accordingly. 
+* The original order of samples is introduced for downstream re-ordering of the read count table.
+```{r}
+metad.avp.ivt<-metad.m.rm[avp.ivt.ind,]
+metad.avp.ivt$orig.ord<-1:nrow(metad.avp.ivt)
+metad.avp.ivt<-metad.avp.ivt[order(metad.avp.ivt$treat),]
+counts.avp.ivt.ind<-metad.avp.ivt$orig.ord
+head(metad.avp.ivt, n = 4L)
+#the group variable for all later assignments of colors/pchs.
+group.avp.ivt<-factor(as.character(metad.avp.ivt$treat))
+group.avp.ivt
+```
+
+### Re-ordering Counts Data Frame Columns
+* Here, read counts are re-ordered according to the metadata object.
+```{r}
+counts.avp.ivt.ord<-counts.ivt[,counts.avp.ivt.ind]
+head(counts.avp.ivt.ord, n=4L)
+counts.ivt<-counts.avp.ivt.ord
+rm(counts.avp.ivt.ord)
+```
+
+### Consistency Check
+* In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
+```{r}
+colnames(counts.ivt)==metad.avp.ivt$sample_ID
+sum(colnames(counts.ivt)==metad.avp.ivt$sample_ID) 
+```
+
+### DGE List Object
+* A DGEList object is generated, the main class of the edgeR package. 
+* For full functionality, the counts.ivt, group.avp.ivt and genes.df variables are used to do so.
+```{r}
+dgel.avp.ivt<-DGEList(counts = counts.ivt, group = group.avp.ivt, genes = genes.df)
+head(dgel.avp.ivt$counts, n=4L)
+head(dgel.avp.ivt$samples, n=4L)
+head(dgel.avp.ivt$genes, n=4L)
+```
+
+### Exclusion of Rare Transcripts
+* The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
+* Only genes fulfilling that criterion are kept and also normalization factors are calculated.
+```{r}
+keep.ivt <- filterByExpr(dgel.avp.ivt, group = group.avp.ivt)
+dgel.avp.ivt <- dgel.avp.ivt[keep.ivt, , keep.lib.sizes=FALSE]
+dgel.avp.ivt <- calcNormFactors(dgel.avp.ivt)
+table(keep.ivt)
+head(dgel.avp.ivt$samples, n=4L)
+```
+
+***
+
+## Differential Gene Expression (DGE) analysis
+* Differential Gene Expression (DGE) is performed in the following part.
+
+### Design for DGE
+* Hereafter, a design is created that contains parameters that are of analytic interest as well as a blocking factor for the independent isolations of *in vitro* expanded Treg.
+```{r}
+# Blocking factor
+tx<-factor(metad.avp.ivt$tx198_No)
+# Design
+avp.ivt.design.dge<-model.matrix(~0+group.avp.ivt+tx)
+colnames(avp.ivt.design.dge)<- c("allo","poly","tx198_10","tx198_12","tx198_2","tx198_4","tx198_5")
+avp.ivt.design.dge
+```
+
+### Dispersion Estimation
+* Hereafter, the dispersion is estimated.
+```{r}
+dgel.avp.ivt<-estimateDisp(dgel.avp.ivt,design=avp.ivt.design.dge,robust=TRUE)
+```
+
+### GLM Fitting
+* Fitting genewise glms (generalized linear model) for the constructed design.
+```{r}
+avp.ivt.fit<-glmQLFit(y = dgel.avp.ivt,design = avp.ivt.design.dge)
+```
+
+### DGE for Contrast of Interest (COI)
+* In this analysis, the differences between allo and poly expanded Treg are of interest. 
+* Thus, the contrast of interest is "allo - poly" for the DGE analysis.
+```{r}
+# Contrast of intrest
+avp.ivt.con<-makeContrasts(allo - poly , levels=avp.ivt.design.dge) #null hypothesis: allo - poly = 0
+# DGE testing against fc = 1.5.
+avp.ivt.tr.res<-glmTreat(avp.ivt.fit,contrast=avp.ivt.con, lfc = log2(1.5))
+avp.ivt.tr.qstat<-topTags(avp.ivt.tr.res,n=Inf)
+```
+
+#### Exporting DGE Statistics
+* The data frame contained in the glmTreat function results is stored for direct access.
+```{r}
+write.table(x = avp.ivt.tr.qstat$table,
+            file = file.path(getwd(),"ANALDIR/Figure1e_TregDGE_avp_invitro_FC1.5.txt"),
+            quote=FALSE, 
+            sep = "\t",
+            col.names = TRUE,
+            row.names = FALSE)
+```
+
+***
+
+## DGE Visualization
+* Hereafter, DEGs are visualized *via* a scatter plot.
+
+### Data Preparation
+* The data is filtered based on logCPM and logRPKM thresholds.
+* Necessary data transformations for the scatter plot are carried out as well.
+```{r}
+# Extraction of data frame from glmTreat result
+avp.ivt.tr.qstat.scat<-avp.ivt.tr.qstat$table #is a data frame
+# Introduction of logRPKM column
+avp.ivt.tr.qstat.scat$logRPKM <- avp.ivt.tr.qstat.scat$logCPM - log2(avp.ivt.tr.qstat.scat$Length * 0.001)
+# Commonly used filter criteria
+avp.ivt.tr.qstat.scat.filt<-subset(avp.ivt.tr.qstat.scat, logCPM > 1 & logRPKM > 1)
+nrow(avp.ivt.tr.qstat.scat.filt)
+# Transformation for scatterplot
+avp.ivt.tr.qstat.scat.filt$logCPMpoly<-avp.ivt.tr.qstat.scat.filt$logCPM - (avp.ivt.tr.qstat.scat.filt$logFC/2) #poly
+avp.ivt.tr.qstat.scat.filt$logCPMallo<-avp.ivt.tr.qstat.scat.filt$logCPM + (avp.ivt.tr.qstat.scat.filt$logFC/2) #allo
+#Separate up and down genes
+avp.ivt.tr.qstat.scat.filt.UP<-subset(avp.ivt.tr.qstat.scat.filt, logFC >= 0 & FDR < 0.05)
+avp.ivt.tr.qstat.scat.filt.DN<-subset(avp.ivt.tr.qstat.scat.filt, logFC <= 0 & FDR < 0.05)
+nrow(avp.ivt.tr.qstat.scat.filt.UP)
+nrow(avp.ivt.tr.qstat.scat.filt.DN)
+```
+
+### Exporting UP and DN regulated Genes
+* Significantly up and down regulated genes are exported in the following.
+```{r}
+#extract filtered gene lists
+#dir.create(file.path(getwd(),"ANALDIR/DGE/AVP/invitro/"), showWarnings = F, recursive = T)
+write.table(rownames(avp.ivt.tr.qstat.scat.filt.UP),
+            file = file.path(getwd(),"ANALDIR/Figure1e_TregDGE_avp_invitro.filt.UP.txt"), #evtl ".sig"
+            col.names = "GeneID",
+            quote=FALSE, 
+            row.names = FALSE)
+write.table(rownames(avp.ivt.tr.qstat.scat.filt.DN),
+            file = file.path(getwd(),"ANALDIR/Figure1e_TregDGE_avp_invitro.filt.DN.txt"),
+            col.names = "GeneID",
+            quote=FALSE, 
+            row.names = FALSE)
+```
+
+### Scatterplot
+
+#### Definition of Genes of Interest (GOI)
+* Genes of interest defining Treg in general are defined in this step.
+* Approach: Intersection of "Treg-meta-signature" and "Immnav-Treg-signature" by Aubert et al. 2020, extended with genes Itgb7 and Sell.
+```{r}
+# Reading in the intersection of "Treg-meta-signature" and "Immnav-Treg-signature" published by Aubert et al. 2020
+aubert.treg.intersect<-readRDS(file = file.path(getwd(),"PUBDATDIR/aubert.treg.intersect.rds"))
+# Extension of the GOI by Itgb7 and Sell
+aubert.treg.intersect<-c(aubert.treg.intersect,"Itgb7","Sell")
+aubert.treg.intersect
+```
+* Also export GOI as tab-delimited text file
+```{r}
+write.table(x = aubert.treg.intersect,
+            file = "./PUBDATDIR/aubert.treg.intersect.extended.txt",
+            col.names = "GeneSymbol",
+            quote = FALSE,
+            row.names = FALSE)
+```
+
+#### Scatter Plot with GOI highlighted
+* The scatter plot object is generated using the following code.
+* At the same time, the figure is exported.
+```{r, fig.height=2.6, fig.width=2.2, out.width="20%", warning=FALSE,echo=TRUE}
+avp.ivt.scat <- ggplot(avp.ivt.tr.qstat.scat.filt) + 
+  aes(x=logCPMpoly, y=logCPMallo) +
+  scale_x_continuous(limits = c(-1,16),
+                     breaks = c(0,3,6,9,12,15),
+                     expand = c(0,0)
+                     )+
+  scale_y_continuous(limits = c(-1,16),
+                     breaks = c(0,3,6,9,12,15),
+                     expand = c(0,0)
+                     )+
+  geom_point(colour=rgb(50,50,50,30,maxColorValue = 255), shape=16, size = .375) +
+
+  geom_point(data = avp.ivt.tr.qstat.scat.filt.DN, aes(x=logCPMpoly, y=logCPMallo), colour="steelblue", shape=16, size = .5, alpha=1) +
+  geom_point(data = avp.ivt.tr.qstat.scat.filt.UP, aes(x=logCPMpoly, y=logCPMallo), colour="orange", shape=16, size = .5, alpha=1) +
+  geom_text_repel(data = subset(avp.ivt.tr.qstat.scat.filt, direction = "both",
+                                GeneSymbol %in% aubert.treg.intersect),aes(label=GeneSymbol),
+                  force = 50,
+                  force_pull = 1,
+                  size=2, 
+                  min.segment.length=0, 
+                  segment.size=0.15, 
+                  point.padding=unit(0.00,"cm"),
+                  box.padding=unit(0.1,"cm"),
+                  max.overlaps = 25,
+                  color = "black",
+                  #nudge_x = -4,
+                  direction = "both",
+                  fontface="italic")+
+  ggtitle(label = "DEGs allo vs. poly Treg", subtitle = "in vitro expanded Treg \nTreg signature Aubert et al. 2020 & Itgb7, Sell") +
+  ylab(bquote(CPM *"("*log[2]*")" *"("*allo~Treg*")"))+
+  xlab(bquote(CPM *"("*log[2]*")" *"("*poly~Treg*")"))+
+  theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), #,angle = 90
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+pdf(file=file.path(getwd(),"FIGDIR","Figure1e_TregDGEScatter_avp_invitro.pdf.pdf"), height=2.6, width=2.2)
+avp.ivt.scat
+dev.off()
+```
+* The actual scatter plot is shown hereafter.
+* GOI are highlighted.
+```{r, fig.height=2.6, fig.width=2.2, out.width="20%", warning=FALSE}
+avp.ivt.scat
+```
+
+***
+
+## SessionInfo
+```{r, echo=FALSE}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure1e_TregDGEScatter_avp_invitro_SessionInfo.txt")
+```
+
+***
+
+## Bibliography
