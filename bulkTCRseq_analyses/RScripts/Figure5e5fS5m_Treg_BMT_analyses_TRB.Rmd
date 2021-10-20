@@ -1,0 +1,190 @@
+---
+title: "Figure5e5fS5m_Treg_BMT_analyses_TRB"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::write_bib(.packages(), "Figure5e5fS5m_Treg_BMT_analyses_TRB.packages.bib")
+```
+
+This Rscript is called in the CommandsB07_bulkTCR_BMT.sh script
+
+# Data analysis for Figures 5e, 5g and S5m
+
+
+R packages
+
+```{r, warning=FALSE, message=FALSE}
+library(reshape2)
+library(ggplot2)
+library(immunarch)
+library(ggrepel)
+```
+
+data loading
+
+```{r, warning=FALSE, message=FALSE}
+file_path = "./MixcrData/allTRB"
+immdataAllTRB <- repLoad(file_path)
+```
+
+extracting clone counts (MIGs)
+
+```{r}
+exp_umi <- repExplore(immdataAllTRB$data, .method = "clones")
+exp_umi
+```
+
+## Figure showing TRB TCR diversities of allo and poly Treg in GvHD and nonGvHD experiments
+
+Throw away samples with lowest UMI counts, downsample to 645 clones
+
+```{r}
+set.seed(42)
+down <- repSample(immdataAllTRB$data[c(1:3,6,7,9:22,25:72,75:80)], .method = "downsample")
+div_simp <- repDiversity(down, "inv.simp")
+div_simp
+```
+
+reformating the data for for plotting with ggplot
+
+```{r}
+redcelltype <- factor(c(rep("d",2), rep("c",3), rep("l",6), rep("s",6), rep("d",2), rep("c",4), rep("l",6), rep("s",6),rep("d",2), rep("cc",6), rep("cl",6), rep("cs",6), rep("d",2), rep("cc",6), rep("cl",4), rep("cs",6)))
+redcolors <- c(rep("red",2), rep("sienna4",3), rep("skyblue4",6), rep("deeppink",6), rep("red",2), rep("sienna4",4), rep("skyblue4",6), rep("deeppink",6), rep("red",2), rep("peru",6), rep("skyblue3",6), rep("hotpink2",6), rep("red",2), rep("peru",6), rep("skyblue3",4), rep("hotpink2",6))
+redmodel <- factor(c(rep("allo",17), rep("poly",18), rep("allo",20), rep("poly",18)))
+div_simp$Class <- as.factor(redcelltype)
+div_simp$Color <- as.factor(redcolors)
+div_simp$Model <- as.factor(redmodel)
+div_simp$Class <- factor(div_simp$Class, levels= c('d','c','l','s','cc','cl','cs'))
+div_simp$Colorlevels <- factor(div_simp$Color, levels= c("red","sienna4","skyblue4","deeppink","peru","skyblue3","hotpink2"))
+```
+
+generating the plot for Figure S5m
+
+```{r, fig.width=4, fig.height=3}
+p <- ggplot(div_simp, aes(x= Class, y= Value))
+p <- p + stat_summary(fun = mean, geom = "bar", position=position_dodge(.9), aes(fill=Color))
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=2,  stackratio = 1, binwidth=10,  aes(fill=Color), show.legend=T) 
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + scale_fill_identity(guide = "legend", labels = levels(div_simp$Class), breaks = levels(div_simp$Colorlevels)) + scale_y_continuous(limits =c(0,700), expand = c(0, 0))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1), text = element_text(size = 12))
+p <- p + facet_wrap(~Model, nrow=1)
+p
+pdf(file="./figures/allTRB_barplot_invSimp.pdf", height=3, width=4)
+plot(p)
+dev.off()
+```
+
+## Figures showing TRBV gene distribution across samples
+
+
+```{r}
+imm_gu <- geneUsage(immdataAllTRB$data[c(1:7,9:22,24:80)] , "musmus.trbv", .type = "segment", .ambig = "exc", .norm = T)
+imm_gu[is.na(imm_gu)] <- 0
+```
+
+overview across distribution
+
+```{r, fig.width=12, fig.height=8}
+p <- vis(imm_gu, .by = c("Trans","Expand","Origin"), .meta = immdataAllTRB$meta)
+p
+```
+
+TRBV26, TRBV12-1, TRBV12-2 are enriched in colon!
+
+### Figure 5e showing tSNE of TRBV distributions 
+
+```{r}
+set.seed(42)
+gu <- t(as.matrix(imm_gu[, -1]))
+imm_gu_ktSNE <- geneUsageAnalysis(dist(gu,method = "manhattan"), .method = "tsne+kmeans", .perp = 3, .k=4, .verbose = F)
+```
+reformating the data for for plotting with ggplot
+
+```{r}
+model <- factor(c(rep("allo",19), rep("poly",19), rep("allo",20), rep("poly",20)))
+celltype <- factor(c(rep("d",2), rep("c",5), rep("l",6), rep("s",6), rep("d",2), rep("c",5), rep("l",6), rep("s",6),rep("d",2), rep("cc",6), rep("cl",6), rep("cs",6), rep("d",2), rep("cc",6), rep("cl",6), rep("cs",6)))
+colors2 <- c(rep("red",2), rep("sienna4",5), rep("skyblue4",6), rep("deeppink",6), rep("red",2), rep("sienna4",5), rep("skyblue4",6), rep("deeppink",6), rep("red",2), rep("peru",6), rep("skyblue3",6), rep("hotpink2",6), rep("red",2), rep("peru",6), rep("skyblue3",6), rep("hotpink2",6))
+embedding <- as.data.frame(imm_gu_ktSNE$data)
+embedding$Class <- as.factor(celltype)
+embedding$Color <- as.factor(colors2)
+embedding$Model <- as.factor(model)
+embedding$Colorlevels <- factor(embedding$Color, levels= c("red","sienna4","skyblue4","deeppink","peru","skyblue3","hotpink2"))
+embedding$Class <- factor(embedding$Class, levels= c('d','c','l','s','cc','cl','cs'))
+```
+plotting (two versions - one with and one without labels
+
+```{r, fig.width=3.5, fig.height=2.5}
+p <- ggplot(embedding, aes(x=DimI, y=DimII)) +
+     geom_point(size=1.5, col=embedding$Color, fill=embedding$Color, aes(shape=Model)) +
+     theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), text = element_text(size = 12)) + 
+     scale_fill_identity(guide = "legend", labels = levels(embedding$Class), breaks = levels(embedding$Color)) +
+     scale_shape_manual(values=c(21, 24)) +
+     xlab("tSNE-X") + ylab("tSNE-Y") + 
+     xlim(-50, 50) + ylim(-50, 54)
+p
+pdf(file="./figures/allTRB_tSNE_geneUsage_unlabelled.pdf", height=2.5, width=3.5)
+plot(p, labels=FALSE)
+dev.off()
+
+p <- p + geom_text_repel(aes(label=celltype), col=embedding$Color, size=1.25, segment.size=0.2, min.segment.length=.05, point.padding=.05, segment.alpha=0.5, max.overlaps = Inf)
+pdf(file="./figures/allTRB_tSNE_geneUsage_partially.labelled.pdf", height=2.5, width=3.5)
+plot(p, labels=TRUE)
+dev.off()
+```
+
+### Figure 5f showing TRBV frequencies for colon enriched segments
+
+
+```{r}
+imm_gu_red <- imm_gu[c(2,3,16), ]
+imm_gu_red
+```
+
+
+reformating for plotting with ggplot
+
+```{r}
+gu_red <- data.frame(t(as.matrix(imm_gu_red[, -1])))
+colnames(gu_red) <- c("TRBV12-1","TRBV12-2","TRBV26")
+gu_red$Class <- as.factor(celltype)
+gu_red$Color <- as.factor(colors2)
+gu_red$Names <- rownames(gu_red)
+gu_red$Model <- as.factor(model)
+melted_gu <- melt(gu_red, id.vars = c('Names', 'Color', 'Class', 'Model'))
+melted_gu$Class <- factor(melted_gu$Class, levels= c('d','c','l','s','cc','cl','cs'))
+melted_gu$Colorlevels <- factor(melted_gu$Color, levels= c("red","sienna4","skyblue4","deeppink","peru","skyblue3","hotpink2"))
+```
+
+generating the bar chart for Figure 5g
+
+```{r, fig.width=10, fig.height=4}
+p <- ggplot(melted_gu, aes(x= Class, y= value))
+p <- p + stat_summary(fun = mean, geom = "bar", position=position_dodge(.9), aes(fill=Color))
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=3,  stackratio = 1, binwidth=.0025,  aes(fill=Color), show.legend=T) 
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + scale_fill_identity(guide = "legend", labels = levels(melted_gu$Class), breaks = levels(melted_gu$Colorlevels)) + scale_y_continuous(limits = c(0, .3), expand = c(0, 0))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1), text = element_text(size = 12))
+p <- p + facet_wrap(~variable + Model, nrow=1)
+p
+pdf(file="./figures/allTRB_barplot_TRBV.pdf", height=4, width=10)
+plot(p)
+dev.off()
+```
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "Figure5e5fS5m_Treg_BMT_analyses_TRB_SessionInfo.txt")
+```
+
+

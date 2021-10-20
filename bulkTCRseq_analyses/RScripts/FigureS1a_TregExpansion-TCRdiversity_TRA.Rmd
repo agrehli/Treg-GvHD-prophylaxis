@@ -1,11 +1,19 @@
 ---
-title: "FigureS2a_TregExpansion-TCRdiversity_TRA"
-output: html_document
+title: "FigureS1a_TregExpansion-TCRdiversity_TRA"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::write_bib(.packages(), "FigureS2a_TregExpansion-TCRdiversity_TRA.packages.bib")
+knitr::write_bib(.packages(), "FigureS1a_TregExpansion-TCRdiversity_TRA.packages.bib")
 ```
 
 This Rscript is called in the CommandsB07_bulkTCR_TregExpansion.sh script 
@@ -63,7 +71,7 @@ dev.off()
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "FigureS2a_TregExpansion-TCRdiversity_SessionInfo_TRA.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "FigureS1a_TregExpansion-TCRdiversity_SessionInfo_TRA.txt")
 ```
 
 

@@ -157,7 +157,7 @@ q()
 cd ${WORKDIR_TCR}
 R --no-restore --no-save
 library(rmarkdown)
-render("FigureS2a_TregExpansion-TCRdiversity_TRA.Rmd", "html_document")
+render("FigureS1a_TregExpansion-TCRdiversity_TRA.Rmd", "html_document")
 q()
 
 
