@@ -1,6 +1,14 @@
 ---
 title: "Figure1d_BarChartsFACSdata"
-output: html_document
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
