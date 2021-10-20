@@ -54,10 +54,10 @@ Description provided by Michael....
 
 <h3 id="other">5. Rscripts</h3>
 
-Description provided by Michael....
+Contains .rds files that are rendered locally using data provided in the [data](#data) folder as well as corresponding Session Infos. This includes the code underlying Figures 1b,d & 2d,e.
 
 <h3 id="data">6. data</h3>
 
-Description provided by Michael....
+Contains data for Figures 1b,d & 2d,e.
 
 
