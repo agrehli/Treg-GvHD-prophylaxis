@@ -16,6 +16,13 @@
 # setting basic path
 
 DIR_DATA="/misc/data"
+DIR_SOFT="/misc/software"
+
+# setting homer environment
+
+PATH_R=${DIR_SOFT}/package/RBioC/stretch_R-4.0.3_Bioc-3.12_intel-mkl-64bit-2020.1-102/lib/R/bin
+export PATH=${PATH_R}:${PATH}
+#export PATH
 
 # processed data directory
 MAPPINGDIR="${DIR_DATA}/processedData/mapping/RNA/RepSeq/MIXCRv3"
@@ -24,17 +31,12 @@ MAPPINGDIR="${DIR_DATA}/processedData/mapping/RNA/RepSeq/MIXCRv3"
 PROJECTDIR="${DIR_DATA}/analysis/project_TregProphylaxis"
 WORKDIR_TCR="${PROJECTDIR}/bulkTCRrepertoire"
 FIGURESDIR="${WORKDIR_TCR}/figures"
-ANALYSISDIR="${WORKDIR_TCR}/analysis"
 MIXDATA="${WORKDIR_TCR}/MixcrData"
-IADATA="${WORKDIR_TCR}/immunArchData"
-DATAREFORM="${IADATA}/reformated"
 
-# creating novel directories
+# creating novel directories 
 
 mkdir -p ${WORKDIR_TCR}/figures
 mkdir ${MIXDATA}
-mkdir -p ${IADATA}/reformated
-mkdir ${ANALYSISDIR}
 
 
 
@@ -113,7 +115,7 @@ COUNT=$((COUNT+=1))
 done
 
 
-# creating metadata tables for TRA and TRB datq in each directory
+# creating metadata tables for TRA and TRB data in each directory
 
 TAB=$(echo -e "\t")
 cat >"${MIXDATA}/Treg_TRA_donors_merged/metadata.txt" <<EOF
@@ -145,7 +147,7 @@ cp ${MIXDATA}/Treg_TRA_donors_merged/metadata.txt ${MIXDATA}/Treg_TRB_donors_mer
 # Treg_TRB_donors_merged
 
 cd ${WORKDIR_TCR}
-rbioc_3-12 --no-restore --no-save
+R --no-restore --no-save
 library(rmarkdown)
 render("Figure1c_TregExpansion-TCRdiversity_TRB.Rmd", "html_document")
 q()
@@ -153,7 +155,7 @@ q()
 # Treg_TRA_donors_merged
 
 cd ${WORKDIR_TCR}
-rbioc_3-12 --no-restore --no-save
+R --no-restore --no-save
 library(rmarkdown)
 render("FigureS2a_TregExpansion-TCRdiversity_TRA.Rmd", "html_document")
 q()

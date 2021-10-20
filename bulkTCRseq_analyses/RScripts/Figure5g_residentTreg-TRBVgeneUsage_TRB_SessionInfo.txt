@@ -13,7 +13,8 @@ attached base packages:
 
 other attached packages:
 [1] immunarch_0.6.6   patchwork_1.1.1   data.table_1.13.6 dtplyr_1.0.1     
-[5] dplyr_1.0.3       ggplot2_3.3.3     rmarkdown_2.6    
+[5] dplyr_1.0.3       ggrepel_0.9.1     reshape2_1.4.4    ggplot2_3.3.3    
+[9] rmarkdown_2.6    
 
 loaded via a namespace (and not attached):
  [1] RColorBrewer_1.1-2  prabclus_2.3-2      UpSetR_1.4.0       
@@ -34,16 +35,15 @@ loaded via a namespace (and not attached):
 [46] yaml_2.2.1          ggalluvial_0.12.3   carData_3.0-4      
 [49] MASS_7.3-53         flexmix_2.3-17      plyr_1.8.6         
 [52] grid_4.0.3          ggseqlogo_0.1       parallel_4.0.3     
-[55] promises_1.1.1      ggrepel_0.9.1       forcats_0.5.0      
-[58] crayon_1.3.4        lattice_0.20-41     haven_2.3.1        
-[61] circlize_0.4.12     hms_1.0.0           knitr_1.30         
-[64] pillar_1.4.7        ggpubr_0.4.0        fpc_2.2-9          
-[67] ggsignif_0.6.0      reshape2_1.4.4      stats4_4.0.3       
-[70] glue_1.4.2          evaluate_0.14       vctrs_0.3.6        
-[73] httpuv_1.5.5        cellranger_1.1.0    gtable_0.3.0       
-[76] purrr_0.3.4         tidyr_1.1.2         kernlab_0.9-29     
-[79] assertthat_0.2.1    xfun_0.20           openxlsx_4.2.3     
-[82] mime_0.9            xtable_1.8-4        broom_0.7.3        
-[85] rstatix_0.6.0       later_1.1.0.1       class_7.3-17       
-[88] tibble_3.0.5        pheatmap_1.0.12     shinythemes_1.2.0  
-[91] cluster_2.1.0       ellipsis_0.3.1     
+[55] promises_1.1.1      forcats_0.5.0       crayon_1.3.4       
+[58] lattice_0.20-41     haven_2.3.1         circlize_0.4.12    
+[61] hms_1.0.0           knitr_1.30          pillar_1.4.7       
+[64] ggpubr_0.4.0        fpc_2.2-9           ggsignif_0.6.0     
+[67] stats4_4.0.3        glue_1.4.2          evaluate_0.14      
+[70] vctrs_0.3.6         httpuv_1.5.5        cellranger_1.1.0   
+[73] gtable_0.3.0        purrr_0.3.4         tidyr_1.1.2        
+[76] kernlab_0.9-29      assertthat_0.2.1    xfun_0.20          
+[79] openxlsx_4.2.3      mime_0.9            xtable_1.8-4       
+[82] broom_0.7.3         rstatix_0.6.0       later_1.1.0.1      
+[85] class_7.3-17        tibble_3.0.5        pheatmap_1.0.12    
+[88] shinythemes_1.2.0   cluster_2.1.0       ellipsis_0.3.1     
