@@ -24,12 +24,12 @@ loaded via a namespace (and not attached):
  [4] png_0.1-7              Biostrings_2.60.2      assertthat_0.2.1      
  [7] digest_0.6.28          utf8_1.2.2             R6_2.5.1              
 [10] GenomeInfoDb_1.28.4    RSQLite_2.2.8          evaluate_0.14         
-[13] highr_0.9              httr_1.4.2             pillar_1.6.3          
-[16] zlibbioc_1.38.0        rlang_0.4.11           jquerylib_0.1.4       
+[13] highr_0.9              httr_1.4.2             pillar_1.6.4          
+[16] zlibbioc_1.38.0        rlang_0.4.12           jquerylib_0.1.4       
 [19] blob_1.2.2             rmarkdown_2.11         splines_4.1.1         
 [22] statmod_1.4.36         stringr_1.4.0          RCurl_1.98-1.5        
 [25] bit_4.0.4              munsell_0.5.0          compiler_4.1.1        
-[28] xfun_0.26              pkgconfig_2.0.3        htmltools_0.5.2       
+[28] xfun_0.27              pkgconfig_2.0.3        htmltools_0.5.2       
 [31] tidyselect_1.1.1       KEGGREST_1.32.0        tibble_3.1.5          
 [34] GenomeInfoDbData_1.2.6 fansi_0.5.0            withr_2.4.2           
 [37] crayon_1.4.1           dplyr_1.0.7            bitops_1.0-7          
