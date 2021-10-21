@@ -1,0 +1,88 @@
+---
+title: "Figure6j_Treg_GvHD_TRBVanalysis_10x_TRB"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::write_bib(.packages(), "Figure6j_Treg_GvHD_TRBVanalysis_10x_TRB.packages.bib")
+```
+
+This Rscript is called in the CommandsB07_bulkTCR_BMT.sh script
+
+# Data analysis for Figures 6j
+
+
+R packages
+
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(reshape2)
+```
+
+data loading
+
+```{r, warning=FALSE, message=FALSE}
+table <- read.table("./TRBcellRangerData/scTRBVcountTable.txt", header=T, sep="\t", row.names="vGene")
+```
+
+retrieving counts for TRBV families (get_genes("musmus.trbv")
+
+```{r}
+imm_gu <- as.data.frame(prop.table(as.matrix(table), 2))
+imm_gu_red <- imm_gu[c(3,4,17), ]
+imm_gu_red
+```
+
+defining groups and colors
+
+```{r}
+celltype <- factor(c(rep("d",2), rep("c",3), rep("l",3), rep("s",3)))
+colors <- c(rep("red",2), rep("sienna4",3), rep("skyblue4",3), rep("deeppink",3))
+```
+
+reformating for plotting with ggplot
+
+```{r}
+gu_red <- data.frame(t(as.matrix(imm_gu_red)))
+colnames(gu_red) <- c("TRBV12-1","TRBV12-2","TRBV26")
+gu_red$Class <- as.factor(celltype)
+gu_red$Color <- as.factor(colors)
+gu_red$Names <- rownames(gu_red)
+melted_gu <- melt(gu_red, id.vars = c('Names', 'Color', 'Class'))
+melted_gu$Class <- factor(melted_gu$Class, levels= c('d','c','l','s'))
+melted_gu$Colorlevels <- factor(melted_gu$Color, levels= c("red","sienna4","skyblue4","deeppink"))
+```
+
+generating the bar chart for Figure 6j
+
+```{r, fig.width=4, fig.height=3}
+p <- ggplot(melted_gu, aes(x= Class, y= value))
+p <- p + stat_summary(fun = mean, geom = "bar", position=position_dodge(.9), aes(fill=Color))
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=3,  stackratio = 1, binwidth=.0025,  aes(fill=Color), show.legend=T) 
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + scale_fill_identity(guide = "legend", labels = levels(melted_gu$Class), breaks = levels(melted_gu$Colorlevels)) + scale_y_continuous(limits = c(0, .2), expand = c(0, 0))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1), text = element_text(size = 12))
+p <- p + facet_wrap(~variable, nrow=1)
+p
+pdf(file="./figures/allTRB_10x_barplot_TRBV.pdf", height=3, width=4)
+plot(p)
+dev.off()
+```
+
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "Figure6j_Treg_GvHD_TRBVanalysis_10x_TRB_SessionInfo.txt")
+```
+
+

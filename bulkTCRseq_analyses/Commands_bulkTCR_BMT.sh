@@ -13,10 +13,7 @@
 ##########################################################################################
 
 
-#!/bin/bash
-# by MR, February 2021
-
-# setting basic path and linux OS
+# setting basic path
 
 DIR_SOFT="/misc/software"
 DIR_PKG="${DIR_SOFT}/ngs"
