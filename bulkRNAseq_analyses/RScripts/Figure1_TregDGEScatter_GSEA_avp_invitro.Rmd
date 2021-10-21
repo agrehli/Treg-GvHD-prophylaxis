@@ -1,9 +1,9 @@
 ---
-title: "Figure1e_TregDGEScatter_avp_invitro"
-subtitle: "Scatter plot indicating genes differentially expressed *in invitro* expanded allo versus polyTreg (as measured by RNAseq, n=6 independent experiments each). Treg-signature genes defined by Aubert et al. 2020 are labeled."
+title: "*In vitro* expanded Treg - Allo versus Poly - Scatter Plot and GSEA Barcode Plot"
+subtitle: "Scatter plot indicating genes differentially expressed *in invitro* expanded allo versus polyTreg (as measured by RNAseq, n=6 independent experiments each). Treg-signature genes defined by Aubert et al. 2020 are labeled. Gene Set Enrichment Analyses (GSEA) for selected Hallmark and Kegg gene sets are represented as barcode plots."
 author: "David Dittmar"
 date: "`r Sys.Date()`"
-bibliography: characterization-of-a-regulatory-t-cells-molecular-meta-signature-identifies-the-pro-enkephalin-gene-as-a-novel-marker-in-mice.bib
+bibliography: Aubert_et_al._2020.bib
 nocite: '@*'
 output:
   html_document:
@@ -20,7 +20,7 @@ output:
 ```{r setup, include=FALSE}
 # Set global chunk options
 knitr::opts_chunk$set(echo = TRUE, include = TRUE)
-knitr::write_bib(.packages(), "Figure1e_TregDGEScatter_avp_invitro_packages.bib")
+knitr::write_bib(.packages(), "Figure1_TregDGEScatter_GSEA_avp_invitro_packages.bib")
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 ```
 
@@ -49,7 +49,7 @@ library(ggrepel)
 
 ### Annotation Data Frame
 * An annotation data frame with 4 columns is constructed.
-* The additional EntrezID column is required for compatibility with the "goana" package.
+* The additional EntrezID column is required for compatibility with downstream pathway enrichment analyes.
 ```{r}
 genes.df<-as.data.frame(strsplit2(stid,"[$]"))
 colnames(genes.df)<-c("EnsemblID","GeneSymbol","Length","GeneType")
@@ -249,7 +249,7 @@ write.table(x = aubert.treg.intersect,
             row.names = FALSE)
 ```
 
-#### Scatter Plot with GOI highlighted
+#### Scatter Plot with GOI highlighted (Figure 1 e)
 * The scatter plot object is generated using the following code.
 * At the same time, the figure is exported.
 ```{r, fig.height=2.6, fig.width=2.2, out.width="20%", warning=FALSE,echo=TRUE}
@@ -308,10 +308,126 @@ avp.ivt.scat
 
 ***
 
+## Pathway enrichment analysis for Kegg and Hallmark gene sets
+* Following, gene set enrichment analyses (GSEA) for Hallmark and Kegg pathway associated genes based on the comparison of allo and poly Treg are performed.
+* Using camera, we look whether pathways from kegg or hallmark collections are enriched in our regulated genes.
+* Barcode plots are used to visualize the results across the logFC ranking of genes based on the comparison of allo and poly Treg.
+
+### GSEA for Hallmark and Kegg gene sets
+* Hallmark gene sets are retrieved and gene identifiers for respective sets are converted into a list of indices.
+* GSEA is performed using the "camera.DGEList" function on the DGEList object with the index and contrast specified previously.
+```{r}
+#hallmark
+Mm.H <- readRDS(url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.h.all.v7.1.entrez.rds"))
+H.ind <- ids2indices(Mm.H, id=dgel.avp.ivt$genes$EntrezID)
+#GSEA
+gst.camera <- camera.DGEList(dgel.avp.ivt,index=H.ind,design=avp.ivt.design.dge,contrast=avp.ivt.con,inter.gene.cor=0.05)
+gst.camera
+```
+* Analogous retrieval of Kegg gene sets and index generation.
+* GSEA on Kegg gene sets.
+```{r}
+#Kegg
+Mm.K <- readRDS(url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.c2.cp.kegg.v7.1.entrez.rds"))
+K.ind <- ids2indices(Mm.K, id=dgel.avp.ivt$genes$EntrezID)
+#GSEA
+gst.camera <- camera.DGEList(dgel.avp.ivt,index=K.ind,design=avp.ivt.design.dge,contrast=avp.ivt.con,inter.gene.cor=0.05)
+gst.camera
+```
+
+### Barcode plot visualizations
+* Barcode plots representing the results for selected Hallmark and Kegg gene sets.
+* HALLMARK_HYPOXIA
+```{r, fig.height=3.2,fig.width=6}
+#hallmark HALLMARK_HYPOXIA 
+barcodeplot(avp.ivt.tr.res$table$logFC, 
+            index=H.ind[["HALLMARK_HYPOXIA"]], 
+            labels=c("up in poly","up in allo"), 
+              col.bars = "orange",
+            main="HALLMARK_HYPOXIA")
+par(new=TRUE)
+plot.new( )
+plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+text(-5,5,"Orange bars: Genes up in expanded allo Treg", adj = c(0,.5))
+text(-5,4,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
+```
+* Barcodeplot is exported.
+```{r}
+pdf(file=file.path(getwd(),"FIGDIR","SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_HYPOXIA.pdf"), height=3.2, width=6)
+barcodeplot(avp.ivt.tr.res$table$logFC, 
+            index=H.ind[["HALLMARK_HYPOXIA"]], 
+            labels=c("up in poly","up in allo"), 
+              col.bars = "orange")
+par(new=TRUE)
+plot.new( )
+plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+text(-5,4.5,"Orange bars: Gene Set HALLMARK_HYPOXIA", adj = c(0,.5))
+text(-5,3,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
+dev.off()
+```
+* HALLMARK_IL2_STAT5_SIGNALING
+```{r,fig.height=3.2,fig.width=6}
+#hallmark HALLMARK_IL2_STAT5_SIGNALING 
+barcodeplot(avp.ivt.tr.res$table$logFC, 
+            index=H.ind[["HALLMARK_IL2_STAT5_SIGNALING"]], 
+            labels=c("up in poly","up in allo"), 
+              col.bars = "orange",
+            main="HALLMARK_IL2_STAT5_SIGNALING")
+par(new=TRUE)
+plot.new( )
+plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+text(-5,5,"Orange bars: Gene Set HALLMARK_IL2_STAT5_SIGNALING", adj = c(0,.5))
+text(-5,4,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
+```
+* Barcode plot is exported.
+```{r}
+pdf(file=file.path(getwd(),"FIGDIR","SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_IL2_STAT5.pdf"), height=3.2, width=6)
+barcodeplot(avp.ivt.tr.res$table$logFC, 
+            index=H.ind[["HALLMARK_IL2_STAT5_SIGNALING"]], 
+            labels=c("up in poly","up in allo"), 
+              col.bars = "orange")
+par(new=TRUE)
+plot.new( )
+plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+text(-5,4.5,"Orange bars: HALLMARK_IL2_STAT5_SIGNALING", adj = c(0,.5))
+text(-5,3,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
+dev.off()
+```
+* KEGG_GLYCOLYSIS_GLUCONEOGENESIS
+```{r}
+#KEGG_GLYCOLYSIS_GLUCONEOGENESIS
+barcodeplot(avp.ivt.tr.res$table$logFC, 
+            index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]], 
+            labels=c("up in poly","up in allo"), 
+              col.bars = "orange",
+            main="KEGG_GLYCOLYSIS_GLUCONEOGENESIS")
+par(new=TRUE)
+plot.new( )
+plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+text(-5,5,"Orange bars: Genes up in expanded allo Treg", adj = c(0,.5))
+text(-5,4,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
+```
+* Barcode plot is exported.
+```{r}
+pdf(file=file.path(getwd(),"FIGDIR","SupplementaryFigure1b_avp.ivt.Barcodeplot_KEGG_GLYCONEO.pdf"), height=3.2, width=6)
+barcodeplot(avp.ivt.tr.res$table$logFC, 
+            index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]], 
+            labels=c("up in poly","up in allo"), 
+              col.bars = "orange")
+par(new=TRUE)
+plot.new( )
+plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+text(-5,4.5,"Orange bars: KEGG_GLYCOLYSIS_GLUCONEOGENESIS", adj = c(0,.5))
+text(-5,3,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
+dev.off()
+```
+
+***
+
 ## SessionInfo
 ```{r, echo=FALSE}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure1e_TregDGEScatter_avp_invitro_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure1_TregDGEScatter_GSEA_avp_invitro_SessionInfo.txt")
 ```
 
 ***
