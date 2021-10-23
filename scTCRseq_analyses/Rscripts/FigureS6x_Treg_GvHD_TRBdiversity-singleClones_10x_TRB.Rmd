@@ -1,0 +1,104 @@
+---
+title: "FigureS6x_Treg_GvHD_TRBdiversity-singleClones_10x_TRB"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::write_bib(.packages(), "FigureS6x_Treg_GvHD_TRBdiversity-singleClones_10x_TRB.packages.bib")
+```
+
+This Rscript is called in the Commands_scTCR_GvHD.sh script
+
+# Data analysis for Figures 6x and 6y  (Labels need to be adjusted)
+
+
+R packages
+
+```{r, warning=FALSE, message=FALSE}
+library(immunarch)
+```
+
+data loading
+
+```{r, warning=FALSE, message=FALSE}
+file_path = "./cellRangerData"
+immdata <- repLoad(file_path)
+```
+
+extracting clone counts
+
+```{r}
+exp_umi <- repExplore(immdata$data, .method = "clones")
+exp_umi
+```
+
+## TCR Diversity
+
+calculating diversity (Simpson Index)
+
+```{r}
+set.seed(42)
+down <- repSample(immdata$data, .method = "downsample")
+sapply(down, nrow)
+div_simp <- repDiversity(down, "inv.simp")
+div_simp$Type <- c(rep("adonor",2),rep("colon",3),rep("liver",3),rep("spleen",3))
+div_simp
+```
+
+defining groups and colors
+
+```{r}
+celltype <- factor(c(rep("d",2), rep("c",3), rep("l",3), rep("s",3)))
+colors <- c(rep("red",2), rep("sienna4",3), rep("skyblue4",3), rep("deeppink",3))
+```
+
+generating the plot for Figure S6X (will remove the error bar in the donor samples, just two samples!)
+
+```{r, fig.width=2, fig.height=3}
+p <- ggplot(div_simp , aes(Type, Value, fill=Type)) 
+p <- p + theme_classic() + theme(panel.grid.major.y = element_line(linetype="dashed", color = "gray")) + theme(legend.position = "none")
+p <- p + geom_bar(stat = "summary", fun = "mean", colour="black", size = .5) 
+p <- p + scale_fill_manual(values = c("red", "sienna4", "skyblue4", "deeppink"))
+p <- p + ggtitle("Clonotype\nDiversity",subtitle = "downsampled (n=33K)") + ylim(0,3400)
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(1), dotsize=2.0, colour="black", binwidth=80) 
+p <- p + stat_summary(fun.data = mean_se, geom = "errorbar", width=.6)
+p <- p + theme(axis.text = element_text(size=12, colour="black"), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+p <- p + ylab("Inverse Simpson index") + xlab("")
+p
+pdf(file="./figures/scTCRxTregDCLS_diversity_invSimp_3.4K.pdf", height=3, width=2)
+p
+dev.off()
+```
+
+## alternative visualization of repertoire overlap 
+used heatmap of Morisita index
+
+```{r}
+imm_ov2 <- repOverlap(immdata$data, .method = "morisita", .verbose = F)
+```
+
+```{r, fig.width=4, fig.height=4}
+vis(imm_ov2, "heatmap2", .color = colorRampPalette(c("navy", "white", "red3"))(50))
+
+pdf(file="./figures/scTCRxTregDCLS_overlap_morista_heatmap.pdf", height=4, width=4)
+vis(imm_ov2, "heatmap2", .color = colorRampPalette(c("navy", "white", "red3"))(50))
+dev.off()
+```
+
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "FigureS6x_Treg_GvHD_TRBdiversity-singleClones_10x_TRB_SessionInfo.txt")
+```
+
+

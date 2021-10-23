@@ -44,6 +44,9 @@ CRDATATRB="${WORKDIR_scTCR}/TRBcellRangerData"
 IADATA="${WORKDIR_scTCR}/immunArchData"
 DATAREFORM="${IADATA}/reformated"
 
+# tab
+
+TAB=$(echo -e "\t")
 
 
 # creating directories
@@ -96,7 +99,6 @@ done
 
 # creating metadata table 
 
-TAB=$(echo -e "\t")
 cat >"${CRDATA}/metadata.txt" <<EOF
 Sample${TAB}Names${TAB}Type${TAB}Rep
 donor_1${TAB}adonor_1${TAB}adonor${TAB}1
@@ -337,267 +339,43 @@ library(rmarkdown)
 render("Figure6j_Treg_GvHD_TRBVanalysis_10x_TRB.Rmd", "html_document")
 q()
 
+# diversity (inverse Simpson) & 
 
+cd ${WORKDIR_scTCR}
+R --no-restore --no-save
+library(rmarkdown)
+render("FigureS6x_Treg_GvHD_TRBdiversity-singleClones_10x_TRB.Rmd", "html_document")
+q()
 
 
+# extracting particular clones from clone table
 
+declare -a CLONES=("TGTGCAGCAAGCGACTATGCCCAGGGATTAACCTTC;TGTGCCAGCGGCCGGGACAGATCCTATGAACAGTACTTC_CAASDYAQGLTF;CASGRDRSYEQYF_TRAV10D;TRBV13-1_NA;NA" \
+"TGTGCTATGAGAGAGGGGAATGCCAATACAGGCAAATTAACCTTT;TGTGCCAGCAGCTCCGCGGGAGGCACCCAGTACTTT_CAMREGNANTGKLTF;CASSSAGGTQYF_TRAV16D-DV11;TRBV3_NA;NA" \
+"TGTGCTGCTGCATCTTCTGGCAGCTGGCAACTCATCTTT;TGTGCCAGCAGGGGACAGAACACAGAAGTCTTCTTT_CAAASSGSWQLIF;CASRGQNTEVFF_TRAV4D-4;TRBV15_NA;NA" \
+"TGTGCTGTGAGGGACCAGGGAGGCAGAGCTCTGATATTT;TGTGCCAGCAGTCTGTTGGGAGGAGTCTTCTTT_CAVRDQGGRALIF;CASSLLGGVFF_TRAV1;TRBV26_NA;NA" \
+"TGTGCTATGGAACGTAATTCTGGGACTTACCAGAGGTTT;TGTGCCAGCAGTATGACTGGGTATGAACAGTACTTC_CAMERNSGTYQRF;CASSMTGYEQYF_TRAV13D-1;TRBV19_NA;NA" \
+"TGTGCAGCAAGCAGATATAACCAGGGGAAGCTTATCTTT;TGTGCCAGCTCTCTCGACGGGGGTTCCTATGAACAGTACTTC_CAASRYNQGKLIF;CASSLDGGSYEQYF_TRAV10;TRBV12-2_NA;NA")
 
+declare -a CLONENAMES=(TRAV10D/TRBV13-1 TRAV16D-DV11/TRBV3 TRAV4D-4/TRBV15 TRAV1/TRBV26 TRAV13D-1/TRBV19 TRAV10/TRBV12-2)
 
-
-
-
-
-
-
-
-
-                      ####################################
-                      #     sequential analysis in R     #
-                      ####################################
-
-#FIGURESDIR=/misc/data/analysis/project_B07/scTCRrepertoire/figures
-#ANALYSISDIR=/misc/data/analysis/project_B07/scTCRrepertoire/analysis
-#CRDATA=/misc/data/analysis/project_B07/scTCRrepertoire/cellRangerData
-
-
-
-
-
-
-rbioc_3-12
-
-
-# load data
-
-library("immunarch")
-file_path = "/misc/data/analysis/project_B07/scTCRrepertoire/cellRangerData"
-immdata <- repLoad(file_path)
-
-head(immdata$data[[1]][c(1:5)])
-
-
-
-# basic stuff
-
-exp_umi <- repExplore(immdata$data, .method = "clones")
-exp_umi
-#            Sample Clones
-# adonor_1 adonor_1   5125
-# adonor_2 adonor_2  19316
-# colon_1   colon_1   6878
-# colon_2   colon_2   5908
-# colon_3   colon_3   5734
-# liver_1   liver_1   5294
-# liver_2   liver_2   4330
-# liver_3   liver_3   3491
-# spleen_1 spleen_1   6287
-# spleen_2 spleen_2   6918
-# spleen_3 spleen_3   5528
-
-p <- vis(exp_umi, .test = FALSE)
-p <- p + scale_fill_manual(values = c("indianred2","red1","sandybrown","tan2","sienna","skyblue1","steelblue1","steelblue","hotpink1","hotpink2","hotpink3"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_cells.pdf", height=4, width=5)
-plot(p)
-dev.off()
-
-exp_vol <- repExplore(immdata$data, .method = "volume")
-p <- vis(exp_vol, .by = c("Names"), .meta = immdata$meta, .test = FALSE)
-p <- vis(exp_vol, .test = FALSE)
-p <- p + scale_fill_manual(values = c("indianred2","red1","sandybrown","tan2","sienna","skyblue1","steelblue1","steelblue","hotpink1","hotpink2","hotpink3"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_volume.pdf", height=4, width=5)
-plot(p)
-dev.off()
-
-
-# imm_top <- repClonality(immdata$data, .method = "top", .head = c(10, 100, 1000, 5000, 25000))
-# imm_top
-# p <- vis(imm_top), .by = c("Names"), .meta = immdata$meta)
-# p <- p + scale_fill_manual(values = c("indianred2","red1","sandybrown","tan2","sienna","skyblue1","steelblue1","steelblue","hotpink1","hotpink2","hotpink3"))
-# pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_top.pdf", height=4, width=5)
-# plot(p)
-# dev.off()
-
-imm_hom <- repClonality(immdata$data,
-  .method = "homeo",
-  .clone.types = c(Small = .0001, Medium = .001, Large = .01, Hyperexpanded = 1)
-)
-imm_hom
-#p <- vis(imm_hom, .order= c(4,5,1,2,3,6,7,8,9,10,11))
-#p <- vis(imm_hom, .order= c("donor_1","donor_2","colon_1","colon_2","colon_3","liver_1","liver_2","liver_3","spleen_1","spleen_2","spleen_3" ))
-p <- vis(imm_hom)
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_clonesizes.pdf", height=4, width=6)
-plot(p)
-dev.off()
-
-# visualize repertoire overlap
-imm_ov1 <- repOverlap(immdata$data, .method = "public", .verbose = F)
-imm_ov2 <- repOverlap(immdata$data, .method = "morisita", .verbose = F)
-
-p <- vis(imm_ov1, .text.size = 2)
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_overlap_public.pdf", height=4, width=4)
-plot(p)
-dev.off()
-
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_overlap_public_circos.pdf", height=4, width=4)
-vis(imm_ov1, "circos")
-dev.off()
-
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_overlap_morista_heatmap.pdf", height=4, width=4)
-vis(imm_ov2, "heatmap2", .color = colorRampPalette(c("navy", "white", "red3"))(50))
-dev.off()
-
-
-# gene usage
-
-# does not work currently, because data is paired - could try to split....
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Compute statistics and visualise them
-# Chao1 diversity measure
-div_chao <- repDiversity(immdata$data, "chao1")
-div_chao
-p <- vis(div_chao, .by = c("Type"), .meta = immdata$meta, .test = FALSE)
-p <- p + scale_fill_manual(values = c("red","sienna", "steelblue", "deeppink"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_diversity_chao1.pdf", height=4, width=4)
-plot(p)
-dev.off()
-
-# Simpson diversity measure
-div_simp <- repDiversity(immdata$data, "inv.simp")
-div_simp
-p <- vis(div_simp, .by = c("Type"), .meta = immdata$meta, .test = FALSE)
-p <- p + scale_fill_manual(values = c("red","sienna", "steelblue", "deeppink"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_diversity_invSimp.pdf", height=4, width=4)
-plot(p)
-dev.off()
-
-# D50 diversity measure
-div_D50 <- repDiversity(immdata$data, "d50")
-div_D50
-p <- vis(div_D50, .by = c("Type"), .meta = immdata$meta, .test = FALSE)
-p <- p + scale_fill_manual(values = c("red","sienna", "steelblue", "deeppink"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_diversity_D50.pdf", height=4, width=4)
-plot(p)
-dev.off()
-
-
-# Rarefaction analysis
-imm_raref <- repDiversity(immdata$data, "raref", .verbose = F)
-p <- vis(imm_raref) 
-p <- p + scale_fill_manual(values = c("indianred2","red1","sandybrown","tan2","sienna","skyblue1","steelblue1","steelblue","hotpink1","hotpink2","hotpink3"))
-p <- p + scale_colour_manual(values = c("indianred2","red1","sandybrown","tan2","sienna","skyblue1","steelblue1","steelblue","hotpink1","hotpink2","hotpink3"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_diversity_raref.pdf", height=8, width=8)
-plot(p)
-dev.off()
-
-#same after downsampling
-
-down <- repSample(immdata$data, .method = "downsample", .n = 3400)
-div_chao <- repDiversity(down, "chao1")
-div_simp <- repDiversity(down, "inv.simp")
-div_D50 <- repDiversity(down, "d50")
-imm_raref <- repDiversity(down, "raref", .verbose = F)
-
-p <- vis(div_chao, .by = c("Type"), .meta = immdata$meta, .test = FALSE)
-p <- p + scale_fill_manual(values = c("red","sienna", "steelblue", "deeppink"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_diversity_chao1_3.4K.pdf", height=3, width=2)
-plot(p)
-dev.off()
-
-p <- vis(div_simp, .by = c("Type"), .meta = immdata$meta, .test = FALSE, .points = FALSE, .errorbar.width = 1)
-p <- p + scale_fill_manual(values = c("red","sienna", "steelblue", "deeppink"))
-p <- p + ggtitle("Clonotype\nDiversity",subtitle = "")
-p <- p + geom_jitter(width = 0.25, height = 0, color="black", size=1)
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_diversity_invSimp_3.4K.pdf", height=3, width=2)
-plot(p)
-dev.off()
-
-p <- vis(div_D50, .by = c("Type"), .meta = immdata$meta, .test = FALSE)
-p <- p + scale_fill_manual(values = c("red","sienna", "steelblue", "deeppink"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_diversity_D50_3.4K.pdf", height=3, width=2)
-plot(p)
-dev.off()
-
-p <- vis(imm_raref) 
-p <- p + scale_fill_manual(values = c("indianred2","red1","sandybrown","tan2","sienna","skyblue1","steelblue1","steelblue","hotpink1","hotpink2","hotpink3"))
-p <- p + scale_colour_manual(values = c("indianred2","red1","sandybrown","tan2","sienna","skyblue1","steelblue1","steelblue","hotpink1","hotpink2","hotpink3"))
-pdf(file="/misc/data/analysis/project_B07/scTCRrepertoire/figures/scTCRxTregDCLS_diversity_raref_3.4K.pdf", height=8, width=8)
-plot(p)
-dev.off()
-
-
-
-
-
-
-
-
-
-
-
-
-
-# extracting barcodes for visualization in UMAP etc.
-
-# TOP clonotypes in tissues:
-
-declare a TOPCLONES=("TGTGCAGCAAGCGACTATGCCCAGGGATTAACCTTC;TGTGCCAGCGGCCGGGACAGATCCTATGAACAGTACTTC" "TGTGCTATGAGAGAGGGGAATGCCAATACAGGCAAATTAACCTTT;TGTGCCAGCAGCTCCGCGGGAGGCACCCAGTACTTT" "TGTGCTGCTGCATCTTCTGGCAGCTGGCAACTCATCTTT;TGTGCCAGCAGGGGACAGAACACAGAAGTCTTCTTT")
-declare a CLONOTYPES=("TRAV10D_TRBV13-1" "TRAV16D-DV11_TRBV3" "TRAV4D-4_TRBV15")
-declare a FILENAMES=(donor_1 \
-donor_2 \
-colon_1 \
-colon_2 \
-colon_3 \
-liver_1 \
-liver_2 \
-liver_3 \
-spleen_1 \
-spleen_2 \
-spleen_3)
-
+echo $'Clone\tdonor_1\tdonor_2\tcolon_1\tcolon_2\tcolon_3\tliver_1\tliver_2\tliver_3\tspleen_1\tspleen_2\tspleen_3' > ${ANALYSISDIR}/scTCRxTregDCLS.selected.clonotypeTable.txt
 COUNT=0
-for CLONE in "${TOPCLONES[@]}"
+for CLONE in "${CLONES[@]}"
 do
-TYPE=${CLONOTYPES[$COUNT]}
-echo $'sample\tbarcodes'> ${ANALYSISDIR}/${TYPE}.barcodes.txt
-	for NAME in "${FILENAMES[@]}" ; do
-	awk -v "key=$NAME" 'BEGIN{OFS="\t"}{print key, $18}' <(grep -w ${CLONE} ${IADATA}/${NAME}.immunarch.txt) >> ${ANALYSISDIR}/${TYPE}.barcodes.txt
-	done
+NAME=${CLONENAMES[$COUNT]}
+echo $NAME
+echo "${NAME}${TAB}$(grep ${CLONE} ${ANALYSISDIR}/scTCRxTregDCLS.clonotypeTable.txt | cut -f 2-12)" >>${ANALYSISDIR}/scTCRxTregDCLS.selected.clonotypeTable.txt
 COUNT=$((COUNT+=1))                       
 done
 
+# frequency of selected clones across tissues
 
-
-
-
-
-
-
-
-# paired data
-
-library("immunarch")
-file_path = "/misc/data/analysis/project_B07/scTCRrepertoire/cellRangerData"
-tcrdata <- repLoad(file_path, .mode = "paired")
-
-
-
+cd ${WORKDIR_scTCR}
+R --no-restore --no-save
+library(rmarkdown)
+render("Figure6g_Treg_GvHD_examplesCloneDistribution_10x_TRB.Rmd", "html_document")
+q()
 
 
 
