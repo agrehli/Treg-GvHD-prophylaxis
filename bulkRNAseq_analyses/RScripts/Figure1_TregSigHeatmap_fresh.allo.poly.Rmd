@@ -1,0 +1,267 @@
+---
+title: "Treg Signature Genes in freshly isolated, allo and poly expanded Treg - Heatmap visualizing Expression Levels"
+subtitle: "Log2-scaled reads per kilobase per million (RPKM) based on group average values on the unlogged scale are represented in a heatmap."
+author: "David Dittmar"
+date: "`r Sys.Date()`"
+bibliography: Aubert_et_al._2020.bib
+nocite: '@*'
+output:
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide 
+---
+
+***
+
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+# ...packages.bib file is also written here
+knitr::write_bib(.packages(), "Figure1_TregSigHeatmap_fresh.allo.poly_packages.bib")
+```
+
+```{r}
+# Load required counts, metadata and annotaion RDS files
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
+stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+```
+
+```{r, include=FALSE}
+# Load required libraries
+library(edgeR)
+library(AnnotationDbi)
+library(org.Mm.eg.db) #for mouse
+library(gplots)
+```
+* First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
+* This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
+
+***
+
+# Data Preparation
+* For the analysis, the data and metadata have to be prepared and properly annotated.
+
+### Annotation Data Frame
+* An annotation data frame with 4 columns is constructed.
+* The additional EntrezID column is required for possible downstream pathway analyses or annotation operations.
+```{r}
+genes.df<-as.data.frame(strsplit2(stid,"[$]"))
+colnames(genes.df)<-c("EnsemblID","GeneSymbol","Length","GeneType")
+genes.df$EnsemblID<-as.character(genes.df$EnsemblID)
+genes.df$GeneSymbol<-as.character(genes.df$GeneSymbol)
+genes.df$Length<-as.numeric(as.character(genes.df$Length))
+genes.df$GeneType<-as.character(genes.df$GeneType)
+genes.df$EntrezID<- mapIds(org.Mm.eg.db,
+                    keys=genes.df$GeneSymbol,
+                    column="ENTREZID",
+                    keytype="SYMBOL",
+                    multiVals="first")
+rownames(genes.df)<-stid
+head(genes.df, n=5L)
+#See if the gene length values are still as they should, so this should yield an empty vector
+which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
+```
+
+## Subsetting Index
+* In this analysis, we focus on *in vitro* expanded Treg (allo and poly) as well as freshly isolated Treg.
+* A subsetting index is generated accordingly.
+```{r}
+iv.ind<-which(grepl("wt_S_pos",metad.m.rm$grp)|(grepl("d",metad.m.rm$org)&(grepl(c(1),metad.m.rm$tx198_No)|grepl(c(2),metad.m.rm$tx198_No)|grepl(c(4),metad.m.rm$tx198_No)|grepl(c(5),metad.m.rm$tx198_No)|grepl(c(10),metad.m.rm$tx198_No)|grepl(c(12),metad.m.rm$tx198_No))))
+iv.ind
+```
+
+## Counts
+* Here, the comprehensive counts data frame is reduced using the subsetting index.
+```{r}
+#Subsetting the respective counts object (counts.m.rm)
+counts.iv<-counts.m.rm[,iv.ind]
+ncol(counts.iv)
+```
+
+## Metadata
+* The metadata has to be reduced accordingly. 
+* The original order of samples is introduced for downstream re-ordering of the read count table.
+* A graspable group variable is introduced, as well.
+```{r, echo= FALSE}
+metad.iv<-metad.m.rm[iv.ind,]
+metad.iv$orig.ord<-1:nrow(metad.iv)
+metad.iv<-metad.iv[order(metad.iv$org),]
+metad.iv$group<-c(rep(c("allo","poly"),6),rep("fresh",4))
+counts.ind<-metad.iv$orig.ord
+metad.iv
+#the group variable for all later assignments of colors/pchs.
+group.iv<-factor(as.character(metad.iv$group), levels = c("fresh", "allo",  "poly"))
+group.iv
+```
+
+### Re-ordering Counts Data Frame Columns
+* Here, read counts are re-ordered according to the metadata object.
+```{r}
+counts.iv.ord<-counts.iv[,counts.ind]
+head(counts.iv.ord)
+counts.iv<-counts.iv.ord
+rm(counts.iv.ord)
+```
+
+## Consistency Check
+* In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
+```{r}
+if (sum(colnames(counts.iv)==metad.iv$sample_ID)==length(iv.ind)) {
+  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+}else {
+  print("Something is inconsistent, check the code above for errors during subsetting!")
+}
+```
+
+## DGE List Object
+* A DGEList object is generated, the main class of the edgeR package. 
+* For full functionality, the counts.ivt, group.avp.ivt and genes.df variables are used to do so.
+```{r}
+dgel.iv<-DGEList(counts = counts.iv, group = group.iv, genes = genes.df)
+head(dgel.iv$counts, n=4L)
+head(dgel.iv$samples, n=4L)
+head(dgel.iv$genes, n=4L)
+```
+
+### Exclusion of Rare Transcripts
+* The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
+* Only genes fulfilling that criterion are kept and also normalization factors are calculated.
+```{r}
+keep.iv <- filterByExpr(dgel.iv)
+dgel.iv <- dgel.iv[keep.iv, , keep.lib.sizes=FALSE]
+dgel.iv <- calcNormFactors(dgel.iv)
+table(keep.iv)
+dgel.iv$samples
+```
+
+## Generation of RPKM variables per Group
+* Hereafter, RPKM values (log-scaled with prior.count = 2) are computed per group based on group average values on the unlogged scale.
+* Using cbind.data.frame(), the GeneSymbol column is added to the dataframe, preventing conversion to character columns.
+```{r}
+# log rpkmByGroup
+iv.log.rpkmByGroup<-rpkmByGroup(dgel.iv, normalized.lib.sizes = TRUE, log = TRUE, prior.count = 2)
+# GeneSymbol column
+iv.log.rpkmByGroup<-cbind.data.frame(iv.log.rpkmByGroup, GeneSymbol=strsplit2(rownames(iv.log.rpkmByGroup), split= "$", fixed = T)[,2])
+```
+
+***
+
+# Log-scaled RPKM Heatmap representing Genes of Interest (GOI)
+
+## Definition of Genes of GOI
+* Genes of interest defining Treg in general are defined in this step.
+* Approach: Intersection of "Treg-meta-signature" and "Immnav-Treg-signature" by Aubert et al. 2020, extended with genes Itgb7 and Sell.
+```{r}
+# Reading in the intersection of "Treg-meta-signature" and "Immnav-Treg-signature" published by Aubert et al. 2020
+aubert.treg.intersect<-readRDS(file = file.path(getwd(),"PUBDATDIR/aubert.treg.intersect.rds"))
+# Extension of the GOI by Itgb7 and Sell
+aubert.treg.intersect<-c(aubert.treg.intersect,"Itgb7","Sell")
+aubert.treg.intersect
+```
+* Also export GOI as tab-delimited text file.
+```{r}
+write.table(x = aubert.treg.intersect,
+            file = "./PUBDATDIR/aubert.treg.intersect.extended.txt",
+            col.names = "GeneSymbol",
+            quote = FALSE,
+            row.names = FALSE)
+```
+
+## Heatmap with log-scaled RPKM for GOI
+* A pre-filtering for log2(RPKM) values greater than 1 for either allo or poly Treg is performed.
+* Genes remaining in the analysis and intersecting with the extended Treg Signature by Aubert et al. 2020 are represented as a heatmap.
+```{r, fig.height=4.5, fig.width=3, warning=FALSE}
+# Pre-filtering and GOI intersection
+iv.log.rpkmByGroup.filtered<-subset(iv.log.rpkmByGroup, allo > 1 | poly > 1)
+ind.aubert<-iv.log.rpkmByGroup.filtered$GeneSymbol%in%aubert.treg.intersect
+aubert.hm.matrix<-data.matrix(iv.log.rpkmByGroup.filtered[ind.aubert,1:3])
+# The actual heatmap.2 plot command
+# Orientation for plot elements: (1=heatmap, 2=row dendogram, 3=col dendogram, 4= key )
+heatmap.2(x = aubert.hm.matrix,
+          Rowv=T,
+          Colv=NA,
+          distfun = function(c){dist(c, method = "manhattan")},
+          hclustfun=function(c){hclust(c, method="ward.D")},
+          dendrogram = "row",
+          symm = FALSE,
+          na.rm=TRUE,
+          col = hcl.colors(30, palette = "ag_Sunset", rev=F),
+          margins=c(1.2,2.5),
+          cexRow = 1/log10(nrow(aubert.hm.matrix)),
+          labRow = as.expression(lapply(iv.log.rpkmByGroup.filtered[ind.aubert,4],function(a) bquote(italic(.(a))))),
+          srtRow = 0,
+          offsetRow = 0,
+          labCol=as.expression(lapply(colnames(aubert.hm.matrix), function(a) bquote(italic(.(a))))),
+          srtCol = 0,
+          offsetCol = 0,
+          adjCol = c(0.45,0.5),
+          #cexCol = 1,
+          cexCol=1,
+          key=T,
+          symbreaks = FALSE,
+          symkey = FALSE,
+          keysize = 0.005,
+          key.par = list(mai=c(0.1,0.1,0.1,0.1)),
+          key.title = "none", 
+          key.xlab = expression(log[2]*"("*RPKM*")"),
+          density.info="none",
+          trace = "none", 
+          lmat = matrix(c(4,2,3,1),nrow = 2, ncol = 2),
+          lhei=c(1,3),
+          lwid = c(0.25, 0.3))
+```
+
+* The heatmap is also exported into the figure directory.
+```{r message=FALSE, warning=FALSE}
+pdf(file = "./FIGDIR/Figure1f_TregSigHeatmap_fresh.allo.poly.pdf",height = 4.5,width = 3)
+heatmap.2(x = aubert.hm.matrix,
+          Rowv=T,
+          Colv=NA,
+          distfun = function(c){dist(c, method = "manhattan")},
+          hclustfun=function(c){hclust(c, method="ward.D")},
+          dendrogram = "row",
+          symm = FALSE,
+          na.rm=TRUE,
+          col = hcl.colors(30, palette = "ag_Sunset", rev=F),
+          margins=c(1.2,2.5),
+          cexRow = 1/log10(nrow(aubert.hm.matrix)),
+          labRow = as.expression(lapply(iv.log.rpkmByGroup.filtered[ind.aubert,4],function(a) bquote(italic(.(a))))),
+          srtRow = 0,
+          offsetRow = 0,
+          labCol=as.expression(lapply(colnames(aubert.hm.matrix), function(a) bquote(italic(.(a))))),
+          srtCol = 0,
+          offsetCol = 0,
+          adjCol = c(0.45,0.5),
+          cexCol = 1,
+          key=T,
+          symbreaks = FALSE,
+          symkey = FALSE,
+          keysize = 0.005,
+          key.par = list(mai=c(0.1,0.1,0.1,0.1)),
+          key.title = "none", 
+          key.xlab = expression(log[2]*"("*RPKM*")"),
+          density.info="none",
+          trace = "none", 
+          lmat = matrix(c(4,2,3,1),nrow = 2, ncol = 2),
+          lhei=c(1,3),
+          lwid = c(0.25, 0.3))
+dev.off()
+```
+
+***
+
+# SessionInfo
+```{r, echo=FALSE, warning=FALSE}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure1_TregSigHeatmap_fresh.allo.poly_SessionInfo.txt")
+```
+
+***
+
+# Bibliography
