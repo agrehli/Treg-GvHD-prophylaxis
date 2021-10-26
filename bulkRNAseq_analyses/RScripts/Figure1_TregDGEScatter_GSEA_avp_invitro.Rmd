@@ -20,15 +20,16 @@ output:
 ```{r setup, include=FALSE}
 # Set global chunk options
 knitr::opts_chunk$set(echo = TRUE, include = TRUE)
-knitr::write_bib(.packages(), "Figure1_TregDGEScatter_GSEA_avp_invitro_packages.bib")
 knitr::opts_knit$set(root.dir = normalizePath(".."))
+# ...packages.bib file is also written here
+knitr::write_bib(.packages(), "Figure1_TregDGEScatter_GSEA_avp_invitro_packages.bib") # check .bib file generation because sometimes only baseR is in there. putting it at the end did not make a difference
 ```
 
 ```{r}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS(file.path(getwd(),"RCTDIR/counts.m.rm.2021-06-09.rds"))
-metad.m.rm<-readRDS(file.path(getwd(),"METADIR/metad.m.rm.2021-06-09.rds"))
-stid<-readRDS(file.path(getwd(),"METADIR/stid_2020-12-21.rds"))
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
+stid<-readRDS("./METADIR/stid_2020-12-21.rds")
 ```
 
 ```{r, include=FALSE}
@@ -44,10 +45,10 @@ library(ggrepel)
 
 ***
 
-## Data Preparation
+# Data Preparation
 * For the analysis, the data and metadata have to be prepared and properly annotated.
 
-### Annotation Data Frame
+## Annotation Data Frame
 * An annotation data frame with 4 columns is constructed.
 * The additional EntrezID column is required for compatibility with downstream pathway enrichment analyes.
 ```{r}
@@ -68,14 +69,14 @@ head(genes.df, n=5L)
 which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
 ```
 
-### Subsetting Index
+## Subsetting Index
 * In this analysis, we focus on *in vitro* expanded Treg (allo and poly).
 ```{r, include=FALSE}
 avp.ivt.ind<-grepl("d",metad.m.rm$org)
 avp.ivt.ind
 ```
 
-### Counts Data Frame
+## Counts Data Frame
 * Here, the comprehensive counts data frame is reduced using the subsetting index.
 ```{r}
 #Subsetting the respective counts object (counts.m.rm)
@@ -84,7 +85,7 @@ paste(ncol(counts.ivt),"samples are selected:")
 colnames(counts.ivt)
 ```
 
-### Metadata Data Frame
+## Metadata Data Frame
 * The metadata has to be reduced accordingly. 
 * The original order of samples is introduced for downstream re-ordering of the read count table.
 ```{r}
@@ -98,7 +99,7 @@ group.avp.ivt<-factor(as.character(metad.avp.ivt$treat))
 group.avp.ivt
 ```
 
-### Re-ordering Counts Data Frame Columns
+## Re-ordering Counts Data Frame Columns
 * Here, read counts are re-ordered according to the metadata object.
 ```{r}
 counts.avp.ivt.ord<-counts.ivt[,counts.avp.ivt.ind]
@@ -107,14 +108,17 @@ counts.ivt<-counts.avp.ivt.ord
 rm(counts.avp.ivt.ord)
 ```
 
-### Consistency Check
+## Consistency Check
 * In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
 ```{r}
-colnames(counts.ivt)==metad.avp.ivt$sample_ID
-sum(colnames(counts.ivt)==metad.avp.ivt$sample_ID) 
+if (sum(colnames(counts.ivt)==metad.avp.ivt$sample_ID)==length(avp.ivt.ind)) {
+  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+}else {
+  print("Something is inconsistent, check the code above for errors during subsetting!")
+}
 ```
 
-### DGE List Object
+## DGE List Object
 * A DGEList object is generated, the main class of the edgeR package. 
 * For full functionality, the counts.ivt, group.avp.ivt and genes.df variables are used to do so.
 ```{r}
@@ -124,7 +128,7 @@ head(dgel.avp.ivt$samples, n=4L)
 head(dgel.avp.ivt$genes, n=4L)
 ```
 
-### Exclusion of Rare Transcripts
+## Exclusion of Rare Transcripts
 * The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
 * Only genes fulfilling that criterion are kept and also normalization factors are calculated.
 ```{r}
@@ -137,10 +141,10 @@ head(dgel.avp.ivt$samples, n=4L)
 
 ***
 
-## Differential Gene Expression (DGE) analysis
+# Differential Gene Expression (DGE) analysis
 * Differential Gene Expression (DGE) is performed in the following part.
 
-### Design for DGE
+## Design for DGE
 * Hereafter, a design is created that contains parameters that are of analytic interest as well as a blocking factor for the independent isolations of *in vitro* expanded Treg.
 ```{r}
 # Blocking factor
@@ -151,19 +155,19 @@ colnames(avp.ivt.design.dge)<- c("allo","poly","tx198_10","tx198_12","tx198_2","
 avp.ivt.design.dge
 ```
 
-### Dispersion Estimation
+## Dispersion Estimation
 * Hereafter, the dispersion is estimated.
 ```{r}
 dgel.avp.ivt<-estimateDisp(dgel.avp.ivt,design=avp.ivt.design.dge,robust=TRUE)
 ```
 
-### GLM Fitting
+## GLM Fitting
 * Fitting genewise glms (generalized linear model) for the constructed design.
 ```{r}
 avp.ivt.fit<-glmQLFit(y = dgel.avp.ivt,design = avp.ivt.design.dge)
 ```
 
-### DGE for Contrast of Interest (COI)
+## DGE for Contrast of Interest (COI)
 * In this analysis, the differences between allo and poly expanded Treg are of interest. 
 * Thus, the contrast of interest is "allo - poly" for the DGE analysis.
 ```{r}
@@ -174,11 +178,11 @@ avp.ivt.tr.res<-glmTreat(avp.ivt.fit,contrast=avp.ivt.con, lfc = log2(1.5))
 avp.ivt.tr.qstat<-topTags(avp.ivt.tr.res,n=Inf)
 ```
 
-#### Exporting DGE Statistics
+### Exporting DGE Statistics
 * The data frame contained in the glmTreat function results is stored for direct access.
 ```{r}
 write.table(x = avp.ivt.tr.qstat$table,
-            file = file.path(getwd(),"ANALDIR/Figure1e_TregDGE_avp_invitro_FC1.5.txt"),
+            file = "./ANALDIR/Figure1e_TregDGE_avp_invitro_FC1.5.txt",
             quote=FALSE, 
             sep = "\t",
             col.names = TRUE,
@@ -187,10 +191,10 @@ write.table(x = avp.ivt.tr.qstat$table,
 
 ***
 
-## DGE Visualization
+# DGE Visualization
 * Hereafter, DEGs are visualized *via* a scatter plot.
 
-### Data Preparation
+## Data Preparation
 * The data is filtered based on logCPM and logRPKM thresholds.
 * Necessary data transformations for the scatter plot are carried out as well.
 ```{r}
@@ -211,31 +215,31 @@ nrow(avp.ivt.tr.qstat.scat.filt.UP)
 nrow(avp.ivt.tr.qstat.scat.filt.DN)
 ```
 
-### Exporting UP and DN regulated Genes
+## Exporting UP and DN regulated Genes
 * Significantly up and down regulated genes are exported in the following.
 ```{r}
 #extract filtered gene lists
 #dir.create(file.path(getwd(),"ANALDIR/DGE/AVP/invitro/"), showWarnings = F, recursive = T)
 write.table(rownames(avp.ivt.tr.qstat.scat.filt.UP),
-            file = file.path(getwd(),"ANALDIR/Figure1e_TregDGE_avp_invitro.filt.UP.txt"), #evtl ".sig"
+            file = "./ANALDIR/Figure1e_TregDGE_avp_invitro.filt.sig.UP.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 write.table(rownames(avp.ivt.tr.qstat.scat.filt.DN),
-            file = file.path(getwd(),"ANALDIR/Figure1e_TregDGE_avp_invitro.filt.DN.txt"),
+            file = "./ANALDIR/Figure1e_TregDGE_avp_invitro.filt.sig.DN.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 ```
 
-### Scatterplot
+## Scatterplot
 
-#### Definition of Genes of Interest (GOI)
+### Definition of Genes of Interest (GOI)
 * Genes of interest defining Treg in general are defined in this step.
 * Approach: Intersection of "Treg-meta-signature" and "Immnav-Treg-signature" by Aubert et al. 2020, extended with genes Itgb7 and Sell.
 ```{r}
 # Reading in the intersection of "Treg-meta-signature" and "Immnav-Treg-signature" published by Aubert et al. 2020
-aubert.treg.intersect<-readRDS(file = file.path(getwd(),"PUBDATDIR/aubert.treg.intersect.rds"))
+aubert.treg.intersect<-readRDS(file = "./PUBDATDIR/aubert.treg.intersect.rds")
 # Extension of the GOI by Itgb7 and Sell
 aubert.treg.intersect<-c(aubert.treg.intersect,"Itgb7","Sell")
 aubert.treg.intersect
@@ -249,7 +253,7 @@ write.table(x = aubert.treg.intersect,
             row.names = FALSE)
 ```
 
-#### Scatter Plot with GOI highlighted (Figure 1 e)
+### Scatter Plot with GOI highlighted (Figure 1 e)
 * The scatter plot object is generated using the following code.
 * At the same time, the figure is exported.
 ```{r, fig.height=2.6, fig.width=2.2, out.width="20%", warning=FALSE,echo=TRUE}
@@ -296,7 +300,7 @@ avp.ivt.scat <- ggplot(avp.ivt.tr.qstat.scat.filt) +
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank())
-pdf(file=file.path(getwd(),"FIGDIR","Figure1e_TregDGEScatter_avp_invitro.pdf.pdf"), height=2.6, width=2.2)
+pdf(file="./FIGDIR/Figure1e_TregDGEScatter_avp_invitro.pdf.pdf", height=2.6, width=2.2)
 avp.ivt.scat
 dev.off()
 ```
@@ -308,12 +312,12 @@ avp.ivt.scat
 
 ***
 
-## Pathway enrichment analysis for Kegg and Hallmark gene sets
+# Pathway enrichment analysis for Kegg and Hallmark gene sets
 * Following, gene set enrichment analyses (GSEA) for Hallmark and Kegg pathway associated genes based on the comparison of allo and poly Treg are performed.
 * Using camera, we look whether pathways from kegg or hallmark collections are enriched in our regulated genes.
 * Barcode plots are used to visualize the results across the logFC ranking of genes based on the comparison of allo and poly Treg.
 
-### GSEA for Hallmark and Kegg gene sets
+## GSEA for Hallmark and Kegg gene sets
 * Hallmark gene sets are retrieved and gene identifiers for respective sets are converted into a list of indices.
 * GSEA is performed using the "camera.DGEList" function on the DGEList object with the index and contrast specified previously.
 ```{r}
@@ -335,7 +339,7 @@ gst.camera <- camera.DGEList(dgel.avp.ivt,index=K.ind,design=avp.ivt.design.dge,
 gst.camera
 ```
 
-### Barcode plot visualizations
+## Barcode plot visualizations (Supplementary Figure 1 b)
 * Barcode plots representing the results for selected Hallmark and Kegg gene sets.
 * HALLMARK_HYPOXIA
 ```{r, fig.height=3.2,fig.width=6}
@@ -353,7 +357,7 @@ text(-5,4,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
 ```
 * Barcodeplot is exported.
 ```{r}
-pdf(file=file.path(getwd(),"FIGDIR","SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_HYPOXIA.pdf"), height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_HYPOXIA.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=H.ind[["HALLMARK_HYPOXIA"]], 
             labels=c("up in poly","up in allo"), 
@@ -381,7 +385,7 @@ text(-5,4,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
 ```
 * Barcode plot is exported.
 ```{r}
-pdf(file=file.path(getwd(),"FIGDIR","SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_IL2_STAT5.pdf"), height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_IL2_STAT5.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=H.ind[["HALLMARK_IL2_STAT5_SIGNALING"]], 
             labels=c("up in poly","up in allo"), 
@@ -394,7 +398,7 @@ text(-5,3,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
 dev.off()
 ```
 * KEGG_GLYCOLYSIS_GLUCONEOGENESIS
-```{r}
+```{r,fig.height=3.2,fig.width=6}
 #KEGG_GLYCOLYSIS_GLUCONEOGENESIS
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]], 
@@ -409,7 +413,7 @@ text(-5,4,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
 ```
 * Barcode plot is exported.
 ```{r}
-pdf(file=file.path(getwd(),"FIGDIR","SupplementaryFigure1b_avp.ivt.Barcodeplot_KEGG_GLYCONEO.pdf"), height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_KEGG_GLYCONEO.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]], 
             labels=c("up in poly","up in allo"), 
@@ -424,12 +428,12 @@ dev.off()
 
 ***
 
-## SessionInfo
-```{r, echo=FALSE}
+# SessionInfo
+```{r, echo=FALSE, warning=FALSE}
 sessionInfo(package = NULL)
 writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure1_TregDGEScatter_GSEA_avp_invitro_SessionInfo.txt")
 ```
 
 ***
 
-## Bibliography
+# Bibliography
