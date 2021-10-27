@@ -1,0 +1,69 @@
+---
+title: "Figure2c_Survival"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::write_bib(.packages(), "Figure2c_Survival.packages.bib")
+```
+
+# Survival in BMT experiments
+
+R packages
+
+```{r, message=FALSE, warnings=FALSE}
+library(survival)
+library(survminer)
+```
+
+data loading and fitting
+
+```{r}
+surv.data <- read.delim("./data/Fig2_survival.txt", header=TRUE)
+surv.data$group <- factor(surv.data$group,levels = c("BMonly","noTreg","alloTreg","polyTreg"))
+fit <- survfit(Surv(time, event) ~ group, data = surv.data)
+```
+
+statistics (pairwise comparisons using Log-Rank test)
+
+```{r}
+res <- pairwise_survdiff(Surv(time, event) ~ group, data = surv.data)
+res
+symnum(res$p.value, cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+   symbols = c("****", "***", "**", "*", " "),
+   abbr.colnames = FALSE, na = "")
+```
+
+basic plot
+
+```{r, fig.width=6, fig.height=4.5, warning=FALSE}
+p <- ggsurvplot(fit, 
+           data = surv.data,
+           palette = c("gray","black","darkorange","steelblue3"),
+           break.time.by=7)
+p
+```
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2c_Survival_SessionInfo.txt")
+```
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 ---
-title: "Figure1b_TregCellCutureExpansion"
+title: "Figure1b_TregCellCultureExpansion"
 author: Michael Rehli
 output: 
   html_document:
@@ -13,7 +13,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::write_bib(.packages(), "Figure1b_TregCellCutureExpansion.packages.bib")
+knitr::write_bib(.packages(), "Figure1b_TregCellCultureExpansion.packages.bib")
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 ```
 

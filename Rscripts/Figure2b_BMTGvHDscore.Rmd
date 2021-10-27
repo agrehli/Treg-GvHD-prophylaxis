@@ -1,0 +1,99 @@
+---
+title: "Figure2b_BMTGvHDscore"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::write_bib(.packages(), "Figure2b_BMTGvHDscore.packages.bib")
+```
+
+# GvHD scores in BMT experiments
+
+R packages
+
+```{r, message=FALSE, warnings=FALSE}
+library(ggplot2)
+library(scales)
+library(tidyr)
+```
+
+data formating 
+
+```{r}
+score.data <- read.delim("./data/Fig2_GvHDscore.txt", header=TRUE)
+score.df <- score.data %>% gather(key = "animal", value = "scores", -1)
+score.df$type <- c(rep("BMonly",285), rep("noTreg",285), rep("alloTreg",304), rep("polyTreg",304))
+score.df$type <- factor(score.df$type,levels = c("BMonly","noTreg","alloTreg","polyTreg"))
+score.df
+```
+generating the plot for Figure 2b
+
+```{r, fig.width=7.5, fig.height=4.5, warning=FALSE}
+p <- ggplot(score.df, aes(x=time, y=scores, group=type, color=type)) 
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 4, position=position_dodge(.9))
+p <- p + stat_summary(fun = mean, geom = "point", size=2.5, position=position_dodge(.9))
+p <- p + stat_summary(fun = mean, geom = "line", size=.5, position=position_dodge(.9))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), axis.text.y = element_text(color="black"), text = element_text(size = 24))
+p <- p + scale_color_manual(values = c("gray","black","darkorange","steelblue3")) + scale_x_continuous(breaks = c(0,7,14,21,28,35,42,49,56,63), expand = c(0.01,0)) + scale_y_continuous(expand = c(0.02,0))
+p <- p + labs(title="",x="Time after alloBMT (d)", y = "Clinical GvHD scores")
+p
+#pdf("./figures/Figure2b_BMTGvHDscore.pdf", height=4.5, width=7.5)
+#p
+#dev.off()
+
+```
+
+# Statistics
+
+1. are allo and poly different from noTreg
+2. are allo and poly different from each other
+3. are all others different from BMonly
+
+run ANOVA with Tukey post-hoc for each time point
+
+```{r}
+myTukey <- score.data$time
+myAnova <- score.data$time
+for (i in score.data$time) {
+test.data <- score.df[ which(score.df$time==i),]  
+test.res.aov <- aov(scores~type, data=test.data)
+myAnova[i] <- summary(test.res.aov)
+myTukey[i] <- TukeyHSD(test.res.aov)
+}
+```
+
+```{r}
+for (i in score.data$time) {
+print(c(i, myAnova[i]), row.names = FALSE)
+}
+```
+
+```{r}
+for (i in score.data$time) {
+print(c(i, myTukey[i]))
+}
+```
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2b_BMTGvHDscore_SessionInfo.txt")
+```
+
+
+
+
+
+
+
+
