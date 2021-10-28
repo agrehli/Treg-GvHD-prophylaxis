@@ -1,0 +1,2449 @@
+---
+title: "Figure 3 and 4 related UMAP, Heatmaps, GSEA and Gene Expression Barplots"
+subtitle: "All figures related to Figure 3 and 4 as well as respective supplementary figures based on the complete set of bulkRNAseq samples are covered in this .Rmd file"
+author: "David Dittmar"
+date: "`r Sys.Date()`"
+bibliography: metascape.bib
+nocite: '@*'
+output:
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide 
+---
+
+***
+
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+# ...packages.bib file is also written here
+knitr::write_bib(.packages(), "Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
+```
+
+```{r}
+# Load required counts, metadata and annotaion RDS files
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
+stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+```
+
+```{r, include=FALSE}
+# Load required libraries
+library(edgeR)
+library(AnnotationDbi)
+library(org.Mm.eg.db) #for mouse
+library(ggplot2)
+library(ggrepel)
+library(dplyr)
+library(tibble)
+library(reshape2)
+library(scales)
+library(readr)
+library(pheatmap)
+library(readxl)
+library(cowplot)
+library(gplots)
+```
+* First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
+* This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
+
+***
+
+# Data Preparation
+* For the analysis, the data and metadata have to be prepared and properly annotated.
+
+### Annotation Data Frame
+* An annotation data frame with 4 columns is constructed.
+* The additional EntrezID column is required for possible downstream pathway analyses or annotation operations.
+```{r}
+genes.df<-as.data.frame(strsplit2(stid,"[$]"))
+colnames(genes.df)<-c("EnsemblID","GeneSymbol","Length","GeneType")
+genes.df$EnsemblID<-as.character(genes.df$EnsemblID)
+genes.df$GeneSymbol<-as.character(genes.df$GeneSymbol)
+genes.df$Length<-as.numeric(as.character(genes.df$Length))
+genes.df$GeneType<-as.character(genes.df$GeneType)
+genes.df$EntrezID<- mapIds(org.Mm.eg.db,
+                    keys=genes.df$GeneSymbol,
+                    column="ENTREZID",
+                    keytype="SYMBOL",
+                    multiVals="first")
+rownames(genes.df)<-stid
+head(genes.df, n=5L)
+#See if the gene length values are still as they should, so this should yield an empty vector
+which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
+```
+
+## Subsetting Index
+* In this analysis, we focus on resident Treg and donor Treg re-isolated from recipient organs 7d after transfer (BMT w/o Tconv & BMT w Tconv).
+* A subsetting index is generated accordingly.
+```{r}
+pcbd.ind<-grepl(pattern = "the",x=metad.m.rm$appl)|grepl(pattern = "P",x=metad.m.rm$org)|grepl(pattern = "I",x=metad.m.rm$org)|grepl(pattern = "B",x=metad.m.rm$org)
+pcbd.ind<-pcbd.ind==F
+print(paste(sum(pcbd.ind),"samples enter the analysis!"))
+```
+
+## Counts
+* Here, the comprehensive counts data frame is reduced using the subsetting index.
+```{r}
+#Subsetting the respective counts object (counts.m.rm)
+counts.pcbd<-counts.m.rm[,pcbd.ind]
+paste(ncol(counts.pcbd),"samples are selected:")
+colnames(counts.pcbd)
+```
+
+## Metadata
+* The metadata has to be reduced accordingly. 
+* The original order of samples is introduced for downstream re-ordering of the read count table.
+* A globally used group variable is introduced, as well.
+```{r, echo= FALSE}
+metad.pcbd<-metad.m.rm[pcbd.ind,]
+metad.pcbd$orig.ord<-1:nrow(metad.pcbd)
+metad.pcbd<-metad.pcbd[order(metad.pcbd$grp),]
+counts.pcbd.ind<-metad.pcbd$orig.ord
+#the whole group description
+group.pcbd<-factor(as.character(metad.pcbd$grp), 
+                  levels = c("d_a","d_p",
+                             "pro_C_a","pro_C_p","prc_C_a","prc_C_p","wt_C_neg",
+                             "pro_L_a","pro_L_p","prc_L_a","prc_L_p","wt_L_neg","wt_L_pos",
+                             "pro_S_a","pro_S_p", "prc_S_a","prc_S_p","wt_S_neg","wt_S_pos"))
+```
+
+### Re-ordering Counts Data Frame Columns
+* Here, read counts are re-ordered according to the metadata object.
+```{r}
+counts.pcbd.ord<-counts.pcbd[,counts.pcbd.ind]
+head(counts.pcbd.ord, n=4L)
+counts.pcbd<-counts.pcbd.ord
+rm(counts.pcbd.ord)
+```
+
+## Consistency Check
+* In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
+```{r}
+if (sum(colnames(counts.pcbd)==metad.pcbd$sample_ID)==sum(pcbd.ind)) {
+  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+}else {
+  print("Something is inconsistent, check the code above for errors during subsetting!")
+}
+```
+
+## DGE List Object
+* A DGEList object is generated, the main class of the edgeR package. 
+* For full functionality, the counts.pcbdt, group.avp.pcbdt and genes.df variables are used to do so.
+```{r}
+dgel.pcbd<-DGEList(counts = counts.pcbd, group = group.pcbd, genes = genes.df)
+head(dgel.pcbd$samples, n=4L)
+head(dgel.pcbd$genes, n=4L)
+```
+
+## Exclusion of Rare Transcripts
+* We filter for transcripts with CPM > 1 in at least 8 samples.
+* Only genes fulfilling that criterion are kept and also normalization factors are calculated.
+```{r}
+keep.pcbd <- rowSums(cpm(dgel.pcbd)>1) >= 8 
+dgel.pcbd <- dgel.pcbd[keep.pcbd, , keep.lib.sizes=FALSE]
+dgel.pcbd <- calcNormFactors(dgel.pcbd)
+print(paste(table(keep.pcbd)[1],"genes are discarded while",table(keep.pcbd)[2], "genes are retained in the analysis!"))
+```
+
+## Raw LOG.CPM, LOG.RPKM & Zscores
+* In this step, log2-transformed counts per million (CPM) and reads per kilobase per million (RPKM) and respective scaled data are computed.
+* This will generate all non-batch-corrected data matrices for downstream analyses.
+```{r}
+# log.cpm with prior count = 2
+pcbd.log.cpm <- cpm(dgel.pcbd, normalized.lib.sizes = TRUE, log = TRUE, prior.count = 2)
+#log rpkm with prior count = 2
+pcbd.log.rpkm <- rpkm(dgel.pcbd, normalized.lib.sizes = TRUE, log = TRUE, prior.count = 2)
+#Zscore transformation of log.cpms
+pcbd.log.cpm.scaled.transposed<-(scale(t(pcbd.log.cpm)))
+pcbd.log.cpm.scaled<-data.matrix(t(pcbd.log.cpm.scaled.transposed))
+rm(pcbd.log.cpm.scaled.transposed)
+```
+
+## Batch-corrected LOG.CPM, LOG.RPKM & Zscores
+
+* It is hardly ever possible to perform library preparation in block design for a variety of sample conditions as large as in this data set.
+* Therefore the most feasible approach for batch-correction is the one that accounts for the number of pcr2 cycles applied.
+* Applying the the "removeBatchEffect()" function while also supplying a design comprising all groups of samples, interesting biological effects are made sure not to be removed from visualizations.
+```{r}
+# design
+pcbd.design.plots <- model.matrix(~group.pcbd)
+# removing batch effect
+pcbd.log.cpm.cor <- removeBatchEffect(pcbd.log.cpm, batch = metad.pcbd$PCR2.Cy, design = pcbd.design.plots)
+pcbd.log.rpkm.cor <- removeBatchEffect(pcbd.log.rpkm, batch = metad.pcbd$PCR2.Cy, design = pcbd.design.plots)
+# scaling corrected log.cpm for corrected scaled data
+pcbd.log.cpm.scaled.cor <- scale(t(pcbd.log.cpm.cor))
+pcbd.log.cpm.scaled.cor <- data.matrix(t(pcbd.log.cpm.scaled.cor))
+```
+
+***
+
+# Aesthetics Vectors
+* The definition of aesthetics vectors as named vectors is useful for proper labeling in downstream plots.
+
+## Named Color Vector
+* Hereafter, colors are defined that are consistently used for groups throughout the manuscript.
+```{r}
+pcbd.col<-c("red","firebrick",
+            "sienna","sienna3",
+            "chocolate4","chocolate3",
+            "peru",
+            "steelblue","steelblue1",
+            "dodgerblue3","dodgerblue",
+            "lightsteelblue","lightsteelblue1",
+            "deeppink4","deeppink",
+            "magenta3","magenta",
+            "hotpink4","hotpink")
+names(pcbd.col)<-levels(group.pcbd)
+pcbd.col
+```
+
+## Named Shape Vector
+* Also, for shapes a vector is required.
+```{r}
+pcbd.shp.4<-c(rep(22,2),
+              23,23,24,24,21,
+              rep(c(23,23,24,24,21,21),2))
+names(pcbd.shp.4)<-levels(group.pcbd)
+pcbd.shp.4
+```
+## Legend Labels with correct replicate count
+* Following, legend labels are defined that also comprise the correct replicate count, based on the actual data structure used.
+```{r}
+pcbd.lab<-c(#donor 
+           paste0("donor, allo (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[1],]),")"),
+           paste0("donor, poly (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[2],]),")"),
+           #colon
+           paste0("prophylaxis, colon, allo (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[3],]),")"),
+           paste0("prophylaxis, colon, poly (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[4],]),")"),
+           paste0("transplant control, colon, allo (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[5],]),")"),
+           paste0("transplant control, colon, poly (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[6],]),")"),
+           paste0("organ-resident, colon, CD62L- (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[7],]),")"),
+           #liver
+           paste0("prophylaxis, liver, allo (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[8],]),")"),
+           paste0("prophylaxis, liver, poly (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[9],]),")"),
+           paste0("transplant control, liver, allo (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[10],]),")"),
+           paste0("transplant control, liver, poly (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[11],]),")"),
+           paste0("organ-resident, liver, CD62L- (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[12],]),")"),
+           paste0("organ-resident, liver, CD62L+ (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[13],]),")"),
+           #spleen 
+           paste0("prophylaxis, spleen, allo (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[14],]),")"),
+           paste0("prophylaxis, spleen, poly (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[15],]),")"),
+           paste0("transplant control, spleen, allo (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[16],]),")"),
+           paste0("transplant control, spleen, poly (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[17],]),")"),
+           paste0("organ-resident, spleen, CD62L- (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[18],]),")"),
+           paste0("organ-resident, spleen, CD62L+ (n=",nrow(metad.pcbd[metad.pcbd$grp==levels(group.pcbd)[19],]),")")
+           )
+names(pcbd.lab)<-levels(group.pcbd)
+pcbd.lab
+```
+***
+
+# Uniform Manifold Aproximation and Projection (UMAP)
+
+* UMAP embedding of donor and re-isolated Treg (noBMT, BMTw/oTconv,BMTwTconv) as well as log~2~RPKM Barplots for selected genes.
+
+## UMAP Function
+* Hereafter, a convenience function for direct UMAP plotting is defined.
+```{r}
+#updated 2021-05-23
+umap_func<-function(data=NULL,
+                    seed=1234,
+                    xlim=range(umap.dat$X1),
+                    n.x.breaks=10,
+                    ylim=range(umap.dat$X2),
+                    n.y.breaks=10,
+                    plot.tag="no tag",
+                    title="no title",
+                    title.pos="panel",
+                    caption="no caption",
+                    group=rep("group",ncol(data)),
+                    group.labels=levels(as.factor(rep("group",ncol(data)))),
+                    group.labelsize=10,
+                    data.labels=colnames(data),
+                    data.labelsize=5,
+                    basesize=10,
+                    pchsize=3,
+                    fill.colors=c("group"="black"),
+                    fill.alpha=rep(1.0,ncol(data)),
+                    colour.colors=c("group"="black"),
+                    colour.alpha=rep(1.0,ncol(data)),
+                    shapes=c("group"=21),
+                    leg.pos="right"){
+  #set seed for reproducibility
+  set.seed(seed = seed)
+  #appply umap algorithm on transposed data matrix, then extract layout for plotting
+  umap.dat<-umap::umap(t(as.matrix(data)))
+  umap.dat<-data.frame(umap.dat$layout)
+  #generate ggplot object
+  umap.p<-ggplot(data = umap.dat)+
+    aes(x = X1, y = X2, shape = group, fill = group, colour = group)+
+    scale_x_continuous(limits = xlim,
+                       n.breaks = n.x.breaks) +
+    scale_y_continuous(limits = ylim,
+                       n.breaks = n.y.breaks)+
+    xlab("UMAP2") + 
+    ylab("UMAP1") +
+    geom_point(size = pchsize)+
+    scale_colour_manual(values = alpha(colour.colors[group],colour.alpha),  #here, you manually adjust the colors of the data points and the legend alike
+                        name  ="Treg Group", #legend title
+                        labels=group.labels) + # adjust the legend label if desired
+    scale_fill_manual(values = alpha(fill.colors[group],fill.alpha),
+                      name = "Treg Group",
+                      labels = group.labels)+
+    scale_shape_manual(values = shapes[group],
+                       name = "Treg Group",
+                       labels = group.labels)+
+    geom_text_repel(aes(label=data.labels), 
+                    size=data.labelsize,
+                  segment.size=0.2, 
+                  min.segment.length=0.0, 
+                  point.padding=.05, 
+                  segment.alpha=0.5,
+                  max.overlaps = 50,
+                  force = 50,
+                  show.legend = FALSE) +
+    labs(title = title,tag = plot.tag, caption = caption)+
+    theme_light(base_size=basesize) + 
+    theme(plot.tag=element_text(size = basesize*2.0, face = "bold"),
+          plot.title = element_text(size = basesize, face = "bold"),
+          plot.title.position = title.pos,
+          legend.text = element_text(colour="black", size = group.labelsize, face = "plain"),
+          legend.title = element_text(colour="black", size = group.labelsize, face = "bold"),
+          legend.box.just = "top",
+          axis.text = element_text(colour = "black", size = basesize, face = "plain"),
+          axis.title = element_text(colour = "black",size = basesize,face = "plain"),
+          panel.grid = element_blank(),
+          panel.border = element_rect(colour = "black"),
+          axis.ticks = element_line(colour="black"),
+          aspect.ratio = 1.0, #plot panel aspect ratio for squared == 1.0! :) 
+          legend.position = leg.pos
+        )
+  plot(umap.p)
+}
+```
+
+## UMAP Plot (Figure 3 a)
+* Following, a UMAP plot is generated based on the log2(CPM) values of selected samples.
+* Plotted values are batch-corrected for the number of pcr2 cycles applied during library preparation.
+```{r, fig.width=8.875, fig.height=5.175}
+umap_func(data = pcbd.log.cpm.cor,
+                        seed = 13,
+                        xlim = c(-10,12),
+                        n.x.breaks = 6,
+                        ylim = c(-8,6),
+                        n.y.breaks = 6, 
+                        plot.tag="a",
+                        title = "Donor Treg expression profiles",
+                        title.pos = "panel",
+                        group = group.pcbd,
+                        group.labels = pcbd.lab,
+                        group.labelsize = 14,
+                        data.labels = "",
+                        data.labelsize = 6,
+                        basesize = 16,
+                        pchsize = 2.5,
+                        fill.colors = pcbd.col,
+                        fill.alpha = 0.5,
+                        colour.colors = pcbd.col,
+                        colour.alpha = 1,
+                        shapes = pcbd.shp.4,
+                        leg.pos = "right",
+          caption = "batch-correction for pcr2 cycle number applied")
+```
+
+* The plot is also exported into the figure directory.
+```{r}
+pdf(file = "./FIGDIR/Figure3a_UMAP_pcbd.pdf",
+    width = 8.875, 
+    height = 5.175)
+umap_func(data = pcbd.log.cpm.cor,
+                        seed = 13,
+                        xlim = c(-10,12),
+                        n.x.breaks = 6,
+                        ylim = c(-8,6),
+                        n.y.breaks = 6, 
+                        plot.tag="a",
+                        title = "Donor Treg expression profiles",
+                        title.pos = "panel",
+                        group = group.pcbd,
+                        group.labels = pcbd.lab,
+                        group.labelsize = 14,
+                        data.labels = "",
+                        data.labelsize = 6,
+                        basesize = 16,
+                        pchsize = 2.5,
+                        fill.colors = pcbd.col,
+                        fill.alpha = 0.5,
+                        colour.colors = pcbd.col,
+                        colour.alpha = 1,
+                        shapes = pcbd.shp.4,
+                        leg.pos = "right",
+          caption = "batch-correction for pcr2 cycle number applied")
+dev.off()
+```
+
+***
+
+# Barplots for Gene Expression Levels
+* log2-transformed RPKM barplots for selected genes are produced by the following code.
+* Before barplots can be generated, an appropriate data frame has to be created.
+
+## Additional Metadata Vectors
+* For grouping in the plots, multiple options for stratification are desired. 
+* Consequently, the group, only the organ, only the setting and the expansion mode for the Treg prior Tx plus Sell+/- for physiologically tissue-resident Treg are required as subsequently defined variables.
+* Also, levels are adjusted for the desired order of samples in the plots, hereafter.
+```{r}
+#only setting and allo/poly or Sell+/-
+appl.treat.pcbd<-factor(c(as.character(c(rep("d_a",6),rep("d_p",6))),
+                        as.character(paste0(metad.pcbd$appl,"_",metad.pcbd$treat))[13:length(paste0(metad.pcbd$appl,"_",metad.pcbd$treat))]),
+                       levels = c("d_a","d_p","pro_a","pro_p","prc_a","prc_p","wt_neg","wt_pos"))
+appl.treat.pcbd
+#only organ 
+org.pcbd<-factor(as.character(metad.pcbd$org))
+org.pcbd
+```
+
+## Transposed Individual Observations and Annotation
+* Individual observations are transposed and properly annotated, hereafter.
+* This is an essential step in preparing the data for the melt() function of the reshape2 package.
+```{r, warning=FALSE}
+#We choose log.rpkm values corrected for pcr2 cy no. for the values to be visualized
+pcbd.log.rpkm.df.tp<-as.data.frame(t(pcbd.log.rpkm.cor)) %>%
+  tibble::rownames_to_column() %>%
+  as_tibble()
+  #as_data_frame()
+#we need a gene symbol annotation based on the column names, which are the short transcript ID entries at the moment
+pcbd.log.rpkm.df.tp.an<-as.data.frame(strsplit2(colnames(pcbd.log.rpkm.df.tp),"[$]"))
+colnames(pcbd.log.rpkm.df.tp)<-pcbd.log.rpkm.df.tp.an$V2
+colnames(pcbd.log.rpkm.df.tp)[1]<-"sample_ID"
+#rownames(pcbd.log.rpkm.df.tp)<-pcbd.log.rpkm.df.tp$sample_ID #setting row names to a tibble is deprecated
+#Addition of metadata columns
+pcbd.log.rpkm.df.tp<-add_column(pcbd.log.rpkm.df.tp, "group"= group.pcbd, .after = "sample_ID", .name_repair = "minimal")
+pcbd.log.rpkm.df.tp<-add_column(pcbd.log.rpkm.df.tp,"appl.exp"=appl.treat.pcbd, .after ="group", .name_repair = "minimal")
+pcbd.log.rpkm.df.tp<-add_column(pcbd.log.rpkm.df.tp, "organ"= org.pcbd, .after = "appl.exp", .name_repair = "minimal")
+pcbd.log.rpkm.df.tp<-add_column(pcbd.log.rpkm.df.tp, "color" = as.factor(pcbd.col[group.pcbd]), .after = "organ", .name_repair = "minimal")
+pcbd.log.rpkm.df.tp<-add_column(pcbd.log.rpkm.df.tp,"shape"=as.factor(pcbd.shp.4[group.pcbd]), .after = "color", .name_repair = "minimal")
+head(pcbd.log.rpkm.df.tp, n=4L)
+tail(pcbd.log.rpkm.df.tp, n=4L)
+```
+
+## Consistency Check
+* Here, a quick consistency check is performed.
+```{r}
+sum(pcbd.log.rpkm.df.tp$sample_ID == metad.pcbd$sample_ID)
+sum(pcbd.log.rpkm.df.tp$group == group.pcbd)
+sum(pcbd.log.rpkm.df.tp$organ == metad.pcbd$org)
+sum(pcbd.log.rpkm.df.tp$appl.exp == appl.treat.pcbd)
+```
+
+## Reshaping with Melt
+* With the help of the reshape2 package and its melt() function we can stack the data frame. 
+* As a result, per gene subsets of our data frame will be appended instead of having observations per gene as individual columns. 
+* Also, we order the data frame alphabetically according to the gene symbol.
+```{r}
+bar.df<-reshape2::melt(pcbd.log.rpkm.df.tp,
+                       value.name="LOG.2.RPKM")
+bar.df$variable<-as.character(bar.df$variable)
+colnames(bar.df)[7]<- "gene_symbol"
+bar.df.ord<-bar.df[order(as.character(bar.df$gene_symbol)),]
+bar.df<-bar.df.ord
+rm(bar.df.ord)
+head(bar.df)
+```
+## Modification for Barplot basing
+* In order for the bars of the bar plots to be based on the x-axis, a data transformation is necessary.
+```{r}
+bar.df.mod<-bar.df
+bar.df.mod$LOG.2.RPKM<-bar.df.mod$LOG.2.RPKM+4
+head(bar.df.mod)
+nrow(bar.df.mod)
+```
+
+## Definition of GOI
+* Hereafter, we define genes of interest (GOI) for downstream bar plots.
+* On the one hand, important genes within clusters resulting from Louvain clustering performed within the Graphia application are defined.
+* On the other hand, certain genes remaining altered between allo and poly Treg even *in vivo* are selected.
+
+### Selected Genes of defined Clusters
+* Hereafter, individual small gene sets are defined.
+```{r}
+cl1.goi<-c("Ctla4", "Pim1", "Kdm6b")
+cl2.goi<-c("Areg", "Klrg1", "Il1rl1")
+cl3.goi<-c("Icos", "Gata3", "Tnfrsf9")
+cl4.goi<-c("Aurkb","Brca2","Top2a")
+cl5.goi<-c("Bop1","Npm1","Rpl10a")
+cl6.goi<-c("Pycard","Arhgef2","Cap1")
+cl7.goi<-c("Tcf7","Lef1","Foxp1")
+cl8.goi<-c("Pgk1","Eno1","Ldha")
+cl9.goi<-c("Irf7","Stat2","Trim21")
+avp.goi<-c("Penk","Tgm2","Lag3","Rbpj","Gpld1")
+```
+
+### List
+* The GOI subsets are stored as a list for easy accessibility afterwards.
+```{r}
+all.goi.list<-list("cluster1"=cl1.goi,
+                  "cluster2"=cl2.goi,
+                  "cluster3"=cl3.goi,
+                  "cluster4"=cl4.goi,
+                  "cluster5"=cl5.goi,
+                  "cluster6"=cl6.goi,
+                  "cluster7"=cl7.goi,
+                  "cluster8"=cl8.goi,
+                  "cluster9"=cl9.goi,
+                  "avpGenes"=avp.goi
+                  )
+all.goi.list
+```
+### Index for avp Genes
+* An index is generated for selected genes that remain differentially expressed in allo Treg as compared to poly Treg *in vivo*.
+```{r}
+avp.idx<-which(bar.df.mod$gene_symbol %in% all.goi.list$avpGenes)
+bar.df.mod.avp<-bar.df.mod[avp.idx,]
+```
+
+### Barplots (Supplementary Figure 3 c)
+* Hereafter, bar plots shown in supplementary figure 3 c are plotted and exported individually.
+
+#### Penk
+* Log~2~RPKM values are used to represent Penk gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Penk<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Penk",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM+0),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,4096),
+                     breaks = c(1,4,16,64,256,1024,4096),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Penk
+```
+
+* Also, the plot is exported into the figure directory.
+```{r}
+pdf(file = "./FIGDIR/SupplementaryFigure3c_pcbd.avp.Penk.barplot.expression.4+shift.pdf", width = 1.5, height = 2)
+bar.p.mod.avp.Penk
+dev.off()
+```
+
+
+#### Rbpj
+* Log~2~RPKM values are used to represent Rbpj gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Rbpj<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Rbpj",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,24),
+                     breaks = c(1,2,4,8,16),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Rbpj
+```
+
+* Also, the plot is exported into the figure directory.
+
+```{r}
+pdf(file = "./FIGDIR/SupplementaryFigure3c_pcbd.avp.Rbpj.barplot.expression.noshift.pdf", width = 1.5, height = 2)
+bar.p.mod.avp.Rbpj
+dev.off()
+```
+
+
+#### Lag3
+* Log~2~RPKM values are used to represent Lag3 gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Lag3<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Lag3",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM+2),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,16384),
+                     breaks = c(1,4,16,64,256,1024,4096,16384),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "log[2]RPKM") +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Lag3
+```
+
+* Also, the plot is exported into the figure directory.
+
+```{r}
+pdf(file = "./FIGDIR/SupplementaryFigure3c_pcbd.avp.Lag3.barplot.expression.6+shift.pdf", width = 1.5, height = 2)
+bar.p.mod.avp.Lag3
+dev.off()
+```
+
+#### Gpld1
+* Log~2~RPKM values are used to represent Gpld1 gene expression levels as a bar plot.
+
+```{r,fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Gpld1<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Gpld1",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM+2),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,1024),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Gpld1
+```
+
+* Also, the plot is exported into the figure directory.
+
+```{r}
+pdf(file = file.path(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.Gpld1.barplot.expression.6+shift.pdf"), width = 1.5, height = 2)
+bar.p.mod.avp.Gpld1
+dev.off()
+```
+
+***
+
+# Co-expression Clusters Zscore Heatmap (Figure 3 e)
+* Co-expression clustering using Graphia resulted in clusters.
+* Expression data will be represented based on these clusters, hereinafter.
+
+## Data Preparation
+* Hereafter, the pcr2CyNo-corrected Zscore values are defined as data frame.
+* A column containing GeneIDs is appended, as well, follwed by a consitency check.
+```{r}
+pcbd.hm.df<-as.data.frame(pcbd.log.cpm.scaled.cor)
+an.df<-as.data.frame(strsplit2(rownames(pcbd.hm.df),split = "[$]"))
+pcbd.hm.df$geneID<-an.df[,2]
+rm(an.df)
+#consistent?
+sum(as.data.frame(strsplit2(rownames(pcbd.hm.df),split = "[$]"))[,2]==pcbd.hm.df$geneID)==nrow(pcbd.hm.df)
+```
+
+### Graph-based Cluster Import
+* A .tsv file containing identified Clusters *via* Graphia is imported.
+```{r}
+goi.cl.tbl<-read_tsv("./GRAPHIADIR/allCluster.tsv")
+head(goi.cl.tbl)
+nrow(goi.cl.tbl)
+```
+
+### Joining Tables by geneID
+* Using the geneID column introduced above the tables are merged.
+* Also, the geneID is declared the rowname of the data frame.
+```{r}
+pcbd.hm.df.jt <- pcbd.hm.df %>% inner_join(goi.cl.tbl)
+rownames(pcbd.hm.df.jt)<-pcbd.hm.df.jt$geneID
+pcbd.hm.df.jt$clNo<-as.numeric(substr(pcbd.hm.df.jt$`Louvain Cluster`,
+                                      start = nchar(pcbd.hm.df.jt$`Louvain Cluster`)-1,
+                                      stop = nchar(pcbd.hm.df.jt$`Louvain Cluster`)))
+nrow(pcbd.hm.df.jt)
+head(pcbd.hm.df.jt)
+```
+
+### Consistency Check
+One gene drops out, which one is it?
+```{r}
+setdiff(goi.cl.tbl$geneID,pcbd.hm.df.jt$geneID)
+```
+
+This is not a problem, even though it is strange the gene is not in there in the same data, the graph-based clustering was performed on.
+
+### Re-ordering Rows
+* Hereafter, rows of the heat map data frame are reordered manually.
+```{r}
+cus.ind<-c(which(pcbd.hm.df.jt$clNo==1),
+           which(pcbd.hm.df.jt$clNo==5),
+           which(pcbd.hm.df.jt$clNo==2),
+           which(pcbd.hm.df.jt$clNo==6),
+           which(pcbd.hm.df.jt$clNo==3),
+           which(pcbd.hm.df.jt$clNo==7),
+           which(pcbd.hm.df.jt$clNo==9),
+           which(pcbd.hm.df.jt$clNo==8),
+           which(pcbd.hm.df.jt$clNo==10))
+pcbd.hm.df.jt.cus<-pcbd.hm.df.jt[cus.ind,]
+unique(pcbd.hm.df.jt.cus$clNo)
+```
+
+* The number of data rows is compared with the original data frame to make sure no genes are lost due to missing cluster affiliation.
+```{r}
+nrow(pcbd.hm.df.jt)==nrow(pcbd.hm.df.jt.cus)
+```
+
+### Sample Clustering
+* Samples are clustered hierarchically, using Manhattan clustering and ward.D distance.
+```{r}
+# Reordering metadata for consistency
+metad.pcbd<-metad.pcbd[order(metad.pcbd$orig.ord),]
+metad.pcbd<-metad.pcbd[order(metad.pcbd$org),]
+#column clustering for samples
+pcbd.hc.cus <- hclust(dist(t(data.matrix(pcbd.hm.df.jt.cus[,metad.pcbd$sample_ID])), method = "manhattan"), method="ward.D")
+```
+
+## Pretty Heatmap
+
+* A color scale is defined.
+* A data matrix only consisting of data column is extracted.
+* Also, a row annotation data frame is generated from the Louvain cluster affiliation.
+
+```{r}
+# color scale
+rwbcol.3 <- colorRampPalette(c("blue","white","red"))(29)
+rwb.3_break_1.5 = c(seq(-1.5,-0.5,length=10), seq(-0.49,0.49,length=10), seq(0.5,1.5,length=10))
+#subset of only the data columns
+pheatmap.mat<-data.matrix(pcbd.hm.df.jt.cus[,metad.pcbd$sample_ID])
+# row annotation data frame
+row.ann.df<-data.frame(cluster=pcbd.hm.df.jt.cus$`Louvain Cluster`)
+rownames(row.ann.df)<-rownames(pcbd.hm.df.jt.cus)
+```
+
+* The actual heat map is plotted. 
+* Be aware that clusters 1-3 in the manuscript equal clusters 1-3 herein, while clusters 4-9 in the manuscript equal clusters 5-10 herein, respectively.
+```{r, fig.height=10, fig.width=12.5}
+pheatmap(pheatmap.mat,
+         color = rwbcol.3,
+         kmeans_k = NA,
+         breaks = rwb.3_break_1.5,
+         border_color = NA,
+         cellwidth = NA,
+         cellheight = NA,
+         scale = "none",
+         cluster_rows = FALSE,
+         cluster_cols = pcbd.hc.cus,
+         annotation_row = row.ann.df,
+         show_rownames = FALSE
+         )
+```
+
+* Lastly, the heat map is exported into the figure directory.
+```{r}
+pdf(file="./FIGDIR/Figure3e_pcbd.Zscore.heatmap.graphia.clusters.pdf", 
+    height=10, 
+    width=12.5)
+pheatmap(pheatmap.mat,
+         color = rwbcol.3,
+         kmeans_k = NA,
+         breaks = rwb.3_break_1.5,
+         border_color = NA,
+         cellwidth = NA,
+         cellheight = NA,
+         scale = "none",
+         cluster_rows = FALSE,
+         cluster_cols = pcbd.hc.cus,
+         annotation_row = row.ann.df,
+         show_rownames = FALSE
+         )
+dev.off()
+```
+
+***
+
+# Metascape Results (Figure 3 f)
+* Enrichment results generated using Metascape are presented as barplots, hereafter.
+* Be aware that clusters 1-3 in the manuscript equal clusters 1-3 herein, while clusters 4-9 in the manuscript equal clusters 5-10 herein, respectively.
+
+## Cluster 1
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl1 <- read_excel("./METASCAPE/cl1.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl1.main <- subset(pcbd.cl.metascape.cl1, grepl("Summary", pcbd.cl.metascape.cl1$GroupID))
+colnames(pcbd.cl.metascape.cl1.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl1.main$Description <- factor(pcbd.cl.metascape.cl1.main$Description, level=pcbd.cl.metascape.cl1.main$Description)
+pcbd.cl.metascape.cl1.sig <- subset(pcbd.cl.metascape.cl1.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl1.bar <- ggplot(pcbd.cl.metascape.cl1.sig) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="forestgreen") +
+    ggtitle(label = "Cluster 1") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Cluster 2
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl2 <- read_excel("./METASCAPE/cl2.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl2.main <- subset(pcbd.cl.metascape.cl2, grepl("Summary", pcbd.cl.metascape.cl2$GroupID))
+colnames(pcbd.cl.metascape.cl2.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl2.main$Description <- factor(pcbd.cl.metascape.cl2.main$Description, level=pcbd.cl.metascape.cl2.main$Description)
+pcbd.cl.metascape.cl2.sig <- subset(pcbd.cl.metascape.cl2.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl2.bar <- ggplot(pcbd.cl.metascape.cl2.sig[1:5,]) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="darkorange1") +
+    ggtitle(label = "Cluster 2") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Cluster 3
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl3 <- read_excel("./METASCAPE/cl3.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl3.main <- subset(pcbd.cl.metascape.cl3, grepl("Summary", pcbd.cl.metascape.cl3$GroupID))
+colnames(pcbd.cl.metascape.cl3.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl3.main$Description <- factor(pcbd.cl.metascape.cl3.main$Description, level=pcbd.cl.metascape.cl3.main$Description)
+pcbd.cl.metascape.cl3.sig <- subset(pcbd.cl.metascape.cl3.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl3.bar <- ggplot(pcbd.cl.metascape.cl3.sig[1:5,]) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="darkmagenta") +
+    ggtitle(label = "Cluster 3") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Cluster 5
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl5 <- read_excel("./METASCAPE/cl5.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl5.main <- subset(pcbd.cl.metascape.cl5, grepl("Summary", pcbd.cl.metascape.cl5$GroupID))
+colnames(pcbd.cl.metascape.cl5.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl5.main$Description <- factor(pcbd.cl.metascape.cl5.main$Description, level=pcbd.cl.metascape.cl5.main$Description)
+pcbd.cl.metascape.cl5.sig <- subset(pcbd.cl.metascape.cl5.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl5.bar <- ggplot(pcbd.cl.metascape.cl5.sig[1:5,]) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="cyan2") +
+    ggtitle(label = "Cluster 4") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Cluster 6
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl6 <- read_excel("./METASCAPE/cl6.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl6.main <- subset(pcbd.cl.metascape.cl6, grepl("Summary", pcbd.cl.metascape.cl6$GroupID))
+colnames(pcbd.cl.metascape.cl6.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl6.main$Description <- factor(pcbd.cl.metascape.cl6.main$Description, level=pcbd.cl.metascape.cl6.main$Description)
+pcbd.cl.metascape.cl6.sig <- subset(pcbd.cl.metascape.cl6.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl6.bar <- ggplot(pcbd.cl.metascape.cl6.sig[1:5,]) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="yellow2") +
+    ggtitle(label = "Cluster 5") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Cluster 7 
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl7 <- read_excel("./METASCAPE/cl7.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl7.main <- subset(pcbd.cl.metascape.cl7, grepl("Summary", pcbd.cl.metascape.cl7$GroupID))
+colnames(pcbd.cl.metascape.cl7.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl7.main$Description <- factor(pcbd.cl.metascape.cl7.main$Description, level=pcbd.cl.metascape.cl7.main$Description)
+pcbd.cl.metascape.cl7.sig <- subset(pcbd.cl.metascape.cl7.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl7.bar <- ggplot(pcbd.cl.metascape.cl7.sig[1:5,]) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="red") +
+    ggtitle(label = "Cluster 6") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Cluster 8
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl8 <- read_excel("./METASCAPE/cl8.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl8.main <- subset(pcbd.cl.metascape.cl8, grepl("Summary", pcbd.cl.metascape.cl8$GroupID))
+colnames(pcbd.cl.metascape.cl8.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl8.main$Description <- factor(pcbd.cl.metascape.cl8.main$Description, level=pcbd.cl.metascape.cl8.main$Description)
+pcbd.cl.metascape.cl8.sig <- subset(pcbd.cl.metascape.cl8.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl8.bar <- ggplot(pcbd.cl.metascape.cl8.sig) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="hotpink") +
+    ggtitle(label = "Cluster 7") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Cluster 9
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl9 <- read_excel("./METASCAPE/cl9.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl9.main <- subset(pcbd.cl.metascape.cl9, grepl("Summary", pcbd.cl.metascape.cl9$GroupID))
+colnames(pcbd.cl.metascape.cl9.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl9.main$Description <- factor(pcbd.cl.metascape.cl9.main$Description, level=pcbd.cl.metascape.cl9.main$Description)
+pcbd.cl.metascape.cl9.sig <- subset(pcbd.cl.metascape.cl9.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl9.bar <- ggplot(pcbd.cl.metascape.cl9.sig[1:5,]) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="blue") +
+    ggtitle(label = "Cluster 8") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Cluster 10
+```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
+pcbd.cl.metascape.cl10 <- read_excel("./METASCAPE/cl10.metascape_result.xlsx", sheet=2)
+pcbd.cl.metascape.cl10.main <- subset(pcbd.cl.metascape.cl10, grepl("Summary", pcbd.cl.metascape.cl10$GroupID))
+colnames(pcbd.cl.metascape.cl10.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
+pcbd.cl.metascape.cl10.main$Description <- factor(pcbd.cl.metascape.cl10.main$Description, level=pcbd.cl.metascape.cl10.main$Description)
+pcbd.cl.metascape.cl10.sig <- subset(pcbd.cl.metascape.cl10.main, LogQ <= log10(0.05))
+pcbd.cl.metascape.cl10.bar <- ggplot(pcbd.cl.metascape.cl10.sig[1:5,]) + 
+    aes(x=Description, y=-LogQ ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="lawngreen") +
+    ggtitle(label = "Cluster 9") +
+        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme(plot.title = element_text(size = 10, face = "bold"),
+        plot.subtitle = element_text(size = 6, face = "bold"),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(size = 6, colour = "black"), 
+        axis.text.y =element_text(size = 6, colour = "black"),
+        axis.ticks.length.x = unit(0.1,"cm"),
+        axis.ticks.length.y = unit(0.1,"cm"),
+        axis.ticks = element_line(size=.236),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill ="white",colour = NA),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        )
+```
+
+## Plot Grid
+* All flipped bar plots are arranged in a plot grid, hereafter.
+```{r fig.height=14, fig.width=4.6}
+pcbd.cl.metascape.plot.grid <- plot_grid(pcbd.cl.metascape.cl1.bar,
+                                       pcbd.cl.metascape.cl2.bar,
+                                       pcbd.cl.metascape.cl3.bar,
+                                       pcbd.cl.metascape.cl5.bar,
+                                       pcbd.cl.metascape.cl6.bar,
+                                       pcbd.cl.metascape.cl7.bar,
+                                       pcbd.cl.metascape.cl8.bar,
+                                       pcbd.cl.metascape.cl9.bar,
+                                       pcbd.cl.metascape.cl10.bar,
+                                       ncol=1, align="v", 
+                                       rel_heights = c(1.35,1.6,1.6,1.6,1.6,1.6,1.6,1.6,1.6))
+pcbd.cl.metascape.plot.grid
+```
+
+
+* The plot grid is exported into the figure directory.
+```{r}
+pdf(file="./FIGDIR/Figure3f_pcbd.graphia.clusters.metascape.pdf", height=14, width=4.6)
+pcbd.cl.metascape.plot.grid
+dev.off()
+```
+
+***
+
+# Transcription Factors Zscore Heatmap of Graphia-Clusters (Figure 3 g)
+* Shown expression data represents per-group-averaged batch-corrected individual and successively scaled expression data.
+* For each cluster transcription factors were chosen for the representation.
+
+## Average Batch-corrected and scaled log2(CPM)
+* The removeBatchEffect() function does not work on variables generated using the cpmByGroup() function.
+* However, for a representation of expression values in a per-group manner, we figured that log2-transforming the means of the unlogged, batch-corrected cpm values is most plausible.
+* This, at the same time, enables us to scale the data in the usual manner.
+```{r}
+pcbd.log.cpmbygroup.cor <- cpmByGroup(2^pcbd.log.cpm.cor, group=group.pcbd, log=T)
+pcbd.log.cpmbygroup.scaled.cor <- t(scale(t(pcbd.log.cpmbygroup.cor)))
+pcbd.log.cpmbygroup.scaled.cor <- cbind.data.frame(pcbd.log.cpmbygroup.scaled.cor, GeneSymbol=strsplit2(rownames(pcbd.log.cpmbygroup.scaled.cor), split= "$", fixed = T)[,2])
+```
+
+## Definition of GOI
+* This visualization focuses on transcription factors belonging to Graphia-clusters 1 to 9.
+* Respective GOI are defined, hereafter.
+```{r}
+TF.sig<-c("Arnt","Runx3","Klf6","Stat3","Stat5a","Stat5b", "Bcl6", "Ets2","Mxi1",
+          "Mybl1","Mybl2","E2f1","Pola1","Pola2","Polh","Pole","Pold1",
+          "Ets1","Rora","Junb","Relb","Klf4",
+          "Gata1","Bcl2","Myc",
+          "Batf","Gata3","Irf5","Nfil3","Tbx21","Hif1a","Bhlhe40","Atf6",
+          "E2f2","Rxra",
+          "Srebf1","Srebf2",
+          "Tcf7","Foxk1","Ikzf1","Lef1","Bach2",
+          "Irf7","Irf9","Stat2","Irf2") 
+```
+
+## heatmap.2
+* First, an index is created based on the transcription factor signature.
+```{r, fig.height=8.6, fig.width=3.8}
+# index
+ind.TF.sig<-pcbd.log.cpmbygroup.scaled.cor$GeneSymbol %in% TF.sig
+# subsetting and ordering
+TF.sig.hm<-pcbd.log.cpmbygroup.scaled.cor[ind.TF.sig,]# ,1:20]
+TF.sig.hm$GeneSymbol<-factor(TF.sig.hm$GeneSymbol,levels=c("Arnt","Runx3","Klf6","Stat3","Stat5a","Stat5b", "Bcl6", "Ets2","Mxi1",
+          "Mybl1","Mybl2","E2f1","Pola1","Pola2","Polh","Pole","Pold1",
+          "Ets1","Rora","Junb","Relb","Klf4",
+          "Gata1","Bcl2","Myc",
+          "Batf","Gata3","Irf5","Nfil3","Tbx21","Hif1a","Bhlhe40","Atf6",
+          "E2f2","Rxra",
+          "Srebf1","Srebf2",
+          "Tcf7","Foxk1","Ikzf1","Lef1","Bach2",
+          "Irf7","Irf9","Stat2","Irf2") )
+TF.sig.hm<-TF.sig.hm[order(TF.sig.hm$GeneSymbol),]
+TF.sig.hm.matrix<-data.matrix(TF.sig.hm[1:19])
+#color scale
+clustercol <- colorRampPalette(c("blue","white","red"))(29)
+col_breaks = c(seq(-1.5,-0.5,length=10), seq(-0.49,0.49,length=10), seq(0.5,1.5,length=10)) 
+#heat map
+heatmap.2(x = TF.sig.hm.matrix, 
+          Rowv=NA, 
+          Colv=NA,
+          dendrogram = "none",
+          na.rm=TRUE,
+          col = clustercol,
+          breaks = col_breaks,
+          margins=c(6,4),
+          cexRow = 1,
+          labRow = TF.sig.hm$GeneSymbol,
+          srtRow = 0,
+          offsetRow = 0,
+          srtCol = 90,
+          offsetCol = 0,
+          adjCol = c(1,.5),
+          cexCol=1, 
+          key=T,
+          keysize = 1,
+          key.par = list(mai=c(0.5,.3,0.1,0.3)),
+          key.title = "none", 
+          key.xlab = "Z-score",
+          density.info="none",
+          trace = "none", 
+          lmat = matrix(c(4,2,3,1),nrow = 2, ncol = 2),
+          lhei=c(1,3),
+          lwid = c(0.25, 0.5),
+          main = "")
+```
+
+* The visualization is also exported into the figure directory.
+
+```{r}
+pdf(file = "./FIGDIR/Figure3g_pcbd.Zscore.heatmap.TFs.in.graphia.clusters.pdf",height = 8.6,width = 3.8)
+heatmap.2(x = TF.sig.hm.matrix, 
+          Rowv=NA, 
+          Colv=NA,
+          dendrogram = "none",
+          na.rm=TRUE,
+          col = clustercol,
+          breaks = col_breaks,
+          margins=c(6,4),
+          cexRow = 1,
+          labRow = TF.sig.hm$GeneSymbol,
+          srtRow = 0,
+          offsetRow = 0,
+          srtCol = 90,
+          offsetCol = 0,
+          adjCol = c(1,.5),
+          cexCol=1, 
+          key=T,
+          keysize = 1,
+          key.par = list(mai=c(0.5,.3,0.1,0.3)),
+          key.title = "none", 
+          key.xlab = "Z-score",
+          density.info="none",
+          trace = "none", 
+          lmat = matrix(c(4,2,3,1),nrow = 2, ncol = 2),
+          lhei=c(1,3),
+          lwid = c(0.25, 0.5),
+          main = "")
+dev.off()
+```
+
+***
+
+# Heatmap and Barplots for suppressive Treg Signature Genes
+
+## Definition of Suppression Signature
+* For this analysis, we will use a signature of genes referred to as "Suppression Signature".
+* It comprises canonical Treg markers, such as CD25, but also more inflammation-specific, environmentally induced genes like Gzma&Gzmb.
+```{r}
+supp.sig<-c("Gzmb","Il10","Gzma","Fasl","Prf1","Ctla4","Entpd1","Tgfb1","Tgfb3","Il2ra","Nt5e","Fgl2","Ebi3","Cd274","Pdcd1lg2") 
+```
+
+## Heatmap (Figure 4 d)
+* Heatmap presenting hierarchically clustered and scaled expression data of genes associated with suppressie Treg functions.
+```{r, fig.height=3.6, fig.width=3.8}
+# index generation
+ind.supp.sig<-pcbd.log.cpmbygroup.scaled.cor$GeneSymbol %in% supp.sig
+# subsetting
+supp.sig.hm.matrix<-data.matrix(pcbd.log.cpmbygroup.scaled.cor[ind.supp.sig,1:19])
+# heatmap colors
+clustercol <- colorRampPalette(c("blue","white","red"))(29)
+col_breaks = c(seq(-1.5,-0.5,length=10), seq(-0.49,0.49,length=10), seq(0.5,1.5,length=10)) 
+# heatmap.2
+heatmap.2(x = supp.sig.hm.matrix, 
+          Rowv=T, 
+          Colv=NA,
+          distfun = function(c){dist(c, method = "manhattan")},
+          hclustfun=function(c){hclust(c, method="ward.D")},
+          dendrogram = "row",
+          na.rm=TRUE,
+          col = clustercol,
+          breaks = col_breaks,
+          margins=c(6,4),
+          cexRow = 1,
+          labRow = as.expression(lapply(pcbd.log.cpmbygroup.scaled.cor[ind.supp.sig,20],function(a) bquote(italic(.(a))))),
+          srtRow = 0,
+          offsetRow = 0,
+          srtCol = 90,
+          offsetCol = 0,
+          adjCol = c(1,.5),
+          cexCol=1, 
+          key=T,
+          keysize = 1,
+          key.par = list(mai=c(0.5,.3,0.1,0.3)),
+          key.title = "none", 
+          key.xlab = "Z-score",
+          density.info="none",
+          trace = "none", 
+          lmat = matrix(c(4,2,3,1),nrow = 2, ncol = 2),
+          lhei=c(1,3),
+          lwid = c(0.25, 0.5),
+          main = "")
+```
+
+* The heatmap is exported into the figure directory.
+
+```{r}
+pdf(file = "./FIGDIR/Figure4d_pcbd.Zscore.heatmap.suppression.signature.pdf",height = 3.6,width = 3.8)
+heatmap.2(x = supp.sig.hm.matrix, 
+          Rowv=T, 
+          Colv=NA,
+          distfun = function(c){dist(c, method = "manhattan")},
+          hclustfun=function(c){hclust(c, method="ward.D")},
+          dendrogram = "row",
+          na.rm=TRUE,
+          col = clustercol,
+          breaks = col_breaks,
+          margins=c(6,4),
+          cexRow = 1,
+          labRow = as.expression(lapply(pcbd.log.cpmbygroup.scaled.cor[ind.supp.sig,20],function(a) bquote(italic(.(a))))),
+          srtRow = 0,
+          offsetRow = 0,
+          srtCol = 90,
+          offsetCol = 0,
+          adjCol = c(1,.5),
+          cexCol=1, 
+          key=T,
+          keysize = 1,
+          key.par = list(mai=c(0.5,.3,0.1,0.3)),
+          key.title = "none", 
+          key.xlab = "Z-score",
+          density.info="none",
+          trace = "none", 
+          lmat = matrix(c(4,2,3,1),nrow = 2, ncol = 2),
+          lhei=c(1,3),
+          lwid = c(0.25, 0.5),
+          main = "")
+dev.off()
+```
+
+## Barplots (Supplementary Figure 4 d)
+* Herafter, expression profiles of genes associated with suppressive Treg functions are presented as barplots.
+
+### Index for Suppression Signature
+* Herafter, an index is generated based on the genes defined withing the "Suppression Signautre".
+* This way, the dataframe for bar plots can be easily subsetted.
+```{r}
+supp.idx<-which(bar.df.mod$gene_symbol %in% supp.sig)
+bar.df.mod.supp<-bar.df.mod[supp.idx,]
+```
+
+### Gzmb
+
+```{r}
+bar.p.mod.supp.Gzmb<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Gzmb",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-2),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,25000),
+                     breaks = c(1,4,16,64,256,1024,4096,16384),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Il10
+
+
+```{r}
+bar.p.mod.supp.Il10<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Il10",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,9000),
+                     breaks = c(1,4,16,64,256,1024,4096),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+
+### Gzma
+
+```{r}
+bar.p.mod.supp.Gzma<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Gzma",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,25000),
+                     breaks = c(1,4,16,64,256,1024,4096,16384),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+
+### Fasl
+
+```{r}
+bar.p.mod.supp.Fasl<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Fasl",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,128),
+                     breaks = c(1,4,16,64),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Prf1
+
+```{r}
+bar.p.mod.supp.Prf1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Prf1",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,512),
+                     breaks = c(1,4,16,64,256),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Ctla4
+
+```{r}
+bar.p.mod.supp.Ctla4<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Ctla4",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,2048),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Entpd1
+
+```{r}
+bar.p.mod.supp.Entpd1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Entpd1",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,32),
+                     breaks = c(1,2,4,8,16,32),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Tgfb1
+
+```{r}
+bar.p.mod.supp.Tgfb1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Tgfb1",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,128),
+                     breaks = c(1,4,16,64),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Tgfb3
+
+```{r}
+bar.p.mod.supp.Tgfb3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Tgfb3",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM+2),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,1024),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Il2ra
+
+```{r}
+bar.p.mod.supp.Il2ra<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Il2ra",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,1024),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Nt5e
+
+```{r}
+bar.p.mod.supp.Nt5e<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Nt5e",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,128),
+                     breaks = c(1,2,4,8,16,32,64,128),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Fgl2
+
+```{r}
+bar.p.mod.supp.Fgl2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Fgl2",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,256),
+                     breaks = c(1,4,16,64,256),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Ebi3
+
+```{r}
+bar.p.mod.supp.Ebi3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Ebi3",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,2048),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+
+### Cd274
+
+
+```{r}
+bar.p.mod.supp.Cd274<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Cd274",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,128),
+                     breaks = c(1,4,16,64),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Pdcd1lg2
+
+```{r}
+bar.p.mod.supp.Pdcd1lg2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=="Pdcd1lg2",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-2),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,256),
+                     breaks = c(1,4,16,64,256),
+                     labels = trans_format("log2", math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = expression("log[2]RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+```
+
+### Combined Plot
+
+* All generated barplots are arranged as plot grid, hereafter.
+
+```{r, fig.height=6, fig.width=8}
+bar.p.mod.supp.grid <- plot_grid(bar.p.mod.supp.Gzmb, bar.p.mod.supp.Il10, bar.p.mod.supp.Gzma, 
+                        bar.p.mod.supp.Fasl, bar.p.mod.supp.Prf1, bar.p.mod.supp.Ctla4, 
+                        bar.p.mod.supp.Entpd1, bar.p.mod.supp.Tgfb1, bar.p.mod.supp.Tgfb3, 
+                        bar.p.mod.supp.Il2ra, bar.p.mod.supp.Nt5e, bar.p.mod.supp.Fgl2, 
+                        bar.p.mod.supp.Ebi3, bar.p.mod.supp.Cd274, bar.p.mod.supp.Pdcd1lg2, 
+                        ncol=5, align="v")
+bar.p.mod.supp.grid
+```
+
+* The barplot arrangement is also exported into the figure directory.
+
+```{r}
+pdf(file="./FIGDIR/SupplementaryFigure4d_pcbd.barplots.supp.sig.expression.pdf", height=6, width=8)
+bar.p.mod.supp.grid
+dev.off()
+```
+
+***
+
+# SessionInfo
+```{r, echo=FALSE, warning=FALSE}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_SessionInfo.txt")
+```
+
+***
+
+# Bibliography
+
+***
