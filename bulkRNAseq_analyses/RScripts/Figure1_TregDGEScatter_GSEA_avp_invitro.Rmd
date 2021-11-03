@@ -3,8 +3,8 @@ title: "*In vitro* expanded Treg - Allo versus Poly - Scatter Plot and GSEA Barc
 subtitle: "Scatter plot indicating genes differentially expressed *in invitro* expanded allo versus polyTreg (as measured by RNAseq, n=6 independent experiments each). Treg-signature genes defined by Aubert et al. 2020 are labeled. Gene Set Enrichment Analyses (GSEA) for selected Hallmark and Kegg gene sets are represented as barcode plots."
 author: "David Dittmar"
 date: "`r Sys.Date()`"
-bibliography: Aubert_et_al._2020.bib
-nocite: '@*'
+bibliography: Rscripts.bib
+nocite: '@Aubert638072'
 output:
   html_document:
     df_print: paged
@@ -300,7 +300,7 @@ avp.ivt.scat <- ggplot(avp.ivt.tr.qstat.scat.filt) +
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank())
-pdf(file="./FIGDIR/Figure1e_TregDGEScatter_avp_invitro.pdf.pdf", height=2.6, width=2.2)
+pdf(file="./FIGDIR/Figure1e_TregDGEScatter_avp.ivt_TregSignature.pdf", height=2.6, width=2.2)
 avp.ivt.scat
 dev.off()
 ```

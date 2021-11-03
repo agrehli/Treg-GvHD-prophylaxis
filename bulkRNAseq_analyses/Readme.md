@@ -4,7 +4,7 @@ This folder contains **data** and **code** for the analyses underlying **the bul
 
 ## Order of Execution
 
-Before you run any of the other .Rmd files, the "RCT&metadata.assembly.Rmd" should be run.
+Before you run any of the other .Rmd files, the "RCT&metadata.assembly.Rmd" should be run. Before "Figure3_TregDGEScatter_GSEA_cvnc.pc_BMT.Rmd" is run, "Figure3_TregDGEScatter_GSEA_Heatmap_cvnc.b_noBMT.Rmd" should be run.
 
 ## Genaral Usage
 

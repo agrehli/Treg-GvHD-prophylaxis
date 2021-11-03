@@ -3,8 +3,8 @@ title: "Figure 3 and 4 related UMAP, Heatmaps, GSEA and Gene Expression Barplots
 subtitle: "All figures related to Figure 3 and 4 as well as respective supplementary figures based on the complete set of bulkRNAseq samples are covered in this .Rmd file"
 author: "David Dittmar"
 date: "`r Sys.Date()`"
-bibliography: metascape.bib
-nocite: '@*'
+bibliography: Rscripts.bib
+nocite: '@Zhou2019'
 output:
   html_document:
     df_print: paged
@@ -2445,5 +2445,3 @@ writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure3&4_UM
 ***
 
 # Bibliography
-
-***
