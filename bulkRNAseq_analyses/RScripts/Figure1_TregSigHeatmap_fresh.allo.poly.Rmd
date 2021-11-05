@@ -3,8 +3,8 @@ title: "Treg Signature Genes in freshly isolated, allo and poly expanded Treg - 
 subtitle: "Log2-scaled reads per kilobase per million (RPKM) based on group average values on the unlogged scale are represented in a heatmap."
 author: "David Dittmar"
 date: "`r Sys.Date()`"
-bibliography: Aubert_et_al._2020.bib
-nocite: '@*'
+bibliography: Rscripts.bib
+nocite: '@Aubert638072'
 output:
   html_document:
     df_print: paged
@@ -173,7 +173,7 @@ write.table(x = aubert.treg.intersect,
             row.names = FALSE)
 ```
 
-## Heatmap with log-scaled RPKM for GOI
+## Heatmap with log-scaled RPKM for GOI (Figure 1 f)
 * A pre-filtering for log2(RPKM) values greater than 1 for either allo or poly Treg is performed.
 * Genes remaining in the analysis and intersecting with the extended Treg Signature by Aubert et al. 2020 are represented as a heatmap.
 ```{r, fig.height=4.5, fig.width=3, warning=FALSE}
