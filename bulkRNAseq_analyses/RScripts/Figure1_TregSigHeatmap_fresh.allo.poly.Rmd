@@ -47,7 +47,7 @@ library(gplots)
 # Data Preparation
 * For the analysis, the data and metadata have to be prepared and properly annotated.
 
-### Annotation Data Frame
+## Annotation Data Frame
 * An annotation data frame with 4 columns is constructed.
 * The additional EntrezID column is required for possible downstream pathway analyses or annotation operations.
 ```{r}
@@ -100,7 +100,7 @@ group.iv<-factor(as.character(metad.iv$group), levels = c("fresh", "allo",  "pol
 group.iv
 ```
 
-### Re-ordering Counts Data Frame Columns
+## Re-ordering Counts Data Frame Columns
 * Here, read counts are re-ordered according to the metadata object.
 ```{r}
 counts.iv.ord<-counts.iv[,counts.ind]
@@ -129,7 +129,7 @@ head(dgel.iv$samples, n=4L)
 head(dgel.iv$genes, n=4L)
 ```
 
-### Exclusion of Rare Transcripts
+## Exclusion of Rare Transcripts
 * The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
 * Only genes fulfilling that criterion are kept and also normalization factors are calculated.
 ```{r}
@@ -176,7 +176,7 @@ write.table(x = aubert.treg.intersect,
 ## Heatmap with log-scaled RPKM for GOI (Figure 1 f)
 * A pre-filtering for log2(RPKM) values greater than 1 for either allo or poly Treg is performed.
 * Genes remaining in the analysis and intersecting with the extended Treg Signature by Aubert et al. 2020 are represented as a heatmap.
-```{r, fig.height=4.5, fig.width=3, warning=FALSE}
+```{r, fig.height=5, fig.width=3.2, warning=FALSE}
 # Pre-filtering and GOI intersection
 iv.log.rpkmByGroup.filtered<-subset(iv.log.rpkmByGroup, allo > 1 | poly > 1)
 ind.aubert<-iv.log.rpkmByGroup.filtered$GeneSymbol%in%aubert.treg.intersect
@@ -192,15 +192,15 @@ heatmap.2(x = aubert.hm.matrix,
           symm = FALSE,
           na.rm=TRUE,
           col = hcl.colors(30, palette = "ag_Sunset", rev=F),
-          margins=c(1.2,2.5),
+          margins=c(1.8,2.5),
           cexRow = 1/log10(nrow(aubert.hm.matrix)),
           labRow = as.expression(lapply(iv.log.rpkmByGroup.filtered[ind.aubert,4],function(a) bquote(italic(.(a))))),
           srtRow = 0,
           offsetRow = 0,
-          labCol=as.expression(lapply(colnames(aubert.hm.matrix), function(a) bquote(italic(.(a))))),
+          labCol=as.expression(lapply(paste0(colnames(aubert.hm.matrix),c("\n(n=4)","\n(n=6)","\n(n=6)")), function(a) bquote(italic(.(a))))),
           srtCol = 0,
           offsetCol = 0,
-          adjCol = c(0.45,0.5),
+          adjCol = c(0.45,1.5),
           #cexCol = 1,
           cexCol=1,
           key=T,
@@ -218,8 +218,9 @@ heatmap.2(x = aubert.hm.matrix,
 ```
 
 * The heatmap is also exported into the figure directory.
+
 ```{r message=FALSE, warning=FALSE}
-pdf(file = "./FIGDIR/Figure1f_TregSigHeatmap_fresh.allo.poly.pdf",height = 4.5,width = 3)
+pdf(file = "./FIGDIR/Figure1f_TregSigHeatmap_fresh.allo.poly.pdf",height = 5,width = 3.2)
 heatmap.2(x = aubert.hm.matrix,
           Rowv=T,
           Colv=NA,
@@ -229,16 +230,17 @@ heatmap.2(x = aubert.hm.matrix,
           symm = FALSE,
           na.rm=TRUE,
           col = hcl.colors(30, palette = "ag_Sunset", rev=F),
-          margins=c(1.2,2.5),
+          margins=c(1.8,2.5),
           cexRow = 1/log10(nrow(aubert.hm.matrix)),
           labRow = as.expression(lapply(iv.log.rpkmByGroup.filtered[ind.aubert,4],function(a) bquote(italic(.(a))))),
           srtRow = 0,
           offsetRow = 0,
-          labCol=as.expression(lapply(colnames(aubert.hm.matrix), function(a) bquote(italic(.(a))))),
+          labCol=as.expression(lapply(paste0(colnames(aubert.hm.matrix),c("\n(n=4)","\n(n=6)","\n(n=6)")), function(a) bquote(italic(.(a))))),
           srtCol = 0,
           offsetCol = 0,
-          adjCol = c(0.45,0.5),
-          cexCol = 1,
+          adjCol = c(0.45,1.5),
+          #cexCol = 1,
+          cexCol=1,
           key=T,
           symbreaks = FALSE,
           symkey = FALSE,

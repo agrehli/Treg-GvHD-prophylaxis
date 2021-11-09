@@ -40,7 +40,6 @@ library(org.Mm.eg.db) #for mouse
 library(tibble)
 library(ggplot2)
 library(ggrepel)
-#library(gplots)
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
@@ -50,7 +49,7 @@ library(ggrepel)
 # Data Preparation
 * For the analysis, the data and metadata have to be prepared and properly annotated.
 
-### Annotation Data Frame
+## Annotation Data Frame
 * An annotation data frame with 4 columns is constructed.
 * The additional EntrezID column is required for possible downstream pathway analyses or annotation operations.
 ```{r}
@@ -106,7 +105,7 @@ group.cvnc.pc<-factor(as.character(metad.cvnc.pc$org.alt))
 group.cvnc.pc
 ```
 
-### Re-ordering Counts Data Frame Columns
+## Re-ordering Counts Data Frame Columns
 * Here, read counts are re-ordered according to the metadata object.
 ```{r}
 counts.cvnc.pc.ord<-counts.cvnc.pc[,counts.cvnc.pc.ind]
@@ -142,36 +141,6 @@ keep.cvnc.pc <- filterByExpr(dgel.cvnc.pc)
 dgel.cvnc.pc <- dgel.cvnc.pc[keep.cvnc.pc, , keep.lib.sizes=FALSE]
 dgel.cvnc.pc <- calcNormFactors(dgel.cvnc.pc)
 print(paste(table(keep.cvnc.pc)[1],"genes are discarded while",table(keep.cvnc.pc)[2], "genes are retained in the analysis!"))
-```
-
-## Raw LOG.CPM, LOG.RPKM & Zscores
-* In this step, log2-transformed counts per million (CPM) and reads per kilobase per million (RPKM) and respective scaled data are computed.
-* This will generate all non-batch-corrected data matrices for downstream analyses.
-```{r}
-# log.cpm with prior count = 2
-#cvnc.pc.log.cpm <- cpm(dgel.cvnc.pc, normalized.lib.sizes = TRUE, log = TRUE, prior.count = 2)
-#log rpkm with prior count = 2
-#cvnc.pc.log.rpkm <- rpkm(dgel.cvnc.pc, normalized.lib.sizes = TRUE, log = TRUE, prior.count = 2)
-#Zscore transformation of log.cpms
-#cvnc.pc.log.cpm.scaled.transposed<-(scale(t(cvnc.pc.log.cpm)))
-#cvnc.pc.log.cpm.scaled<-data.matrix(t(cvnc.pc.log.cpm.scaled.transposed))
-#rm(cvnc.pc.log.cpm.scaled.transposed)
-```
-
-## Batch-corrected LOG.CPM, LOG.RPKM & Zscores
-
-* It is hardly ever possible to perform library preparation in block design for a variety of sample conditions as large as in this data set.
-* Therefore the most feasible approach for batch-correction is the one that accounts for the number of pcr2 cycles applied.
-* Applying the the "removeBatchEffect()" function while also supplying a design comprising all groups of samples, interesting biological effects are made sure not to be removed from visualizations.
-```{r}
-# design
-#cvnc.pc.design.plots <- model.matrix(~group.cvnc.pc)
-# removing batch effect
-#cvnc.pc.log.cpm.cor <- removeBatchEffect(cvnc.pc.log.cpm, batch = metad.cvnc.pc$PCR2.Cy, design = cvnc.pc.design.plots)
-#cvnc.pc.log.rpkm.cor <- removeBatchEffect(cvnc.pc.log.rpkm, batch = metad.cvnc.pc$PCR2.Cy, design = cvnc.pc.design.plots)
-# scaling corrected log.cpm for corrected scaled data
-#cvnc.pc.log.cpm.scaled.cor <- scale(t(cvnc.pc.log.cpm.cor))
-#cvnc.pc.log.cpm.scaled.cor <- data.matrix(t(cvnc.pc.log.cpm.scaled.cor))
 ```
 
 ***
@@ -216,6 +185,7 @@ cvnc.pc.tr.qstat<-topTags(cvnc.pc.tr,n = Inf)
 cvnc.pc.tr.qdt<-decideTestsDGE(cvnc.pc.tr)
 summary(cvnc.pc.tr.qdt)
 ```
+
 ### Exporting DGE Statistics
 * The data frame contained in the glmTreat function results is stored for direct access.
 ```{r}
@@ -244,10 +214,10 @@ cvnc.pc.tr.qstat.scat$logRPKM <- cvnc.pc.tr.qstat.scat$logCPM - log2(cvnc.pc.tr.
 # Commonly used filter criteria
 cvnc.pc.tr.qstat.scat.filt<-subset(cvnc.pc.tr.qstat.scat, logCPM > 1 & logRPKM > 1)
 nrow(cvnc.pc.tr.qstat.scat.filt)
-# Transformation for scatterplot
+# Transformation for scatter plot
 cvnc.pc.tr.qstat.scat.filt$logCPMnonColon<-cvnc.pc.tr.qstat.scat.filt$logCPM - (cvnc.pc.tr.qstat.scat.filt$logFC/2) #non-colon
 cvnc.pc.tr.qstat.scat.filt$logCPMcolon<-cvnc.pc.tr.qstat.scat.filt$logCPM + (cvnc.pc.tr.qstat.scat.filt$logFC/2) #colon
-#Separate up and down genes
+# Separation of up and down genes
 cvnc.pc.tr.qstat.scat.filt.UP<-subset(cvnc.pc.tr.qstat.scat.filt, logFC >= 0 & FDR < 0.05)
 cvnc.pc.tr.qstat.scat.filt.DN<-subset(cvnc.pc.tr.qstat.scat.filt, logFC <= 0 & FDR < 0.05)
 nrow(cvnc.pc.tr.qstat.scat.filt.UP)
@@ -284,7 +254,7 @@ tm_fig2_panel_LT<-rev(c("Stat1","Ccr7","S1pr1","Sell","Bcl2","Tcf7"))
 ```
 
 ### Scatterplot with GOI highlighted (Figure 3 b)
-*Hereafter, the scatterplot is generated and plotted.
+* Hereafter, the scatter plot is generated and plotted.
 ```{r, fig.height=2.6, fig.width=2.2, out.width="20%", warning=FALSE}
 cvnc.pc.scat.colon.tm <- ggplot(cvnc.pc.tr.qstat.scat.filt) + 
   aes(x=logCPMnonColon, y=logCPMcolon) +
@@ -329,7 +299,7 @@ geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt, direction = "both",
                   direction = "both",
                   color = "navy",
                   fontface="italic") +
-  ggtitle(label = "DEGs colon vs. non-colon", subtitle = "transplanted Treg \n NLT and LT from Miragaia et al. 2019") +
+  ggtitle(label = "DEGs colon vs. non-colon", subtitle = "transplanted Treg \nNLT and LT from Miragaia et al. 2019") +
   xlab(bquote(log[2]~CPM *"("*spleen*","*liver*")"))+
   ylab(bquote(log[2]~CPM *"("*colon*")"))+
   theme(plot.title = element_text(size = 10, face = "bold"),
@@ -358,14 +328,14 @@ dev.off()
 ***
 
 # GSEA with baseline colon signatures
-* Please not, you should have run "Figure3_TregDGEScatter_GSEA_Heatmap_cvnc.b.Rmd" before proceeding.
+* Please not, you should have run "Figure3_TregDGEScatter_GSEA_Heatmap_Metascape_cvnc.b.Cd62Lneg.Rmd" before proceeding.
 * The question addressed here is, whether differential genes in organ-resident Treg also tend to be differentially expressed in transplanted Treg.
 
 ## Reading in DGE from Baseline Colon Treg
 * Data from analogous baseline Treg analysis is read in, hereafter. 
 ```{r}
-bc.up <- read.delim(file = "./ANALDIR/cluster4.colon.up.GeneIDs.txt")
-bc.dn <- read.delim(file = "./ANALDIR/cluster1.colon.down.GeneIDs.txt")                  
+bc.up <- read.delim(file = "./ANALDIR/SupplementaryFigure3g_cluster4.colon.up.GeneIDs.txt")
+bc.dn <- read.delim(file = "./ANALDIR/SupplementaryFigure3g_cluster1.colon.down.GeneIDs.txt")                  
 ```
 
 * First, indices have to be generated for the underlying generalized linear model of this analysis.
@@ -394,7 +364,7 @@ plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,5,"Brown bars: Genes up in resident Treg in colon", adj = c(0,.5))
 text(-5,4,expression(""*italic(P)*"adj.< 4.7x10"^-40), adj = c(0,.5))
 text(5,-3.8,"Blue bars:Genes down resident Treg in colon", adj = c(1,.5))
-text(5,-4.8,expression(""*italic(P)*"adj.< 1.3x10"^-37), adj = c(1,.5))
+text(5,-4.8,expression(""*italic(P)*"adj.< 1.9x10"^-37), adj = c(1,.5))
 ```
 
 * There is a large overlap between resident and BMT samples: Hence transplanted Treg acquire organ phenotype rapidly.
@@ -414,7 +384,7 @@ plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,5,"Brown bars: Genes up in resident Treg in colon", adj = c(0,.5))
 text(-5,4,expression(""*italic(P)*"adj.< 4.7x10"^-40), adj = c(0,.5))
 text(5,-3.8,"Blue bars: Genes down resident Treg in colon", adj = c(1,.5))
-text(5,-4.8,expression(""*italic(P)*"adj.< 1.3x10"^-37), adj = c(1,.5))
+text(5,-4.8,expression(""*italic(P)*"adj.< 1.9x10"^-37), adj = c(1,.5))
 dev.off()
 ```
 
@@ -516,19 +486,19 @@ write.table(x = avp.pc.tr.qstat$table,
 ```{r}
 avp.pc.tr.qstat.scat<-avp.pc.tr.qstat$table #is a data frame
 avp.pc.tr.qstat.scat$logRPKM <- avp.pc.tr.qstat.scat$logCPM - log2(avp.pc.tr.qstat.scat$Length * 0.001)
-#These are the basic filter criteria decided on with MR 
+# Commonly used filter criteria  
 avp.pc.tr.qstat.scat.filt<-subset(avp.pc.tr.qstat.scat, logCPM > 1 & logRPKM > 1)
-#avp.pc.tr.qstat.scat.filt<-avp.pc.tr.qstat.scat
 nrow(avp.pc.tr.qstat.scat.filt)
-#transformation for scatter
+# Transformation for scatter
 avp.pc.tr.qstat.scat.filt$logCPMpoly<-avp.pc.tr.qstat.scat.filt$logCPM - (avp.pc.tr.qstat.scat.filt$logFC/2) # poly
 avp.pc.tr.qstat.scat.filt$logCPMallo<-avp.pc.tr.qstat.scat.filt$logCPM + (avp.pc.tr.qstat.scat.filt$logFC/2) # allo
-#Separate up and down genes
+# Separation of up and down genes
 avp.pc.tr.qstat.scat.filt.UP<-subset(avp.pc.tr.qstat.scat.filt, logFC >= 0 & FDR < 0.05)
 avp.pc.tr.qstat.scat.filt.DN<-subset(avp.pc.tr.qstat.scat.filt, logFC <= 0 & FDR < 0.05)
 nrow(avp.pc.tr.qstat.scat.filt.UP)
 nrow(avp.pc.tr.qstat.scat.filt.DN)
 ```
+
 ## Export UP and DN regulated Genes
 * Significantly up and down regulated genes are exported in the following.
 ```{r}
@@ -733,7 +703,7 @@ plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(5,4.5,"Steelblue bars: HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(1,.5))
 text(5,2.8,expression(italic(P)[adj.] *"<"* ~1.9*"x10"^-4), adj = c(1,.5))
 ```
-* Export Barcode Plot
+* Barcode plot is exported, hereafter.
 ```{r}
 pdf(file= "./FIGDIR/SupplementaryFigure3d_avp.pc.Barcodeplot_HALL_IFN.pdf", height=3.2, width=6)
 barcodeplot(avp.pc.tr$table$logFC,
@@ -751,7 +721,7 @@ dev.off()
 
 ## Summary of Condition/Organ-wise Comparisons
 
-```{r}
+```{r, fig.height=1.6, fig.width=2.6}
 res_pvalues_ifn <-data.frame(samples=c("pro_S","prc_S","pro_L","prc_L","pro_C","prc_C"), pifn=c(0.009970082,0.000271564,0.7228390,0.10217242,0.2062865,0.994023097))
 res_pvalues_ifn$logFDR <- log10(res_pvalues_ifn$pifn)
 res_pvalues_ifn.bar <- ggplot(res_pvalues_ifn) + 
