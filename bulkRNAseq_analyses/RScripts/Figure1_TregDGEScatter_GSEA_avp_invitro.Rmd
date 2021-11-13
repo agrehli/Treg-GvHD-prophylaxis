@@ -353,7 +353,7 @@ par(new=TRUE)
 plot.new( )
 plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,5,"Orange bars: Genes up in expanded allo Treg", adj = c(0,.5))
-text(-5,4,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
+text(-5,4,expression(italic(P)[adj.] *"<"* ~0.012), adj = c(0,.5))
 ```
 * Barcodeplot is exported.
 ```{r}
@@ -366,7 +366,7 @@ par(new=TRUE)
 plot.new( )
 plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,4.5,"Orange bars: Gene Set HALLMARK_HYPOXIA", adj = c(0,.5))
-text(-5,3,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
+text(-5,3,expression(italic(P)[adj.] *"<"* ~0.012), adj = c(0,.5))
 dev.off()
 ```
 * HALLMARK_IL2_STAT5_SIGNALING
@@ -381,7 +381,7 @@ par(new=TRUE)
 plot.new( )
 plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,5,"Orange bars: Gene Set HALLMARK_IL2_STAT5_SIGNALING", adj = c(0,.5))
-text(-5,4,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
+text(-5,4,expression(italic(P)[adj.] *"<"* ~0.016), adj = c(0,.5))
 ```
 * Barcode plot is exported.
 ```{r}
@@ -394,7 +394,7 @@ par(new=TRUE)
 plot.new( )
 plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,4.5,"Orange bars: HALLMARK_IL2_STAT5_SIGNALING", adj = c(0,.5))
-text(-5,3,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
+text(-5,3,expression(italic(P)[adj.] *"<"* ~0.016), adj = c(0,.5))
 dev.off()
 ```
 * KEGG_GLYCOLYSIS_GLUCONEOGENESIS
