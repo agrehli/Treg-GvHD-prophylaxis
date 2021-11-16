@@ -17,21 +17,6 @@ output:
 
 ***
 
-```{r setup, include=FALSE}
-# Set global chunk options
-knitr::opts_chunk$set(echo = TRUE, include = TRUE)
-knitr::opts_knit$set(root.dir = normalizePath(".."))
-# ...packages.bib file is also written here
-knitr::write_bib(.packages(), "Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
-```
-
-```{r}
-# Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
-stid<-readRDS("./METADIR/stid_2020-12-21.rds")
-```
-
 ```{r, include=FALSE}
 # Load required libraries
 library(edgeR)
@@ -48,6 +33,21 @@ library(pheatmap)
 library(readxl)
 library(cowplot)
 library(gplots)
+```
+
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+# ...packages.bib file is also written here
+knitr::write_bib(.packages(), "Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
+```
+
+```{r}
+# Load required counts, metadata and annotaion RDS files
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
+stid<-readRDS("./METADIR/stid_2020-12-21.rds")
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
@@ -396,7 +396,7 @@ dev.off()
 
 ## Additional Metadata Vectors
 * For grouping in the plots, multiple options for stratification are desired. 
-* Consequently, the group, only the organ, only the setting and the expansion mode for the Treg prior Tx plus Sell+/- for physiologically tissue-resident Treg are required as subsequently defined variables.
+* Consequently, the group, only the organ, only the setting and the expansion mode for the Treg prior Tx plus CD62L+/- for physiologically tissue-resident Treg are required as subsequently defined variables.
 * Also, levels are adjusted for the desired order of samples in the plots, hereafter.
 ```{r}
 #only setting and allo/poly or Sell+/-
@@ -2415,7 +2415,7 @@ bar.p.mod.supp.Pdcd1lg2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symb
 
 ### Combined Plot
 
-* All generated barplots are arranged as plot grid, hereafter.
+* All generated bar plots are arranged as plot grid, hereafter.
 
 ```{r, fig.height=6, fig.width=8}
 bar.p.mod.supp.grid <- plot_grid(bar.p.mod.supp.Gzmb, bar.p.mod.supp.Il10, bar.p.mod.supp.Gzma, 
@@ -2427,7 +2427,7 @@ bar.p.mod.supp.grid <- plot_grid(bar.p.mod.supp.Gzmb, bar.p.mod.supp.Il10, bar.p
 bar.p.mod.supp.grid
 ```
 
-* The barplot arrangement is also exported into the figure directory.
+* The bar plot arrangement is also exported into the figure directory.
 
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure4d_pcbd.barplots.supp.sig.expression.pdf", height=6, width=8)
