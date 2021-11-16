@@ -1,6 +1,6 @@
 ---
 title: "Figure 3 related DGE Analyses for CD62L^-^ Treg comparing Colon vs. non-Colon Residency"
-subtitle: "Supplementary Figure 3 related subfigures for CD62L^-^ negative, physiologically tissue-resident Treg: DGE Scatter Plot, Hallmark GSEA Barcode Plots, Zscore Heatmap with downstream Metascape Analysis."
+subtitle: "Supplementary Figure 3 related subfigures for CD62L^-^ negative, physiologically tissue-resident Treg: DGE Scatter Plot, Hallmark GSEA Barcode Plots, Zscore Heatmap with downstream Metascape Analysis. Also, RPKM bar plots for selected genes and all resident Treg (CD62L^+^ & CD62L^-^) are created"
 author: "David Dittmar"
 date: "`r Sys.Date()`"
 bibliography: Rscripts.bib
@@ -18,6 +18,22 @@ output:
 
 ***
 
+```{r, include=FALSE}
+# Load required libraries
+library(edgeR)
+library(AnnotationDbi)
+library(org.Mm.eg.db) #for mouse
+library(tibble)
+library(dplyr)
+library(gplots)
+library(readxl)
+library(ggplot2)
+library(cowplot)
+library(ggrepel)
+library(tidyr)
+library(scales)
+```
+
 ```{r setup, include=FALSE}
 # Set global chunk options
 knitr::opts_chunk$set(echo = TRUE, include = TRUE)
@@ -31,20 +47,6 @@ knitr::write_bib(.packages(), "Figure3_TregDGEScatter_GSEA_Heatmap_Metascape_cvn
 counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
 metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
 stid<-readRDS("./METADIR/stid_2020-12-21.rds")
-```
-
-```{r, include=FALSE}
-# Load required libraries
-library(edgeR)
-library(AnnotationDbi)
-library(org.Mm.eg.db) #for mouse
-library(tibble)
-library(dplyr)
-library(gplots)
-library(readxl)
-library(ggplot2)
-library(cowplot)
-library(ggrepel)
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
@@ -142,7 +144,7 @@ if (sum(colnames(counts.bclsn)==metad.bclsn$sample_ID)==sum(bclsn.ind)) {
 
 ## DGE List Objects
 * A DGEList object is generated, the main class of the edgeR package. 
-* For full functionality, the counts.bclsnt, group.avp.bclsnt and genes.df variables are used to do so.
+* For full functionality, the counts.bclsn, group.bclsn and genes.df variables are used to do so.
 ```{r}
 dgel.bclsn<-DGEList(counts = counts.bclsn, group = group.bclsn, genes = genes.df)
 head(dgel.bclsn$samples, n=13L)
@@ -344,6 +346,8 @@ tm_fig2_panel_NLT<-rev(c("Ccr1","Ccr2","Gzmb","Il10","Il1rl1","Kdm6b","Gata3","A
 tm_fig2_panel_LT<-rev(c("Stat1","Ccr7","S1pr1","Sell","Bcl2","Tcf7"))
 ```
 
+***  
+
 ### Scatter plot with GOI highlighted (Supplementary Figure 3 e)
 * Hereafter, the scatter plot is generated and plotted.
 ```{r, fig.height=2.6, fig.width=2.2}
@@ -425,9 +429,9 @@ dev.off()
 ```{r}
 #hallmark
 Mm.H <- readRDS(url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.h.all.v7.1.entrez.rds"))
-H.ind <- ids2indices(Mm.H, id=dgel.bclsn$genes$EntrezID)
-gst.camera <- camera.DGEList(dgel.bclsn,index=H.ind,design=bclsn.design.dge,contrast=bclsn.con,inter.gene.cor=0.05)
-gst.camera
+H.ind.cvnc.bn <- ids2indices(Mm.H, id=dgel.bclsn$genes$EntrezID)
+gst.camera.cvnc.bn <- camera.DGEList(dgel.bclsn,index=H.ind.cvnc.bn,design=bclsn.design.dge,contrast=bclsn.con,inter.gene.cor=0.05)
+gst.camera.cvnc.bn
 ```
 ## GSEA Barcode Plots (Supplementary Figure 3 f)
 * Barcode plot visualizations of selected top ranking terms are shown below.
@@ -435,7 +439,8 @@ gst.camera
 ```{r, fig.height=3.2, fig.width=6}
 #hallmark HALLMARK_TNFA_SIGNALING_VIA_NFKB 
 barcodeplot(bclsn.treat.lfc0.6$table$logFC, 
-            index=H.ind[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
+            index=H.ind.cvnc.bn[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
+            xlab = bquote(log[2]*"FC"),
             labels=c("non-colon","colon"), 
               col.bars = "peru")
 par(new=TRUE)
@@ -450,7 +455,8 @@ text(-5,2.8,expression(italic(P)[adj.] *"<"* ~2.2*"x10"^-5), adj = c(0,.5))
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure3f_Barcodeplot_cvnc.bas.neg_Hallmark_TNFA.pdf", height=3.2, width=6)
 barcodeplot(bclsn.treat.lfc0.6$table$logFC, 
-            index=H.ind[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
+            index=H.ind.cvnc.bn[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
+            xlab = bquote(log[2]*"FC"),
             labels=c("non-colon","colon"), 
               col.bars = "peru")
 par(new=TRUE)
@@ -466,7 +472,8 @@ dev.off()
 ```{r, fig.height=3.2, fig.width=6}
 #hallmark HALLMARK_INFLAMMATORY_RESPONSE 
 barcodeplot(bclsn.treat.lfc0.6$table$logFC, 
-            index=H.ind[["HALLMARK_INFLAMMATORY_RESPONSE"]], 
+            index=H.ind.cvnc.bn[["HALLMARK_INFLAMMATORY_RESPONSE"]], 
+            xlab = bquote(log[2]*"FC"),
             labels=c("non-colon","colon"), 
               col.bars = "peru")
 par(new=TRUE)
@@ -481,7 +488,8 @@ text(-5,2.8,expression(italic(P)[adj.] *"<"* ~0.012), adj = c(0,.5))
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure3f_Barcodeplot_cvnc.bas.neg_Hallmark_IR.pdf", height=3.2, width=6)
 barcodeplot(bclsn.treat.lfc0.6$table$logFC, 
-            index=H.ind[["HALLMARK_INFLAMMATORY_RESPONSE"]], 
+            index=H.ind.cvnc.bn[["HALLMARK_INFLAMMATORY_RESPONSE"]], 
+            xlab = bquote(log[2]*"FC"),
             labels=c("non-colon","colon"), 
               col.bars = "peru")
 par(new=TRUE)
@@ -877,6 +885,228 @@ dev.off()
 
 ***
 
+# Additional Subsetting Index for all Baseline samples: CD62L^+^ & CD62L^-^
+* For the bar plot in Supplementary Figure 3 i, we also need to include CD62L^+^ samples.
+* A subsetting index is created for that purpose.
+```{r}
+bcls.ind<-grepl("wt",metad.m.rm$appl)&(grepl("S", metad.m.rm$org)|grepl("C", metad.m.rm$org)|grepl("L", metad.m.rm$org))
+bcls.ind
+```
+
+##Counts
+* Here, the comprehensive counts data frame is reduced using the subsetting index.
+```{r}
+#Subsetting the respective counts object (counts.m.rm)
+counts.bcls<-counts.m.rm[,bcls.ind]
+ncol(counts.bcls)
+colnames(counts.bcls)
+```
+## Metadata
+* The metadata has to be reduced accordingly. 
+* The original order of samples is introduced for downstream re-ordering of the read count table.
+* An additional, custom group variable is introduced as well. 
+```{r, echo= FALSE}
+metad.bcls<-metad.m.rm[bcls.ind,]
+metad.bcls$orig.ord<-1:nrow(metad.bcls)
+metad.bcls<-metad.bcls[order(metad.bcls$appl),] #maybe think of something notowing the order to be customized here
+counts.bcls.ind<-metad.bcls$orig.ord
+metad.bcls
+group.bcls<-factor(as.character(metad.bcls$grp), levels = #c("wt_C_neg","wt_L_neg","wt_L_pos","wt_S_neg","wt_S_pos") # this cannot be true, there is a mistake in the bar plot, trying to find it now
+                     c("wt_C_neg","wt_L_neg","wt_S_neg","wt_L_pos","wt_S_pos"))
+```
+## Re-ordering Counts Data Frame Columns
+* Here, read counts are re-ordered according to the metadata object.
+```{r}
+counts.bcls.ord<-counts.bcls[,counts.bcls.ind]
+head(counts.bcls.ord)
+counts.bcls<-counts.bcls.ord
+rm(counts.bcls.ord)
+```
+## Consistency Check
+* In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
+```{r}
+if (sum(colnames(counts.bcls)==metad.bcls$sample_ID)==sum(bcls.ind)) {
+  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+}else {
+  print("Something is inconsistent, check the code above for errors during subsetting!")
+}
+```
+## DGE List Objects
+* A DGEList object is generated, the main class of the edgeR package. 
+* For full functionality, the counts.bcls, group.bcls and genes.df variables are used to do so.
+```{r,include=FALSE}
+dgel.bcls<-DGEList(counts = counts.bcls, group = group.bcls, genes = genes.df)
+dgel.bcls
+dgel.bcls$samples
+```
+
+## Exclusion of Rare Transcripts
+* The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
+* Only genes fulfilling that criterion are kept and also normalization factors are calculated.
+```{r}
+keep.bcls <- filterByExpr(dgel.bcls) # I guess gruop would have been extracted from dgel.bcls, but it 
+#keep.bcls <- rowSums(cpm(dgel.bcls)>1) >= 8 #the way we used to filter before the filterByExpr function #ususnoty we use 5 here
+dgel.bcls <- dgel.bcls[keep.bcls, , keep.lib.sizes=FALSE]
+dgel.bcls <- calcNormFactors(dgel.bcls)
+table(keep.bcls)
+dgel.bcls$samples
+```
+## Log~2~(rpkm) Calculation
+* In this step, Log~2~(rpkm) are calculated.
+* This will be the data plotted in the bar plots.
+```{r}
+bcls.log.rpkm <- rpkm(dgel.bcls, prior.count = 2,log = TRUE)
+```
+
+***
+
+# Barplots for Gene Expression Levels
+* log2-transformed RPKM bar plots for selected genes are produced by the following code.
+* Before bar plots can be generated, an appropriate data frame has to be created.
+
+## Aesthetics
+* Fitting color and shapes vectors have to be defined for aesthetic plotting.
+
+### Named Color Vector
+* A named color vector is defined, hereafter.
+```{r}
+bcls.col<-c("peru","lightsteelblue","hotpink4","lightsteelblue1","hotpink")
+names(bcls.col)<-levels(group.bcls)
+bcls.col
+```
+
+### Named Shapes Vector
+* A named shapes vector is defined, in the following.
+```{r}
+bcls.shp.3<-c(23,24,21,24,21)
+names(bcls.shp.3)<-levels(group.bcls)
+bcls.shp.3
+```
+
+## Definition of GOI
+* Hereafter, we define genes of interest (GOI) for downstream bar plots.
+* GOI comprise organ specific genes, defined as one vector.
+```{r}
+organ.sig<-c("Cxcr5","Izumo1r","Naip5","Naip6","S1pr1","S1pr4","Cd55","Klf2","Klrg1","Il1rl1","Gpr15","Relb")
+organ.sig
+```
+
+## Data Preparation
+
+### Transposed Data Frame 
+* Hereafter, a transposed log~2~(rpkm) data frame is generated.
+* This is done for the defined GOI with gene symbols used as rownames.
+```{r}
+bcls.log.rpkm.4bar <- data.frame(bcls.log.rpkm)
+bcls.log.rpkm.an <- as.data.frame(strsplit2(rownames(bcls.log.rpkm),"[$]"))
+# introduce GeneSymbol column
+bcls.log.rpkm.4bar$GeneSymbol <- bcls.log.rpkm.an$V2
+# subsetting for GOI
+bcls.log.rpkm.4bar.organ <- bcls.log.rpkm.4bar[bcls.log.rpkm.4bar$GeneSymbol %in% organ.sig, ]
+# GeneSymbols become row names
+rownames(bcls.log.rpkm.4bar.organ) <- bcls.log.rpkm.4bar.organ$GeneSymbol
+# the matrix is transposed
+bcls.log.rpkm.4bar.organ.tp <- t(bcls.log.rpkm.4bar.organ)
+# the GeneSymbol row after transposing is removed
+bcls.log.rpkm.4bar.organ.tp <- as.data.frame(bcls.log.rpkm.4bar.organ.tp[rownames(bcls.log.rpkm.4bar.organ.tp) != "GeneSymbol", , drop = FALSE])
+```
+
+### Annotation and Gathering for Bar plot Data frame
+* SampleID, group information is added.
+* Individual observations are summarized per sample group and GOI.
+* Values are converted to numeric and the GeneSymbol column is declared a factor to enable desirable ordering.
+```{r}
+bcls.log.rpkm.4bar.organ.tp$sampleID<-colnames(counts.bcls)
+bcls.log.rpkm.4bar.organ.tp$group<-group.bcls
+bcls.log.rpkm.4bar.organ.dm <- gather(bcls.log.rpkm.4bar.organ.tp, key = "GeneSymbol", value="rpkm",
+all_of(organ.sig))
+bcls.log.rpkm.4bar.organ.dm$rpkm <- as.numeric(as.character(bcls.log.rpkm.4bar.organ.dm$rpkm))
+bcls.log.rpkm.4bar.organ.dm$GeneSymbol <- factor(as.character(bcls.log.rpkm.4bar.organ.dm$GeneSymbol), levels = c("Cxcr5","Izumo1r","Naip5","Naip6","S1pr1","S1pr4","Cd55","Klf2","Klrg1","Il1rl1","Gpr15","Relb"))
+sapply(bcls.log.rpkm.4bar.organ.dm, class)
+```
+
+## Bar plot arrangement (Supplementary Figure 3 i)
+* Bar plots are created and arranged into an array of plots.
+* Scale labeling is adjusted to match the manual data transformation for more aesthetic plotting.  
+```{r}
+bar.plot.organ<-ggplot(data = bcls.log.rpkm.4bar.organ.dm,
+                       aes(x = group,
+                           y = 2^(rpkm+4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0.01,0),
+                     limits = c(1,16384),
+                     breaks = c(1,4,16,64,256,1024, 4096,16384),
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
+  annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"),
+                      mid = unit(.5,"mm"),
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.75,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0,
+                                             dodge.width = 1.0,
+                                             seed = 1234))+
+  stat_summary(fun.data = mean_se,
+               fun.args = list(mult=1),
+               geom = "errorbar",
+               color ="black",
+               linetype = "solid",
+               size=0.25,
+               width=0.8,
+               position = "dodge")+
+  scale_fill_manual(values = alpha(bcls.col,0.75))+
+  scale_colour_manual(values = alpha(bcls.col,0.50))+
+  scale_shape_manual(values = bcls.shp.3)+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group",
+       y = "Reads per kilobase per million (RPKM)") +
+  facet_wrap(~GeneSymbol, ncol = 4)
+```
+
+* The plot array is shown, hereafter.  
+
+```{r, fig.width=2.5, fig.height=3.5}
+bar.plot.organ
+```
+
+* The bar plot arrangement is exported, hereafter.
+
+```{r}
+pdf(file = "./FIGDIR/SupplementaryFigure3i_bcls.organ.sig.barplots.expression.shifted+4.pdf",
+   width = 2.5, height = 3.5)
+bar.plot.organ
+dev.off()
+```
+
+***
+
 # SessionInfo
 ```{r, echo=FALSE, warning=FALSE}
 sessionInfo(package = NULL)
@@ -886,7 +1116,3 @@ writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure3_Treg
 ***
 
 # Bibliography
-
-
-
-
