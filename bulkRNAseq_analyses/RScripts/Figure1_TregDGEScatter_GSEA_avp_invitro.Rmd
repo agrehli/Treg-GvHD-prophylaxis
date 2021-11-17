@@ -17,22 +17,7 @@ output:
 
 ***
 
-```{r setup, include=FALSE}
-# Set global chunk options
-knitr::opts_chunk$set(echo = TRUE, include = TRUE)
-knitr::opts_knit$set(root.dir = normalizePath(".."))
-# ...packages.bib file is also written here
-knitr::write_bib(.packages(), "Figure1_TregDGEScatter_GSEA_avp_invitro_packages.bib") # check .bib file generation because sometimes only baseR is in there. putting it at the end did not make a difference
-```
-
-```{r}
-# Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
-stid<-readRDS("./METADIR/stid_2020-12-21.rds")
-```
-
-```{r, include=FALSE}
+```{r required libraries, include=FALSE}
 # Load required libraries
 library(edgeR)
 library(AnnotationDbi)
@@ -40,6 +25,22 @@ library(org.Mm.eg.db) #for mouse
 library(ggplot2)
 library(ggrepel)
 ```
+
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+# ...packages.bib file is also written here
+knitr::write_bib(.packages(), "Figure1_TregDGEScatter_GSEA_avp_invitro_packages.bib")
+```
+
+```{r RDS, include=FALSE}
+# Load required counts, metadata and annotaion RDS files
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
+stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+```
+
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
 
@@ -111,7 +112,7 @@ rm(counts.avp.ivt.ord)
 ## Consistency Check
 * In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
 ```{r}
-if (sum(colnames(counts.ivt)==metad.avp.ivt$sample_ID)==length(avp.ivt.ind)) {
+if (sum(colnames(counts.ivt)==metad.avp.ivt$sample_ID)==sum(avp.ivt.ind)) {
   print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
 }else {
   print("Something is inconsistent, check the code above for errors during subsetting!")
@@ -341,11 +342,12 @@ gst.camera
 
 ## Barcode plot visualizations (Supplementary Figure 1 b)
 * Barcode plots representing the results for selected Hallmark and Kegg gene sets.
-* HALLMARK_HYPOXIA
+* HALLMARK_HYPOXIA  
 ```{r, fig.height=3.2,fig.width=6}
 #hallmark HALLMARK_HYPOXIA 
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=H.ind[["HALLMARK_HYPOXIA"]], 
+            xlab = bquote(log[2]*"FC"),
             labels=c("up in poly","up in allo"), 
               col.bars = "orange",
             main="HALLMARK_HYPOXIA")
@@ -355,11 +357,14 @@ plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,5,"Orange bars: Genes up in expanded allo Treg", adj = c(0,.5))
 text(-5,4,expression(italic(P)[adj.] *"<"* ~0.012), adj = c(0,.5))
 ```
-* Barcodeplot is exported.
+
+* Barcodeplot is exported.  
+
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_HYPOXIA.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=H.ind[["HALLMARK_HYPOXIA"]], 
+            xlab = bquote(log[2]*"FC"),
             labels=c("up in poly","up in allo"), 
               col.bars = "orange")
 par(new=TRUE)
@@ -369,11 +374,14 @@ text(-5,4.5,"Orange bars: Gene Set HALLMARK_HYPOXIA", adj = c(0,.5))
 text(-5,3,expression(italic(P)[adj.] *"<"* ~0.012), adj = c(0,.5))
 dev.off()
 ```
-* HALLMARK_IL2_STAT5_SIGNALING
+
+* HALLMARK_IL2_STAT5_SIGNALING  
+
 ```{r,fig.height=3.2,fig.width=6}
 #hallmark HALLMARK_IL2_STAT5_SIGNALING 
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=H.ind[["HALLMARK_IL2_STAT5_SIGNALING"]], 
+            xlab = bquote(log[2]*"FC"),
             labels=c("up in poly","up in allo"), 
               col.bars = "orange",
             main="HALLMARK_IL2_STAT5_SIGNALING")
@@ -381,27 +389,33 @@ par(new=TRUE)
 plot.new( )
 plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,5,"Orange bars: Gene Set HALLMARK_IL2_STAT5_SIGNALING", adj = c(0,.5))
-text(-5,4,expression(italic(P)[adj.] *"<"* ~0.016), adj = c(0,.5))
+text(-5,4,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
 ```
-* Barcode plot is exported.
+
+* Barcode plot is exported.  
+
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_IL2_STAT5.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=H.ind[["HALLMARK_IL2_STAT5_SIGNALING"]], 
+            xlab = bquote(log[2]*"FC"),
             labels=c("up in poly","up in allo"), 
               col.bars = "orange")
 par(new=TRUE)
 plot.new( )
 plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,4.5,"Orange bars: HALLMARK_IL2_STAT5_SIGNALING", adj = c(0,.5))
-text(-5,3,expression(italic(P)[adj.] *"<"* ~0.016), adj = c(0,.5))
+text(-5,3,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
 dev.off()
 ```
-* KEGG_GLYCOLYSIS_GLUCONEOGENESIS
+
+* KEGG_GLYCOLYSIS_GLUCONEOGENESIS  
+
 ```{r,fig.height=3.2,fig.width=6}
 #KEGG_GLYCOLYSIS_GLUCONEOGENESIS
 barcodeplot(avp.ivt.tr.res$table$logFC, 
-            index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]], 
+            index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]],
+            xlab = bquote(log[2]*"FC"),
             labels=c("up in poly","up in allo"), 
               col.bars = "orange",
             main="KEGG_GLYCOLYSIS_GLUCONEOGENESIS")
@@ -411,11 +425,14 @@ plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,5,"Orange bars: Genes up in expanded allo Treg", adj = c(0,.5))
 text(-5,4,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
 ```
-* Barcode plot is exported.
+
+* Barcode plot is exported. 
+
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_KEGG_GLYCONEO.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
-            index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]], 
+            index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]],
+            xlab = bquote(log[2]*"FC"),
             labels=c("up in poly","up in allo"), 
               col.bars = "orange")
 par(new=TRUE)
