@@ -40,7 +40,11 @@ library(gplots)
 knitr::opts_chunk$set(echo = TRUE, include = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 # ...packages.bib file is also written here
+<<<<<<< HEAD:bulkRNAseq_analyses/RScripts/Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
 knitr::write_bib(.packages(), "Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
+=======
+knitr::write_bib(.packages(), "Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
+>>>>>>> 19f38bac8e4f0993bf53add236471e3d5dd943fb:bulkRNAseq_analyses/RScripts/Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
 ```
 
 ```{r}
