@@ -1,0 +1,518 @@
+---
+title: "Allo vs. Poly in BMT models - organ wise"
+subtitle: "Individual organ and model wise GSEA of up-regulated genes in alloTreg *in vivo* based on up-regulated genes in *in vitro* expanded alloTreg."
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide 
+---
+
+***
+
+```{r libaries, include=FALSE}
+# Load required libraries
+library(edgeR)
+library(AnnotationDbi)
+library(org.Mm.eg.db) #for mouse
+library(tibble)
+#library(ggplot2)
+#library(ggrepel)
+```
+
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+# ...packages.bib file is also written here
+knitr::write_bib(.packages(), "Figure3_GSEA_prc.pro_avp.c.l.s.indiv_packages.bib")
+```
+
+```{r RDS files}
+# Load required counts, metadata and annotaion RDS files
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
+stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+```
+* First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
+* This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
+
+***
+
+# Data Preparation
+* For the analysis, the data and metadata have to be prepared and properly annotated.
+
+## Annotation Data Frame
+* An annotation data frame with 4 columns is constructed.
+* The additional EntrezID column is required for possible downstream pathway analyses or annotation operations.
+```{r annotation df}
+genes.df<-as.data.frame(strsplit2(stid,"[$]"))
+colnames(genes.df)<-c("EnsemblID","GeneSymbol","Length","GeneType")
+genes.df$EnsemblID<-as.character(genes.df$EnsemblID)
+genes.df$GeneSymbol<-as.character(genes.df$GeneSymbol)
+genes.df$Length<-as.numeric(as.character(genes.df$Length))
+genes.df$GeneType<-as.character(genes.df$GeneType)
+genes.df$EntrezID<- mapIds(org.Mm.eg.db,
+                    keys=genes.df$GeneSymbol,
+                    column="ENTREZID",
+                    keytype="SYMBOL",
+                    multiVals="first")
+rownames(genes.df)<-stid
+head(genes.df, n=5L)
+#See if the gene length values are still as they should, so this should yield an empty vector
+which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
+```
+
+## Subsetting Indices
+* In this analysis, we focus on donor Treg re-isolated from recipient organs 7d after transfer (BMT w/o Tconv & BMT w Tconv).
+* However, for the purpose of the GSEA, downstream data objects are required to be separate regarding the model ("noGvHD", "GvHD") and the organs ("colon", "liver", "spleen").
+* Subsetting indices are generated accordingly.
+```{r individual subsetting indices}
+# noGvHD
+avp.ind.prc.c <- grepl("prc", metad.m.rm$appl)&grepl("C",metad.m.rm$org)
+print(paste(sum(avp.ind.prc.c),"samples enter the noGvHD colon analysis!"))
+avp.ind.prc.l <- grepl("prc", metad.m.rm$appl)&grepl("L",metad.m.rm$org)
+print(paste(sum(avp.ind.prc.l),"samples enter the noGvHD liver analysis!"))
+avp.ind.prc.s <- grepl("prc", metad.m.rm$appl)&grepl("S",metad.m.rm$org)
+print(paste(sum(avp.ind.prc.s),"samples enter the noGvHD spleen analysis!"))
+# GvHD
+avp.ind.pro.c <- grepl("pro", metad.m.rm$appl)&grepl("C",metad.m.rm$org)
+print(paste(sum(avp.ind.pro.c),"samples enter the GvHD colon analysis!"))
+avp.ind.pro.l <- grepl("pro", metad.m.rm$appl)&grepl("L",metad.m.rm$org)
+print(paste(sum(avp.ind.pro.l),"samples enter the GvHD liver analysis!"))
+avp.ind.pro.s <- grepl("pro", metad.m.rm$appl)&grepl("S",metad.m.rm$org)
+print(paste(sum(avp.ind.pro.s),"samples enter the GvHD spleen analysis!"))
+```
+
+
+
+## Counts
+* Here, the comprehensive counts data frame is reduced using the subsetting indices.
+```{r counts data frames}
+# noGvHD
+counts.avp.prc.c<-counts.m.rm[,avp.ind.prc.c]
+paste(ncol(counts.avp.prc.c),"samples are selected for the noGvHD colon analysis:")
+colnames(counts.avp.prc.c)
+counts.avp.prc.l<-counts.m.rm[,avp.ind.prc.l]
+paste(ncol(counts.avp.prc.l),"samples are selected for the noGvHD liver analysis:")
+colnames(counts.avp.prc.l)
+counts.avp.prc.s<-counts.m.rm[,avp.ind.prc.s]
+paste(ncol(counts.avp.prc.s),"samples are selected for the noGvHD spleen analysis:")
+colnames(counts.avp.prc.s)
+# GvHD
+counts.avp.pro.c<-counts.m.rm[,avp.ind.pro.c]
+paste(ncol(counts.avp.pro.c),"samples are selected for the GvHD colon analysis:")
+colnames(counts.avp.pro.c)
+counts.avp.pro.l<-counts.m.rm[,avp.ind.pro.l]
+paste(ncol(counts.avp.pro.l),"samples are selected for the GvHD liver analysis:")
+colnames(counts.avp.pro.l)
+counts.avp.pro.s<-counts.m.rm[,avp.ind.pro.s]
+paste(ncol(counts.avp.pro.s),"samples are selected for the GvHD spleen analysis:")
+colnames(counts.avp.pro.s)
+```
+
+## Metadata
+* The metadata has to be reduced accordingly. 
+* The original order of samples is introduced for downstream re-ordering of the read count tables.
+* For each of the 6 analyses, a group variable is defined to enable the downstream comparison of allo vs. poly Treg.
+```{r metadata frames}
+# noGvHD
+metad.avp.prc.c<-metad.m.rm[avp.ind.prc.c,]
+metad.avp.prc.c$orig.ord<-1:nrow(metad.avp.prc.c)
+metad.avp.prc.c<-metad.avp.prc.c[order(metad.avp.prc.c$treat),]
+counts.avp.ind.prc.c<-metad.avp.prc.c$orig.ord
+group.avp.prc.c<-factor(as.character(metad.avp.prc.c$grp))
+group.avp.prc.c
+metad.avp.prc.l<-metad.m.rm[avp.ind.prc.l,]
+metad.avp.prc.l$orig.ord<-1:nrow(metad.avp.prc.l)
+metad.avp.prc.l<-metad.avp.prc.l[order(metad.avp.prc.l$treat),]
+counts.avp.ind.prc.l<-metad.avp.prc.l$orig.ord
+group.avp.prc.l<-factor(as.character(metad.avp.prc.l$grp))
+group.avp.prc.l
+metad.avp.prc.s<-metad.m.rm[avp.ind.prc.s,]
+metad.avp.prc.s$orig.ord<-1:nrow(metad.avp.prc.s)
+metad.avp.prc.s<-metad.avp.prc.s[order(metad.avp.prc.s$treat),]
+counts.avp.ind.prc.s<-metad.avp.prc.s$orig.ord
+group.avp.prc.s<-factor(as.character(metad.avp.prc.s$grp))
+group.avp.prc.s
+# GvHD
+metad.avp.pro.c<-metad.m.rm[avp.ind.pro.c,]
+metad.avp.pro.c$orig.ord<-1:nrow(metad.avp.pro.c)
+metad.avp.pro.c<-metad.avp.pro.c[order(metad.avp.pro.c$treat),]
+counts.avp.ind.pro.c<-metad.avp.pro.c$orig.ord
+group.avp.pro.c<-factor(as.character(metad.avp.pro.c$grp))
+group.avp.pro.c
+metad.avp.pro.l<-metad.m.rm[avp.ind.pro.l,]
+metad.avp.pro.l$orig.ord<-1:nrow(metad.avp.pro.l)
+metad.avp.pro.l<-metad.avp.pro.l[order(metad.avp.pro.l$treat),]
+counts.avp.ind.pro.l<-metad.avp.pro.l$orig.ord
+group.avp.pro.l<-factor(as.character(metad.avp.pro.l$grp))
+group.avp.pro.l
+metad.avp.pro.s<-metad.m.rm[avp.ind.pro.s,]
+metad.avp.pro.s$orig.ord<-1:nrow(metad.avp.pro.s)
+metad.avp.pro.s<-metad.avp.pro.s[order(metad.avp.pro.s$treat),]
+counts.avp.ind.pro.s<-metad.avp.pro.s$orig.ord
+group.avp.pro.s<-factor(as.character(metad.avp.pro.s$grp))
+group.avp.pro.s
+```
+
+## Re-ordering Counts Data Frames Columns
+* Here, read counts are re-ordered according to the metadata objects.
+```{r counts df re-ordering}
+# no GvHD
+counts.avp.prc.c.ord<-counts.avp.prc.c[,counts.avp.ind.prc.c]
+counts.avp.prc.c<-counts.avp.prc.c.ord
+rm(counts.avp.prc.c.ord)
+counts.avp.prc.l.ord<-counts.avp.prc.l[,counts.avp.ind.prc.l]
+counts.avp.prc.l<-counts.avp.prc.l.ord
+rm(counts.avp.prc.l.ord)
+counts.avp.prc.s.ord<-counts.avp.prc.s[,counts.avp.ind.prc.s]
+counts.avp.prc.s<-counts.avp.prc.s.ord
+rm(counts.avp.prc.s.ord)
+# GvHD
+counts.avp.pro.c.ord<-counts.avp.pro.c[,counts.avp.ind.pro.c]
+counts.avp.pro.c<-counts.avp.pro.c.ord
+rm(counts.avp.pro.c.ord)
+counts.avp.pro.l.ord<-counts.avp.pro.l[,counts.avp.ind.pro.l]
+counts.avp.pro.l<-counts.avp.pro.l.ord
+rm(counts.avp.pro.l.ord)
+counts.avp.pro.s.ord<-counts.avp.pro.s[,counts.avp.ind.pro.s]
+counts.avp.pro.s<-counts.avp.pro.s.ord
+rm(counts.avp.pro.s.ord)
+```
+
+## Consistency Check
+* In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
+```{r consistency check}
+if (sum(colnames(counts.avp.prc.c)==metad.avp.prc.c$sample_ID)==sum(avp.ind.prc.c)
+    &sum(colnames(counts.avp.prc.l)==metad.avp.prc.l$sample_ID)==sum(avp.ind.prc.l)
+    &sum(colnames(counts.avp.prc.s)==metad.avp.prc.s$sample_ID)==sum(avp.ind.prc.s)
+    &sum(colnames(counts.avp.pro.c)==metad.avp.pro.c$sample_ID)==sum(avp.ind.pro.c)
+    &sum(colnames(counts.avp.pro.l)==metad.avp.pro.l$sample_ID)==sum(avp.ind.pro.l)
+    &sum(colnames(counts.avp.pro.s)==metad.avp.pro.s$sample_ID)==sum(avp.ind.pro.s)
+    ) {
+  print("All counts and respective metadata variables are properly subsetted and in accordance with each other. The analyses can be proceeded with!")
+}else {
+  print("Something is inconsistent, check the code above for errors during subsetting!")
+}
+```
+
+## DGE List Objects
+* DGEList object are generated for each of the 6 analyses, the main class of the edgeR package. 
+* For full functionality, the counts, group and genes.df variables are used to do so.
+```{r DGEList objects}
+# no GvHD
+dgel.avp.prc.c<-DGEList(counts = counts.avp.prc.c, group = group.avp.prc.c, genes = genes.df)
+head(dgel.avp.prc.c$samples, n=4L)
+dgel.avp.prc.l<-DGEList(counts = counts.avp.prc.l, group = group.avp.prc.l, genes = genes.df)
+head(dgel.avp.prc.l$samples, n=4L)
+dgel.avp.prc.s<-DGEList(counts = counts.avp.prc.s, group = group.avp.prc.s, genes = genes.df)
+head(dgel.avp.prc.s$samples, n=4L)
+# GvHD
+dgel.avp.pro.c<-DGEList(counts = counts.avp.pro.c, group = group.avp.pro.c, genes = genes.df)
+head(dgel.avp.pro.c$samples, n=4L)
+dgel.avp.pro.l<-DGEList(counts = counts.avp.pro.l, group = group.avp.pro.l, genes = genes.df)
+head(dgel.avp.pro.l$samples, n=4L)
+dgel.avp.pro.s<-DGEList(counts = counts.avp.pro.s, group = group.avp.pro.s, genes = genes.df)
+head(dgel.avp.pro.s$samples, n=4L)
+head(dgel.avp.pro.c$genes, n=4L)
+```
+
+## Exclusion of Rare Transcripts
+* The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
+* Only genes fulfilling that criterion are kept and also normalization factors are calculated.
+```{r exclusion of rare transcripts}
+# no GvHD
+keep.avp.prc.c <- filterByExpr(dgel.avp.prc.c)
+dgel.avp.prc.c <- dgel.avp.prc.c[keep.avp.prc.c, , keep.lib.sizes=FALSE]
+dgel.avp.prc.c <- calcNormFactors(dgel.avp.prc.c)
+print(paste(table(keep.avp.prc.c)[1],"genes are discarded while",table(keep.avp.prc.c)[2], "genes are retained in the noGvHD colon analysis!"))
+keep.avp.prc.l <- filterByExpr(dgel.avp.prc.l)
+dgel.avp.prc.l <- dgel.avp.prc.l[keep.avp.prc.l, , keep.lib.sizes=FALSE]
+dgel.avp.prc.l <- calcNormFactors(dgel.avp.prc.l)
+print(paste(table(keep.avp.prc.l)[1],"genes are discarded while",table(keep.avp.prc.l)[2], "genes are retained in the noGvHD liver analysis!"))
+keep.avp.prc.s <- filterByExpr(dgel.avp.prc.s)
+dgel.avp.prc.s <- dgel.avp.prc.s[keep.avp.prc.s, , keep.lib.sizes=FALSE]
+dgel.avp.prc.s <- calcNormFactors(dgel.avp.prc.s)
+print(paste(table(keep.avp.prc.s)[1],"genes are discarded while",table(keep.avp.prc.s)[2], "genes are retained in the noGvHD spleen analysis!"))
+# GvHD
+keep.avp.pro.c <- filterByExpr(dgel.avp.pro.c)
+dgel.avp.pro.c <- dgel.avp.pro.c[keep.avp.pro.c, , keep.lib.sizes=FALSE]
+dgel.avp.pro.c <- calcNormFactors(dgel.avp.pro.c)
+print(paste(table(keep.avp.pro.c)[1],"genes are discarded while",table(keep.avp.pro.c)[2], "genes are retained in the GvHD colon analysis!"))
+keep.avp.pro.l <- filterByExpr(dgel.avp.pro.l)
+dgel.avp.pro.l <- dgel.avp.pro.l[keep.avp.pro.l, , keep.lib.sizes=FALSE]
+dgel.avp.pro.l <- calcNormFactors(dgel.avp.pro.l)
+print(paste(table(keep.avp.pro.l)[1],"genes are discarded while",table(keep.avp.pro.l)[2], "genes are retained in the GvHD liver analysis!"))
+keep.avp.pro.s <- filterByExpr(dgel.avp.pro.s)
+dgel.avp.pro.s <- dgel.avp.pro.s[keep.avp.pro.s, , keep.lib.sizes=FALSE]
+dgel.avp.pro.s <- calcNormFactors(dgel.avp.pro.s)
+print(paste(table(keep.avp.pro.s)[1],"genes are discarded while",table(keep.avp.pro.s)[2], "genes are retained in the GvHD spleen analysis!"))
+```
+***
+
+# Differential Gene Expression (DGE) analysis
+* Differential Gene Expression (DGE) is performed in the following part.
+* The contrast of interest (COI) will be "allo - poly" for the comparison of alloTreg vs. polyTreg *in vivo*.
+
+## Designs for DGE
+* Hereafter, a design is created that contains parameters that are of analytic interest. 
+* If applicable, a blocking factor for the number of pcr2 cycles applied in library preparation is taken into account.
+```{r DGE designs}
+# NOGVHD
+# COLON
+# factor for contrast of interest
+treat.avp.prc.c<-factor(metad.avp.prc.c$treat)
+# blocking factor
+pcr2.avp.prc.c<-factor(metad.avp.prc.c$PCR2.Cy)
+# design
+avp.prc.c.design.dge<-model.matrix(~0+treat.avp.prc.c+pcr2.avp.prc.c)
+colnames(avp.prc.c.design.dge)<- c("allo","poly","thirteen","fourteen")
+as_tibble(avp.prc.c.design.dge)
+# LIVER
+# factor for contrast of interest
+treat.avp.prc.l<-factor(metad.avp.prc.l$treat)
+# design
+avp.prc.l.design.dge<-model.matrix(~0+treat.avp.prc.l)
+colnames(avp.prc.l.design.dge)<- c("allo","poly")
+as_tibble(avp.prc.l.design.dge)
+#SPLEEN
+# factor for contrast of interest
+treat.avp.prc.s<-factor(metad.avp.prc.s$treat)
+# blocking factor
+pcr2.avp.prc.s<-factor(metad.avp.prc.s$PCR2.Cy)
+# design
+avp.prc.s.design.dge<-model.matrix(~0+treat.avp.prc.s+pcr2.avp.prc.s)
+colnames(avp.prc.s.design.dge)<- c("allo","poly","thirteen","fourteen")
+as_tibble(avp.prc.s.design.dge)
+
+# GVHD
+# COLON
+# factor for contrast of interest
+treat.avp.pro.c<-factor(metad.avp.pro.c$treat)
+# blocking factor
+pcr2.avp.pro.c<-factor(metad.avp.pro.c$PCR2.Cy)
+# design
+avp.pro.c.design.dge<-model.matrix(~0+treat.avp.pro.c+pcr2.avp.pro.c)
+colnames(avp.pro.c.design.dge)<- c("allo","poly","thirteen")
+as_tibble(avp.pro.c.design.dge)
+# LIVER
+# factor for contrast of interest
+treat.avp.pro.l<-factor(metad.avp.pro.l$treat)
+# blocking factor
+pcr2.avp.pro.l<-factor(metad.avp.pro.l$PCR2.Cy)
+# design
+avp.pro.l.design.dge<-model.matrix(~0+treat.avp.pro.l + pcr2.avp.pro.l)
+colnames(avp.pro.l.design.dge)<- c("allo","poly","thirteen","fourteen")
+as_tibble(avp.pro.l.design.dge)
+#SPLEEN
+# factor for contrast of interest
+treat.avp.pro.s<-factor(metad.avp.pro.s$treat)
+# blocking factor
+pcr2.avp.pro.s<-factor(metad.avp.pro.s$PCR2.Cy)
+# design
+avp.pro.s.design.dge<-model.matrix(~0+treat.avp.pro.s+pcr2.avp.pro.s)
+colnames(avp.pro.s.design.dge)<- c("allo","poly","thirteen","fourteen")
+as_tibble(avp.pro.s.design.dge)
+```
+
+## Dispersion Esitmation
+* Hereafter, dispersion is estimated.
+* This step is also carried out for each of the 6 analyses run in parallel.
+```{r}
+# no GvHD
+dgel.avp.prc.c<-estimateDisp(dgel.avp.prc.c,design=avp.prc.c.design.dge,robust=TRUE)
+dgel.avp.prc.c$common.dispersion #[1] 0.043
+dgel.avp.prc.l<-estimateDisp(dgel.avp.prc.l,design=avp.prc.l.design.dge,robust=TRUE)
+dgel.avp.prc.l$common.dispersion #[1] 0.141
+dgel.avp.prc.s<-estimateDisp(dgel.avp.prc.s,design=avp.prc.s.design.dge,robust=TRUE)
+dgel.avp.prc.s$common.dispersion #[1] 0.024
+# GvHD
+dgel.avp.pro.c<-estimateDisp(dgel.avp.pro.c,design=avp.pro.c.design.dge,robust=TRUE)
+dgel.avp.pro.c$common.dispersion #[1] 0.083
+dgel.avp.pro.l<-estimateDisp(dgel.avp.pro.l,design=avp.pro.l.design.dge,robust=TRUE)
+dgel.avp.pro.l$common.dispersion #[1] 0.048
+dgel.avp.pro.s<-estimateDisp(dgel.avp.pro.s,design=avp.pro.s.design.dge,robust=TRUE)
+dgel.avp.pro.s$common.dispersion #[1] 0.028
+```
+
+## GLM Fitting
+* Fitting gene wise glms (generalized linear models) for the constructed designs.
+* The resulting object will enable a gene set rotation analysis with fry() as soon as a fitting index for a gene set of interest is constructed.
+```{r}
+avp.prc.c.fit<-glmQLFit(dgel.avp.prc.c,avp.prc.c.design.dge)
+avp.prc.l.fit<-glmQLFit(dgel.avp.prc.l,avp.prc.l.design.dge)
+avp.prc.s.fit<-glmQLFit(dgel.avp.prc.s,avp.prc.s.design.dge)
+avp.pro.c.fit<-glmQLFit(dgel.avp.pro.c,avp.pro.c.design.dge)
+avp.pro.l.fit<-glmQLFit(dgel.avp.pro.l,avp.pro.l.design.dge)
+avp.pro.s.fit<-glmQLFit(dgel.avp.pro.s,avp.pro.s.design.dge)
+```
+
+## Contrasts of Interest (COI)
+* The interest in this analysis lies in the differences between allo vs. polyTreg.
+* This is done separately for re-isolated Treg from colon, liver and spleen of either the "GvHD" (+Tconv) or the "noGvHD" (-Tconv).
+* Thus, our contrast of interest is "allo - poly" for the DGE analyses. 
+```{r}
+# GvHD
+avp.prc.c.con<-makeContrasts(allo - poly, levels=avp.prc.c.design.dge)
+avp.prc.l.con<-makeContrasts(allo - poly, levels=avp.prc.l.design.dge)
+avp.prc.s.con<-makeContrasts(allo - poly, levels=avp.prc.s.design.dge)
+# no GvHD
+avp.pro.c.con<-makeContrasts(allo - poly, levels=avp.pro.c.design.dge)
+avp.pro.l.con<-makeContrasts(allo - poly, levels=avp.pro.l.design.dge)
+avp.pro.s.con<-makeContrasts(allo - poly, levels=avp.pro.s.design.dge)
+```
+
+# GSEA with *in vitro* allo up Gene Set
+* Hereafter, a gene set enrichment analysis (GSEA) is performed.
+
+## Reading in DGE from *in vitro* allo/poly comparison and GSEA
+* GeneID lists of filtered and significantly up/down regulated genes in *in vitro* allo vs. poly Treg are generated in "Figure1_TregDGEScatter_GSEA_avp_invitro.Rmd".
+* The results are read in and indices are generated for the current models of "allo versus poly" in all transplanted Treg.
+* This is performed for each condition individually.
+* Using the fry() function, a rotation gene set testing for linear models is carried out.
+```{r}
+# Reading in avp.ivt results
+avp.ivt.tr.qstat.scat.filt.GeneID.UP <- read.delim(file = "./ANALDIR/Figure1e_TregDGE_avp_invitro.filt.sig.UP.txt")
+avp.ivt.tr.qstat.scat.filt.GeneID.DN <- read.delim(file = "./ANALDIR/Figure1e_TregDGE_avp_invitro.filt.sig.DN.txt")
+# index generation and GSEA
+# no GvHD
+ind1.prc.c <- rownames(avp.prc.c.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.UP[[1]]
+ind2.prc.c <- rownames(avp.prc.c.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.DN[[1]]
+ind.prc.c <- list(ind1.prc.c,ind2.prc.c)
+names(ind.prc.c) <- c("up in allo","up in poly")
+gse.avp.prc.c <- fry(dgel.avp.prc.c, index=ind.prc.c, design=avp.prc.c.design.dge,contrast=avp.prc.c.con)
+gse.avp.prc.c
+ind1.prc.l <- rownames(avp.prc.l.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.UP[[1]]
+ind2.prc.l <- rownames(avp.prc.l.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.DN[[1]]
+ind.prc.l <- list(ind1.prc.l,ind2.prc.l)
+names(ind.prc.l) <- c("up in allo","up in poly")
+gse.avp.prc.l <- fry(dgel.avp.prc.l, index=ind.prc.l, design=avp.prc.l.design.dge,contrast=avp.prc.l.con)
+gse.avp.prc.l
+ind1.prc.s <- rownames(avp.prc.s.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.UP[[1]]
+ind2.prc.s <- rownames(avp.prc.s.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.DN[[1]]
+ind.prc.s <- list(ind1.prc.s,ind2.prc.s)
+names(ind.prc.s) <- c("up in allo","up in poly")
+gse.avp.prc.s <- fry(dgel.avp.prc.s, index=ind.prc.s, design=avp.prc.s.design.dge,contrast=avp.prc.s.con)
+gse.avp.prc.s
+# GvHD
+ind1.pro.c <- rownames(avp.pro.c.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.UP[[1]]
+ind2.pro.c <- rownames(avp.pro.c.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.DN[[1]]
+ind.pro.c <- list(ind1.pro.c,ind2.pro.c)
+names(ind.pro.c) <- c("up in allo","up in poly")
+gse.avp.pro.c <- fry(dgel.avp.pro.c, index=ind.pro.c, design=avp.pro.c.design.dge,contrast=avp.pro.c.con)
+gse.avp.pro.c
+ind1.pro.l <- rownames(avp.pro.l.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.UP[[1]]
+ind2.pro.l <- rownames(avp.pro.l.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.DN[[1]]
+ind.pro.l <- list(ind1.pro.l,ind2.pro.l)
+names(ind.pro.l) <- c("up in allo","up in poly")
+gse.avp.pro.l <- fry(dgel.avp.pro.l, index=ind.pro.l, design=avp.pro.l.design.dge,contrast=avp.pro.l.con)
+gse.avp.pro.l
+ind1.pro.s <- rownames(avp.pro.s.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.UP[[1]]
+ind2.pro.s <- rownames(avp.pro.s.fit) %in% avp.ivt.tr.qstat.scat.filt.GeneID.DN[[1]]
+ind.pro.s <- list(ind1.pro.s,ind2.pro.s)
+names(ind.pro.s) <- c("up in allo","up in poly")
+gse.avp.pro.s <- fry(dgel.avp.pro.s, index=ind.pro.s, design=avp.pro.s.design.dge,contrast=avp.pro.s.con)
+gse.avp.pro.s
+```
+
+## Summary Data Frame of "up in allo"
+
+```{r}
+# Extraction "up in allo" FDR
+gse.avp.summary.FDR<-c(gse.avp.pro.s$FDR[1],gse.avp.prc.s$FDR[1], # spleen
+                       gse.avp.pro.l$FDR[1],gse.avp.prc.l$FDR[1], # liver
+                       gse.avp.pro.c$FDR[1],gse.avp.prc.c$FDR[1]) # colon
+# Data Frame
+res_pvalues_ivt<-data.frame(samples=c("pro_S","prc_S","pro_L","prc_L","pro_C","prc_C"), 
+                            pivt=gse.avp.summary.FDR)
+res_pvalues_ivt
+```
+## Export of the Summary
+```{r}
+write.table(res_pvalues_ivt,
+            file = "./ANALDIR/SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ivt.txt",
+            col.names = TRUE,
+            quote = FALSE,
+            row.names = FALSE)
+```
+
+# GSEA with for Hallmark gene sets
+
+## Pathway enrichment analysis for Hallmark gene sets
+
+* Using camera, we look whether pathways from hallmark collections are enriched in our regulated genes.
+
+```{r GSEA HALLMARK}
+# Retrieval of Hallmark gene sets
+Mm.H <- readRDS(url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.h.all.v7.1.entrez.rds"))
+# no GvHD
+# colon
+H.ind.avp.prc.c <- ids2indices(Mm.H, id=dgel.avp.prc.c$genes$EntrezID)
+gst.camera.avp.prc.c <- camera.DGEList(dgel.avp.prc.c,index=H.ind.avp.prc.c,design=avp.prc.c.design.dge,contrast=avp.prc.c.con,inter.gene.cor=0.05)
+gst.camera.avp.prc.c
+# liver
+H.ind.avp.prc.l <- ids2indices(Mm.H, id=dgel.avp.prc.l$genes$EntrezID)
+gst.camera.avp.prc.l <- camera.DGEList(dgel.avp.prc.l,index=H.ind.avp.prc.l,design=avp.prc.l.design.dge,contrast=avp.prc.l.con,inter.gene.cor=0.05)
+gst.camera.avp.prc.l
+# spleen
+H.ind.avp.prc.s <- ids2indices(Mm.H, id=dgel.avp.prc.s$genes$EntrezID)
+gst.camera.avp.prc.s <- camera.DGEList(dgel.avp.prc.s,index=H.ind.avp.prc.s,design=avp.prc.s.design.dge,contrast=avp.prc.s.con,inter.gene.cor=0.05)
+gst.camera.avp.prc.s
+
+# GvHD
+# colon
+Mm.H <- readRDS(url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.h.all.v7.1.entrez.rds"))
+H.ind.avp.pro.c <- ids2indices(Mm.H, id=dgel.avp.pro.c$genes$EntrezID)
+gst.camera.avp.pro.c <- camera.DGEList(dgel.avp.pro.c,index=H.ind.avp.pro.c,design=avp.pro.c.design.dge,contrast=avp.pro.c.con,inter.gene.cor=0.05)
+gst.camera.avp.pro.c
+# liver
+H.ind.avp.pro.l <- ids2indices(Mm.H, id=dgel.avp.pro.l$genes$EntrezID)
+gst.camera.avp.pro.l <- camera.DGEList(dgel.avp.pro.l,index=H.ind.avp.pro.l,design=avp.pro.l.design.dge,contrast=avp.pro.l.con,inter.gene.cor=0.05)
+gst.camera.avp.pro.l
+# spleen
+H.ind.avp.pro.s <- ids2indices(Mm.H, id=dgel.avp.pro.s$genes$EntrezID)
+gst.camera.avp.pro.s <- camera.DGEList(dgel.avp.pro.s,index=H.ind.avp.pro.s,design=avp.pro.s.design.dge,contrast=avp.pro.s.con,inter.gene.cor=0.05)
+gst.camera.avp.pro.s
+```
+
+## Summary of "HALLMARK_INTERFERON_ALPHA_RESPONSE"
+
+```{r}
+# Extraction of "HALLMARK_INTERFERON_ALPHA_RESPONSE" pathway enrichment FDR
+gst.camera.avp.summary.FDR<-c(gst.camera.avp.pro.s["HALLMARK_INTERFERON_ALPHA_RESPONSE","FDR"],
+                              gst.camera.avp.prc.s["HALLMARK_INTERFERON_ALPHA_RESPONSE","FDR"],
+                              gst.camera.avp.pro.l["HALLMARK_INTERFERON_ALPHA_RESPONSE","FDR"],
+                              gst.camera.avp.prc.l["HALLMARK_INTERFERON_ALPHA_RESPONSE","FDR"],
+                              gst.camera.avp.pro.c["HALLMARK_INTERFERON_ALPHA_RESPONSE","FDR"],
+                              gst.camera.avp.prc.c["HALLMARK_INTERFERON_ALPHA_RESPONSE","FDR"])
+# Data Frame
+res_pvalues_ifn<-data.frame(samples=c("pro_S","prc_S","pro_L","prc_L","pro_C","prc_C"), 
+                            pifn=gst.camera.avp.summary.FDR)
+res_pvalues_ifn
+```
+
+## Export of the Summary
+```{r}
+write.table(res_pvalues_ifn,
+            file = "./ANALDIR/SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ifn.txt",
+            col.names = TRUE,
+            quote = FALSE,
+            row.names = FALSE)
+```
+
+***
+
+# SessionInfo
+```{r, echo=FALSE, warning=FALSE}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure3_GSEA_prc.pro_avp.c.l.s.indiv_SessionInfo.txt")
+```
+
+***
+
+# Bibliography
