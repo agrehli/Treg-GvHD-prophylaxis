@@ -590,7 +590,7 @@ dev.off()
 
 # GSEA with *in vitro* allo up Gene Set
 
-## Reading in DGE from *in vitro* allo/poly comparison
+## Reading in DGE from *in vitro* allo/poly comparison and GSEA
 * GeneID lists of filtered and significantly up/down regulated genes in *in vitro* allo vs. poly Treg are generated in "Figure1_TregDGEScatter_GSEA_avp_invitro.Rmd".
 * The results are read in and indices are generated for the current model of "allo versus poly in all BMT Treg".
 * Using the fry() function, a rotation gene set testing for linear models is carried out.
@@ -639,20 +639,23 @@ text(-5,2.8,expression(italic(P)[adj.] *"<"* ~3.5*"x10"^-15), adj = c(0,.5))
 dev.off()
 ```
 
-### Summary of Condition/Organ-wise Comparisons
-
-```{r, fig.height=1.6, fig.width=2.6}
-res_pvalues_ivt <-data.frame(samples=c("pro_S","prc_S","pro_L","prc_L","pro_C","prc_C"), pivt=c(0.000167952,0.00003884044,0.000001311260,0.001111913,0.0000457997,0.002166074))
+## Summary of Condition/Organ-wise Comparisons
+* First, make sure the "Figure3_GSEA_prc.pro_avp.c.l.s.indiv.Rmd" has been run.
+* The file "SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ivt.txt" has to be generated first.
+* The individual FDR values for the GSEA are visualized as horizontal bar plot.
+```{r, fig.height=1.8, fig.width=2.6}
+res_pvalues_ivt<-read.table(file = "./ANALDIR/SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ivt.txt", header = TRUE)
 res_pvalues_ivt$logFDR <- log10(res_pvalues_ivt$pivt)
 res_pvalues_ivt.bar <- ggplot(res_pvalues_ivt) + 
-    aes(x=samples, y=-logFDR ) + coord_flip() + 
-    scale_x_discrete(limits=rev) +
-    scale_y_continuous(expand = c(0,0.1)) +
-    geom_bar(stat="identity", fill="orange") +
-    ggtitle(label = "GSEA P values", subtitle = "individual allo-poly comparisons") +
-    geom_hline(yintercept=-log10(0.05),linetype='dashed',color='red') +
-    ylab("-log10(adj.P)") + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
+  aes(x=samples, y=-logFDR ) + coord_flip() + 
+  scale_x_discrete(limits=rev) +
+  scale_y_continuous(expand = c(0,0.1)) +
+  geom_bar(stat="identity", fill="orange") +
+  ggtitle(label = "GSEA P values", subtitle = "individual allo-poly comparisons") +
+  geom_hline(yintercept=-log10(0.05),linetype='dashed',color='red') +
+  ylab(bquote(-log[10]*" "*italic(P)[adj.]))+
+  xlab(c("GvHD  no GvHD")) +
+  theme(plot.title = element_text(size = 10, face = "bold"),
         plot.subtitle = element_text(size = 6, face = "bold"),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(size = 6, colour = "black"), 
@@ -667,10 +670,10 @@ res_pvalues_ivt.bar <- ggplot(res_pvalues_ivt) +
 res_pvalues_ivt.bar
 ```
 
-* The summary barplot is also exported into the figure directory.
+* The summary bar plot is also exported into the figure directory.
 
 ```{r}
-pdf(file= "./FIGDIR/SupplementaryFigure3b_avp.org.appl.wise.pvalues.bar_GenesUpInIvtAllo.pdf", height=1.6, width=2.6)
+pdf(file= "./FIGDIR/SupplementaryFigure3b_avp.org.appl.wise.pvalues.bar_GenesUpInIvtAllo.pdf", height=1.8, width=2.6)
 res_pvalues_ivt.bar
 dev.off()
 ```
@@ -690,7 +693,6 @@ H.ind.cvnc.pc <- ids2indices(Mm.H, id=dgel.avp.pc$genes$EntrezID)
 gst.camera.cvnc.pc <- camera.DGEList(dgel.avp.pc,index=H.ind.cvnc.pc,design=avp.pc.design.dge,contrast=avp.pc.con,inter.gene.cor=0.05)
 gst.camera.cvnc.pc
 ```
-
 
 ## GSEA Barcode Plot for Interferon Alpha Response Hallmark Gene Set (Supplementary Figure 3 d)
 * The top Hallmark gene set found enriched is presented as barcode plot, hereafter.  
@@ -726,21 +728,23 @@ text(5,2.8,expression(italic(P)[adj.] *"<"* ~1.9*"x10"^-4), adj = c(1,.5))
 dev.off()
 ```
 
-
 ## Summary of Condition/Organ-wise Comparisons
-
-```{r, fig.height=1.6, fig.width=2.6}
-res_pvalues_ifn <-data.frame(samples=c("pro_S","prc_S","pro_L","prc_L","pro_C","prc_C"), pifn=c(0.009970082,0.000271564,0.7228390,0.10217242,0.2062865,0.994023097))
+* First, make sure the "Figure3_GSEA_prc.pro_avp.c.l.s.indiv.Rmd" has been run.
+* The file "SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ifn.txt" has to be generated first.
+* The individual FDR values for the GSEA are visualized as horizontal bar plot.
+```{r, fig.height=1.9, fig.width=2.6}
+res_pvalues_ifn<-read.table(file = "./ANALDIR/SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ifn.txt", header = TRUE)
 res_pvalues_ifn$logFDR <- log10(res_pvalues_ifn$pifn)
 res_pvalues_ifn.bar <- ggplot(res_pvalues_ifn) + 
-    aes(x=samples, y=-logFDR ) + coord_flip() + 
-    scale_x_discrete(limits=rev) +
-    scale_y_continuous(expand = c(0,0.1)) +
-    geom_bar(stat="identity", fill="steelblue") +
-    ggtitle(label = "GSEA P values", subtitle = "individual allo-poly comparisons") +
-    geom_hline(yintercept=-log10(0.05),linetype='dashed',color='red') +
-    ylab("-log10(adj.P)") + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
+  aes(x=samples, y=-logFDR ) + coord_flip() + 
+  scale_x_discrete(limits=rev) +
+  scale_y_continuous(expand = c(0,0.1)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  ggtitle(label = "GSEA P values", subtitle = "individual allo-poly comparisons") +
+  geom_hline(yintercept=-log10(0.05),linetype='dashed',color='red') +
+  ylab(bquote(-log[10]*" "*italic(P)[adj.]))+
+  xlab(c("GvHD  no GvHD")) +
+  theme(plot.title = element_text(size = 10, face = "bold"),
         plot.subtitle = element_text(size = 6, face = "bold"),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(size = 6, colour = "black"), 
@@ -758,7 +762,7 @@ res_pvalues_ifn.bar
 * The summary adj. p value bar plot is exported, hereafter.
 
 ```{r}
-pdf(file= "./FIGDIR/SupplementaryFigure3d_avp.org.appl.wise.pvalues.bar_HALL_IFN.pdf", height=1.6, width=2.6)
+pdf(file= "./FIGDIR/SupplementaryFigure3d_avp.org.appl.wise.pvalues.bar_HALL_IFN.pdf", height=1.9, width=2.6)
 res_pvalues_ifn.bar
 dev.off()
 ```

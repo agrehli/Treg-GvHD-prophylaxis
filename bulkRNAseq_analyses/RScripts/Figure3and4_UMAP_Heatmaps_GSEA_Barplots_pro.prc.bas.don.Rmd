@@ -40,7 +40,15 @@ library(gplots)
 knitr::opts_chunk$set(echo = TRUE, include = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 # ...packages.bib file is also written here
+<<<<<<< HEAD:bulkRNAseq_analyses/RScripts/Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
+<<<<<<< HEAD:bulkRNAseq_analyses/RScripts/Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
+knitr::write_bib(.packages(), "Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
+=======
 knitr::write_bib(.packages(), "Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
+>>>>>>> 19f38bac8e4f0993bf53add236471e3d5dd943fb:bulkRNAseq_analyses/RScripts/Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
+=======
+knitr::write_bib(.packages(), "Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
+>>>>>>> main:bulkRNAseq_analyses/RScripts/Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
 ```
 
 ```{r}
@@ -456,8 +464,10 @@ bar.df<-bar.df.ord
 rm(bar.df.ord)
 head(bar.df)
 ```
-## Modification for Barplot basing
+## Data Shift
 * In order for the bars of the bar plots to be based on the x-axis, a data transformation is necessary.
+* In most cases, adding 4 to the log~2~(rpkm) values is appropriate.
+* **Note**: This will be taken into account when y-axes are labelled so impact is only of an aesthetic nature.
 ```{r}
 bar.df.mod<-bar.df
 bar.df.mod$LOG.2.RPKM<-bar.df.mod$LOG.2.RPKM+4
@@ -524,7 +534,8 @@ bar.p.mod.avp.Penk<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Pe
                      expand = c(0,0.1),
                      limits = c(1,4096),
                      breaks = c(1,4,16,64,256,1024,4096),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -539,7 +550,7 @@ bar.p.mod.avp.Penk<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Pe
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -571,7 +582,7 @@ bar.p.mod.avp.Penk<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Pe
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Penk
 ```
@@ -597,7 +608,8 @@ bar.p.mod.avp.Rbpj<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Rb
                      expand = c(0,0.1),
                      limits = c(1,24),
                      breaks = c(1,2,4,8,16),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -612,7 +624,7 @@ bar.p.mod.avp.Rbpj<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Rb
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -644,7 +656,7 @@ bar.p.mod.avp.Rbpj<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Rb
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Rbpj
 ```
@@ -671,7 +683,8 @@ bar.p.mod.avp.Lag3<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="La
                      expand = c(0,0.1),
                      limits = c(1,16384),
                      breaks = c(1,4,16,64,256,1024,4096,16384),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-6,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -686,7 +699,7 @@ bar.p.mod.avp.Lag3<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="La
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -718,7 +731,7 @@ bar.p.mod.avp.Lag3<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="La
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = "log[2]RPKM") +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Lag3
 ```
@@ -745,7 +758,8 @@ bar.p.mod.avp.Gpld1<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="G
                      expand = c(0,0.1),
                      limits = c(1,1024),
                      breaks = c(1,4,16,64,256,1024),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-6,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -760,7 +774,7 @@ bar.p.mod.avp.Gpld1<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="G
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -792,7 +806,7 @@ bar.p.mod.avp.Gpld1<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="G
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Gpld1
 ```
@@ -802,6 +816,28 @@ bar.p.mod.avp.Gpld1
 ```{r}
 pdf(file = file.path(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.Gpld1.barplot.expression.6+shift.pdf"), width = 1.5, height = 2)
 bar.p.mod.avp.Gpld1
+dev.off()
+```
+
+#### Combined Plot
+
+* All generated bar plots are arranged as plot grid, hereafter.
+
+```{r, fig.height=2, fig.width=6}
+bar.p.mod.avp.grid <- plot_grid(bar.p.mod.avp.Penk,
+                                 bar.p.mod.avp.Rbpj,
+                                 bar.p.mod.avp.Lag3,
+                                 bar.p.mod.avp.Gpld1,
+                                 ncol=4, align="v")
+bar.p.mod.avp.grid
+```
+
+* The bar plot arrangement is also exported into the figure directory.
+
+```{r}
+pdf(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.combined.barplot.expression.correct.yaxis.labels.pdf", 
+    height=2, width=6)
+bar.p.mod.avp.grid
 dev.off()
 ```
 
@@ -1438,11 +1474,11 @@ dev.off()
 ```
 
 ## Barplots (Supplementary Figure 4 d)
-* Herafter, expression profiles of genes associated with suppressive Treg functions are presented as barplots.
+* Hereafter, expression profiles of genes associated with suppressive Treg functions are presented as bar plots.
 
 ### Index for Suppression Signature
-* Herafter, an index is generated based on the genes defined withing the "Suppression Signautre".
-* This way, the dataframe for bar plots can be easily subsetted.
+* Hereafter, an index is generated based on the genes defined withing the "Suppression Signautre".
+* This way, the data frame for bar plots can be easily subsetted.
 ```{r}
 supp.idx<-which(bar.df.mod$gene_symbol %in% supp.sig)
 bar.df.mod.supp<-bar.df.mod[supp.idx,]
@@ -1461,7 +1497,8 @@ bar.p.mod.supp.Gzmb<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                      expand = c(0,0.1),
                      limits = c(1,25000),
                      breaks = c(1,4,16,64,256,1024,4096,16384),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-2,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1476,7 +1513,7 @@ bar.p.mod.supp.Gzmb<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -1508,7 +1545,7 @@ bar.p.mod.supp.Gzmb<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -1526,7 +1563,8 @@ bar.p.mod.supp.Il10<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                      expand = c(0,0.1),
                      limits = c(1,9000),
                      breaks = c(1,4,16,64,256,1024,4096),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1541,7 +1579,7 @@ bar.p.mod.supp.Il10<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -1573,7 +1611,7 @@ bar.p.mod.supp.Il10<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -1591,7 +1629,8 @@ bar.p.mod.supp.Gzma<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                      expand = c(0,0.1),
                      limits = c(1,25000),
                      breaks = c(1,4,16,64,256,1024,4096,16384),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1606,7 +1645,7 @@ bar.p.mod.supp.Gzma<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -1638,7 +1677,7 @@ bar.p.mod.supp.Gzma<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -1656,7 +1695,8 @@ bar.p.mod.supp.Fasl<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                      expand = c(0,0.1),
                      limits = c(1,128),
                      breaks = c(1,4,16,64),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1671,7 +1711,7 @@ bar.p.mod.supp.Fasl<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -1703,7 +1743,7 @@ bar.p.mod.supp.Fasl<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -1720,7 +1760,8 @@ bar.p.mod.supp.Prf1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                      expand = c(0,0.1),
                      limits = c(1,512),
                      breaks = c(1,4,16,64,256),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1735,7 +1776,7 @@ bar.p.mod.supp.Prf1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -1767,7 +1808,7 @@ bar.p.mod.supp.Prf1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -1784,7 +1825,8 @@ bar.p.mod.supp.Ctla4<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                      expand = c(0,0.1),
                      limits = c(1,2048),
                      breaks = c(1,4,16,64,256,1024),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1799,7 +1841,7 @@ bar.p.mod.supp.Ctla4<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -1831,7 +1873,7 @@ bar.p.mod.supp.Ctla4<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -1848,7 +1890,8 @@ bar.p.mod.supp.Entpd1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol
                      expand = c(0,0.1),
                      limits = c(1,32),
                      breaks = c(1,2,4,8,16,32),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1863,7 +1906,7 @@ bar.p.mod.supp.Entpd1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -1895,7 +1938,7 @@ bar.p.mod.supp.Entpd1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -1912,7 +1955,8 @@ bar.p.mod.supp.Tgfb1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                      expand = c(0,0.1),
                      limits = c(1,128),
                      breaks = c(1,4,16,64),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1927,7 +1971,7 @@ bar.p.mod.supp.Tgfb1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -1959,7 +2003,7 @@ bar.p.mod.supp.Tgfb1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -1976,7 +2020,8 @@ bar.p.mod.supp.Tgfb3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                      expand = c(0,0.1),
                      limits = c(1,1024),
                      breaks = c(1,4,16,64,256,1024),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-6,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -1991,7 +2036,7 @@ bar.p.mod.supp.Tgfb3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -2023,7 +2068,7 @@ bar.p.mod.supp.Tgfb3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2040,7 +2085,8 @@ bar.p.mod.supp.Il2ra<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                      expand = c(0,0.1),
                      limits = c(1,1024),
                      breaks = c(1,4,16,64,256,1024),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -2055,7 +2101,7 @@ bar.p.mod.supp.Il2ra<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -2087,7 +2133,7 @@ bar.p.mod.supp.Il2ra<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2104,7 +2150,8 @@ bar.p.mod.supp.Nt5e<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                      expand = c(0,0.1),
                      limits = c(1,128),
                      breaks = c(1,2,4,8,16,32,64,128),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -2119,7 +2166,7 @@ bar.p.mod.supp.Nt5e<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -2151,7 +2198,7 @@ bar.p.mod.supp.Nt5e<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2168,7 +2215,8 @@ bar.p.mod.supp.Fgl2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                      expand = c(0,0.1),
                      limits = c(1,256),
                      breaks = c(1,4,16,64,256),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -2183,7 +2231,7 @@ bar.p.mod.supp.Fgl2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -2215,7 +2263,7 @@ bar.p.mod.supp.Fgl2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2232,7 +2280,8 @@ bar.p.mod.supp.Ebi3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                      expand = c(0,0.1),
                      limits = c(1,2048),
                      breaks = c(1,4,16,64,256,1024),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -2247,7 +2296,7 @@ bar.p.mod.supp.Ebi3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -2279,7 +2328,7 @@ bar.p.mod.supp.Ebi3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2298,7 +2347,8 @@ bar.p.mod.supp.Cd274<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                      expand = c(0,0.1),
                      limits = c(1,128),
                      breaks = c(1,4,16,64),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -2313,7 +2363,7 @@ bar.p.mod.supp.Cd274<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0, 
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -2345,7 +2395,7 @@ bar.p.mod.supp.Cd274<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2362,7 +2412,8 @@ bar.p.mod.supp.Pdcd1lg2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symb
                      expand = c(0,0.1),
                      limits = c(1,256),
                      breaks = c(1,4,16,64,256),
-                     labels = trans_format("log2", math_format(2^.x)))+
+                     labels = trans_format(trans = function(x) log2(x)-2,
+                                           format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
                       short = unit(0.01,"mm"), 
@@ -2377,7 +2428,7 @@ bar.p.mod.supp.Pdcd1lg2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symb
   geom_point(size=1,
              stroke=.236,
              colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, #resolution(y,zero = T)*10,
+             position = position_jitterdodge(jitter.width=2.0,
                                              dodge.width = 1.0,
                                              seed = 1234
                                              ))+
@@ -2409,7 +2460,7 @@ bar.p.mod.supp.Pdcd1lg2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symb
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = expression("log[2]RPKM")) +
+       y = bquote(log[2]*"RPKM")) +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2440,7 +2491,7 @@ dev.off()
 # SessionInfo
 ```{r, echo=FALSE, warning=FALSE}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_SessionInfo.txt")
 ```
 
 ***
