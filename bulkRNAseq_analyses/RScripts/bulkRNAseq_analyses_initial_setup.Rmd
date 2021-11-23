@@ -1,0 +1,172 @@
+---
+title: "Initial Setup for Bulk RNA-Seq Analyses"
+subtitle: "Counts data and metadata assembly for SMART-Seq libraries relevant to the manuscript"
+author: "David Dittmar"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: hide 
+---
+
+# RNA-Seq Data Preparation
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+# ...packages.bib file is also written here
+knitr::write_bib(.packages(), "bulkRNAseq_analyses_initial_setup_packages.bib")
+```
+
+```{r libraries, include=FALSE}
+library(dplyr)
+library(readr)
+library(tidyr)
+library(stringr)
+library(AnnotationDbi)
+library(org.Mm.eg.db) #for mouse
+```
+
+* In this .Rmd file the reads per gene of each sample will be combined into a read count table data object that will be used for all subsequent .Rmd files concerning bulkRNA-Seq analyses.
+* While initially files resulting from re-sequencing libraries will be treated as individual samples, counts for physical RNA-Seq libraries will be added up.
+* The result will be a comprehensive read count table data object containing all measured counts per biological sample.
+
+## Creating Directories
+* Hereafter, directories for the analysis output are generated.
+* Figures will be exported to **"FIGDIR"** whereas tables, such as differential gene expression statistics, will be written into **"ANALDIR"**.
+```{r directories, warning=FALSE}
+# analysis directory
+dir.create(path = "./ANALDIR")
+# figure directory
+dir.create(path = "./FIGDIR")
+```
+
+## Reading in Annotation and Metadata
+* For the annotation of read counts a "short transcript ID" will be used, comprising "EnsemblID", "GeneSymbol", "Length" and "GeneType", separated by the "$" sign.
+* Also, metadata will be read in from a .csv file, containing all relevant library/sample data apart from the counts.
+* The metadata file is extended with a logical vector "metadupvec" as additional column indicating sample_IDs that appear more than one time. 
+* This is necessary for correctly adding up RNA-seq counts of repeatedly sequenced biological samples.
+```{r, annotation and metadata}
+# For annotation an .rds file "short transcript ID" (stid) is read in
+stid<-readRDS("./METADIR/stid.rds")
+# Reading in the metadata file and ordering it according to the samples_N
+metad<-read.csv("./METADIR/Smart-Seq_libraries_metad4R_ID-ordered.csv")
+metad<-metad[order(metad$sample_N),]
+rownames(metad)<-1:nrow(metad)
+# Some of the columns used later MUST NOT be factors and will therefore be defined as character columns
+metad$RNAseq_DD_ID<-as.character(metad$RNAseq_DD_ID)
+metad$sample_ID<-as.character(metad$sample_ID)
+metad$workflow<-as.character(metad$workflow)
+# Duplicate vector logically indicating which sample IDs appear more than one time --> re-seqs, more than 2 instances possible
+metad$metadupvec <- duplicated(metad$sample_ID)
+# Consistency check
+dim(metad)
+metad
+```
+
+## Initial Read Count Table Assembly
+* Hereafter, the initial read count table is assembled.
+* All "...ReadsPerGene.txt" files appear as individual samples.
+* A sorting vector is introduced, assuring the consistency between the metadata and the read count data.
+```{r initial RCT assembly}
+# Listing in all RPG files RPGDIR
+rpgl<-list.files(path = "./RPGDIR", pattern = "ReadsPerGene.txt",ignore.case = FALSE)
+# Introduction of a sorting vector according to RNAseq_DD_ID of the metadata on the rpgl object
+sortvec<-sapply(metad$RNAseq_DD_ID, function(x) grep(x,rpgl))
+# Creating an empty matrix as data frame, which can be written into in the following for-loop
+counts<-as.data.frame(matrix(),row.names = NULL)
+# In this for-loop the read counts of interest (column 4) of the samples in the right order are extracted and appended to the counts data.frame
+for (i in sortvec) {
+rpgf<-read.delim(file.path("./RPGDIR",rpgl[i]),sep = "\t",header = FALSE,check.names = TRUE,skip = 4,row.names = NULL)
+counts<-cbind(counts,rpgf[,4])
+}
+# Leaving out the empty column resulting from generating the "empty" matrix before the loop
+counts<-counts[,(-1)] 
+
+#define column names
+#names are unique, therefore the RNAseq_DD_ID has to serve as column name here
+colnames(counts)<-names(sortvec)
+#define rownames
+rownames(counts)<-stid
+#consistency check
+ncol(counts)
+head(counts)
+```
+
+## Merging Counts
+* The following code block merges counts of samples to be merged, however the number of samples stays unaltered. 
+* The Removal of obsolete columns will be done afterwards.
+```{r merging counts and adapting metadata}
+# creating a copy of the counts data.frame for the merged read counts of re-sequenced samples
+counts.m<-counts
+# the same goes for the metadata object
+metad.m<-metad
+# For loop, in which merging is done if needed and renaming is done when needed
+for (i in 1:nrow(metad.m)) {
+  if (metad.m$metadupvec[i] == TRUE) {
+    # adding up the read counts and store the values in the last summed column
+    counts.m[i]<-counts.m[i]+counts.m[i-1]
+    # renaming the respective column with the accurate sample_ID
+    colnames(counts.m)[i]<-metad.m$sample_ID[i]
+    } else {
+    # renaming the kept column with the sample_ID instead of the RNAseq_DD_ID
+    colnames(counts.m)[i]<- metad.m$sample_ID[i]
+    }  
+}
+#have a look at the dimensions of the matrix
+dim(counts.m)
+```
+
+## Removing obsolete sample_IDs
+* Hereafter, an index for filtering out unwanted redundant sample_IDs is generated. 
+* The merged counts are always stored in the last occurrence of each sample_ID.
+* Thus, all preceding instances of a sample_ID have to be removed.
+```{r}
+# a vector of unique sample_IDs
+sample_ID<-unique(metad.m$sample_ID)
+# an empty vector for the indices of rows (metad.m) and columns (counts.m) that must be kept
+idx.m<- c()
+# determining the last occurence of all sample_IDs in the metadata as index vector
+for (i in sample_ID) {
+ value<-max(which(metad.m$sample_ID == i))
+ print(value)
+ idx.m[i]<-value
+ }
+```
+
+## Subsetting Counts and Metadata
+* Subsetting the data and metadata objects can now be easily done with the index defined above.
+* Metadata rownames are adjusted and a final consistency check is carried out.
+```{r}
+# subsetting with idx.m
+counts.m <- counts.m[,idx.m]
+metad.m <- metad.m[idx.m,]
+# ascending numbering for rows in meatd.m
+rownames(metad.m)<-1:nrow(metad.m)
+# final consistency check
+if (sum(metad.m$sample_ID == colnames(counts.m)) == ncol(counts.m)) {
+  print("Data objects for counts and respective metadata are ready for further analysis!")
+} else {
+  print("Something is inconsistent between metadata and counts data. Please check assembly step by step!")
+}
+```
+
+# Exporting objects as RDS files
+```{r}
+saveRDS(metad.m, file = "./METADIR/metad.m.reproduced.rds")
+saveRDS(counts.m, file = "./RCTDIR/counts.m.reproduced.rds")
+```
+
+***
+
+# SessionInfo
+```{r, echo=FALSE, warning=FALSE}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/bulkRNAseq_analyses_initial_setup_SessionInfo.txt")
+```
+
+***

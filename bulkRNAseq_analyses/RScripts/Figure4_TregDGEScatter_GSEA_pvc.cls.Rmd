@@ -25,9 +25,9 @@ knitr::write_bib(.packages(), "Figure4_TregDGEScatter_GSEA_pvc.cls_packages.bib"
 
 ```{r}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
-stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rds")
+stid<-readRDS("./METADIR/stid.rds")
 ```
 
 ```{r, include=FALSE}
@@ -136,8 +136,8 @@ head(metad.cpc, n = 4L)
 #the group variable for all later assignments of colors/pchs.
 group.cpc<-factor(as.character(metad.cpc$appl), levels = c("prc","pro"))
 group.cpc
-#group.subcpc<-factor(as.character(metad.cpc$grp), levels = c("prc_C_a","prc_C_p","pro_C_a","pro_C_p"))
-#group.subcpc
+group.subcpc<-factor(as.character(metad.cpc$grp), levels = c("prc_C_a","prc_C_p","pro_C_a","pro_C_p"))
+group.subcpc
 ```
 
 ### Liver
@@ -444,11 +444,11 @@ nrow(spc.cp.qstat.scat.filt.UP)
 nrow(spc.cp.qstat.scat.filt.DN)
 ```
 
-## Exporting UP and DN regulated Genes
+## Exporting UP and DN regulated Genes with background
 * Significantly up and down regulated genes are exported in the following.
 * For each analysis, you will find the respecitve gene lists in the analysis directory.
 ```{r}
-#extract filtered gene lists
+#extract filtered gene lists with background genes
 #colon
 write.table(rownames(cpc.cp.qstat.scat.filt.UP),
             file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.sig.UP.txt",
@@ -459,6 +459,22 @@ write.table(rownames(cpc.cp.qstat.scat.filt.DN),
             file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.sig.DN.txt",
             col.names = "GeneID",
             quote=FALSE, 
+            row.names = FALSE)
+## Gene Symbols for Metascape
+write.table(cpc.cp.qstat.scat.filt.UP$GeneSymbol,
+            file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.sig.UP.genes.txt",
+            col.names = "GeneSymbol",
+            quote=FALSE, 
+            row.names = FALSE)
+write.table(cpc.cp.qstat.scat.filt.DN$GeneSymbol,
+            file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.sig.DN.genes.txt",
+            col.names = "GeneSymbol",
+            quote=FALSE, 
+            row.names = FALSE)
+write.table(cpc.cp.qstat.scat.filt$GeneSymbol,
+            file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.bg.genes.txt",
+            col.names = "GeneSymbol",
+            quote = FALSE,
             row.names = FALSE)
 #liver
 write.table(rownames(lpc.cp.qstat.scat.filt.UP),
@@ -471,6 +487,22 @@ write.table(rownames(lpc.cp.qstat.scat.filt.DN),
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
+## Gene Symbols for Metascape
+write.table(lpc.cp.qstat.scat.filt.UP$GeneSymbol,
+            file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver.filt.sig.UP.genes.txt",
+            col.names = "GeneSymbol",
+            quote=FALSE, 
+            row.names = FALSE)
+write.table(lpc.cp.qstat.scat.filt.DN$GeneSymbol,
+            file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver.filt.sig.DN.genes.txt",
+            col.names = "GeneSymbol",
+            quote=FALSE, 
+            row.names = FALSE)
+write.table(lpc.cp.qstat.scat.filt$GeneSymbol,
+            file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver.filt.bg.genes.txt",
+            col.names = "GeneSymbol",
+            quote = FALSE,
+            row.names = FALSE)
 #spleen
 write.table(rownames(spc.cp.qstat.scat.filt.UP),
             file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.sig.UP.txt",
@@ -482,6 +514,22 @@ write.table(rownames(spc.cp.qstat.scat.filt.DN),
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
+## Gene Symbols for Metascape
+write.table(spc.cp.qstat.scat.filt.UP$GeneSymbol,
+            file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.sig.UP.genes.txt",
+            col.names = "GeneSymbol",
+            quote=FALSE, 
+            row.names = FALSE)
+write.table(spc.cp.qstat.scat.filt.DN$GeneSymbol,
+            file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.sig.DN.genes.txt",
+            col.names = "GeneSymbol",
+            quote=FALSE, 
+            row.names = FALSE)
+write.table(spc.cp.qstat.scat.filt$GeneSymbol,
+            file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.bg.genes.txt",
+            col.names = "GeneSymbol",
+            quote = FALSE,
+            row.names = FALSE)
 ```
 
 ## Scatterplots
@@ -491,22 +539,35 @@ write.table(rownames(spc.cp.qstat.scat.filt.DN),
 * Most importantly, genes related to suppression are highlighted for all three tissues to corroborate the protective role of colon Treg in the prophylaxis setting.  
 ```{r}
 # spleen plot
-## cell cycle signature
+
+## cell cycle signature # Aurka,Cdkn3,Cdc20,Cdk1,E2f1 --> NOT IDENTIFIED
 cellCycle.sig <-c("Aurka","Cdkn3","Cdc20","Cdk1","E2f1")
+
 ## ifn signature colored green in Fig 4 a,b
+## from metascape --> GO Biological Processes	GO:0035457	cellular response to interferon-alpha	-2.476343477	-0.967	4/11	15951,15957,15959,246730	Ifi204,Ifit1,Ifit3,Oas1a --> how did Irf7 get in there? --> NOT IDENTIFIED
 ifn.spc.sig <-c("Irf7","Ifi204","Ifit1","Ifit3","Oas1a")
+
 ## Where do these genes come from?
+## From metascape_results from spc.dn --> IDENTIFIED
+# Reactome Gene Sets	R-MMU-5669034	TNFs bind their physiological receptors (Lta,Tnfsf11,Tnfsf8,Tnfsf4,Tnfrsf25)
 cytoRec.sig <-c("Lta","Tnfsf11","Tnfsf8","Tnfsf4","Tnfrsf25")
 
 # liver plot
 ## ifn signature colored green in Fig 4 a,b
+## From metascape 1_Member	GO Biological Processes	GO:0035456	response to interferon-beta	-7.554770767	-3.537	6/43	15957,54396,60440,66141,240327,100033459	Ifit1,Irgm2,Iigp1,Ifitm3,Gm4951,Ifi208 --> IDENTIFIED
 ifn.lpc.sig <-c("Ifitm3","Ifi208","Ifit1","Irgm2","Iigp1")
+
 ## nfkb targets? --> did not find Il6ra or Rora in the hallmark list (https://www.gsea-msigdb.org/gsea/msigdb/cards/HALLMARK_TNFA_SIGNALING_VIA_NFKB.html)
+## KEGG Pathway	mmu04659	Th17 cell differentiation (Fos,Il6ra,Jun,Nfkbia,Rora) --> blue in plot --> IDENTIFIED
 mapk.sig <-c("Fos","Il6ra","Jun","Nfkbia","Rora")
+
 #colon plot
-## negative regulation of what?
+## negative regulation of what? --> #leukocyte differentiation in metascape!!
+## smalles pathway I found: 1_Member	GO Biological Processes	GO:0046632	alpha-beta T cell differentiation	-3.861926687	-1.346	9/94	12053,12458,12522,12775,19883,21414,21949,22164,192656	Bcl6,Ccr6,Cd83,Ccr7,Rora,Tcf7,Tnfsf8,Tnfsf4,Ripk2 --> IDENTIFIED
 negReg.sig <-c("Bcl6","Ccr7","Cd83","Rora","Tnfsf8","Tnfsf4")
-# suppressive signature
+#Bcl6,Ccr7,Cd83,Cd83,Rora,Tnfsf8,Tnfsf4
+
+# suppressive signature --> hand-picked, immunosuppression and other Treg functions up to killing!
 supp.sig<-c("Gzmb","Il10","Gzma","Fasl","Prf1","Ctla4","Entpd1","Tgfb1","Tgfb3","Il2ra","Nt5e","Fgl2","Il12a","Ebi3","Cd274","Pdcd1lg2")
 supp.sig <- sort(supp.sig)
 ```
@@ -612,7 +673,9 @@ spc.scat.spleen <- ggplot(spc.cp.qstat.scat.filt) +
         panel.grid.minor = element_blank())
 spc.scat.spleen
 ```
+
 * The scatterplot is also exported into the figure directory.  
+
 ```{r, warning=FALSE}
 pdf(file="./FIGDIR/Figure4a_TregDGEScatter_GvHD.vs.noGvHD_spleen.SuppressionSignature.pdf", height=2.6, width=2.2)
 spc.scat.spleen
@@ -707,7 +770,9 @@ lpc.scat.liver <- ggplot(lpc.cp.qstat.scat.filt) +
         panel.grid.minor = element_blank())
 lpc.scat.liver  
 ```
+
 * The scatterplot is also exported into the figure directory.  
+
 ```{r, warning=FALSE}
 pdf(file="./FIGDIR/Figure4b_TregDGEScatter_GvHD.vs.noGvHD_liver.SuppressionSignature.pdf", height=2.6, width=2.2)
 lpc.scat.liver
@@ -790,7 +855,9 @@ cpc.scat.colon <- ggplot(cpc.cp.qstat.scat.filt) +
         panel.grid.minor = element_blank())
 cpc.scat.colon
 ```  
+
 * The scatterplot is also exported into the figure directory.  
+
 ```{r}
 pdf(file="./FIGDIR/Figure4c_TregDGEScatter_GvHD.vs.noGvHD_colon.SuppressionSignature.pdf", height=2.6, width=2.2)
 cpc.scat.colon
@@ -1042,7 +1109,8 @@ plot.window( xlim=c(-5,5), ylim=c(-5,5) )
 text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
 text(-5,3.1,expression(""*italic(P)[adj.]~"adj.< 5.7x10"^-9), adj = c(0,.5))
 ```
-* All three barplots are exported into one 3 paged .pdf file, hereafter.  
+* All three barcode plots are exported into one 3 paged .pdf file, hereafter.  
+
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure4c_Barcodeplot_pvc.cls_Kegg_DNAReplication.pdf", height=3.2, width=6)
 # Colon
