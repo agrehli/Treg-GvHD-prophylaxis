@@ -1,0 +1,183 @@
+sample_N,sample_ID,RNAseq_DD_ID,sample description,tx198_No,cellNo,incat,workflow,PCR2 Cy,ind_ID,mk,m,appl,org,treat,grp,frag[min],pb,RunN,library date,c_lib[ng/µl]
+64,199_d12_ra,RNAseq_DD_034,mk#199 Tregs d12 (allo),2, 3000000 ,1,sp_low,12,B03,199,N/A,N/A,d,a,d_a,6,2,72,31.01.19,18.40
+65,199_d12_rp,RNAseq_DD_035,mk#199 Tregs d12 (poly),2, 3000000 ,1,sp_low,12,B04,199,N/A,N/A,d,p,d_p,6,2,72,31.01.19,11.70
+66,341_L_ra,RNAseq_DD_036,tx#198-2 m#341 liver Treg (allo),2, 14600 ,0,sp_low,13,E02,N/A,341,pro,L,a,pro_L_a,4,6,72,28.03.19,8.44
+67,341_C_ra,RNAseq_DD_037,tx#198-2 m#341 colon Treg (allo),2, 20000 ,0,sp_low,13,E03,N/A,341,pro,C,a,pro_C_a,4,6,72,28.03.19,8.30
+68,341_S_ra,RNAseq_DD_038,tx#198-2 m#341 spleen Treg (allo),2, 100000 ,1,sp_low,12,D02,N/A,341,pro,S,a,pro_S_a,6,4,72,08.02.19,25.40
+69,346_L_ra,RNAseq_DD_039,tx#198-2 m#346 liver Treg (allo),2, 16000 ,0,sp_low,13,D05,N/A,346,pro,L,a,pro_L_a,6,4,72,08.02.19,10.60
+71,346_S_ra,RNAseq_DD_040,tx#198-2 m#346 spleen Treg (allo),2, 120000 ,1,sp_low,12,D03,N/A,346,pro,S,a,pro_S_a,6,4,72,08.02.19,23.80
+72,348_L_ra,RNAseq_DD_041,tx#198-2 m#348 liver Treg (allo),2, 27000 ,0,sp_low,13,D06,N/A,348,pro,L,a,pro_L_a,6,4,72,08.02.19,17.50
+73,348_C_ra,RNAseq_DD_042,tx#198-2 m#348 colon Treg (allo),2, 18000 ,0,sp_low,13,E04,N/A,348,pro,C,a,pro_C_a,6,6,72,28.03.19,10.10
+74,348_S_ra,RNAseq_DD_043,tx#198-2 m#348 spleen Treg (allo),2, 111000 ,1,sp_low,13,F03,N/A,348,pro,S,a,pro_S_a,6,6,72,28.03.20,28.40
+76,343_C_rp,RNAseq_DD_045,tx#198-2 m#343 colon Treg (poly),2, 30400 ,0,sp_low,13,E05,N/A,343,pro,C,p,pro_C_p,6,6,72,28.03.22,10.50
+77,343_S_rp,RNAseq_DD_046,tx#198-2 m#343 spleen Treg (poly),2, 50000 ,0,sp_low,13,E06,N/A,343,pro,S,p,pro_S_p,6,6,72,28.03.23,18.30
+78,347_L_rp,RNAseq_DD_047,tx#198-2 m#347 liver Treg (poly),2, 13500 ,0,sp_low,14,F01,N/A,347,pro,L,p,pro_L_p,6,6,72,28.03.24,1.15
+79,347_C_rp,RNAseq_DD_048,tx#198-2 m#347 colon Treg (poly),2, 37000 ,0,sp_low,13,E07,N/A,347,pro,C,p,pro_C_p,6,6,72,28.03.25,12.30
+80,347_S_rp,RNAseq_DD_049,tx#198-2 m#347 spleen Treg (poly),2, 60000 ,0,sp_low,13,E08,N/A,347,pro,S,p,pro_S_p,6,6,72,28.03.26,33.00
+81,349_L_rp,RNAseq_DD_050,tx#198-2 m#349 liver Treg (poly),2, 20600 ,0,sp_low,13,F09,N/A,349,pro,L,p,pro_L_p,6,6,72,28.03.27,6.54
+82,349_C_rp,RNAseq_DD_051,tx#198-2 m#349 colon Treg (poly),2, 30000 ,0,sp_low,13,F10,N/A,349,pro,C,p,pro_C_p,6,6,72,28.03.28,10.70
+83,349_S_rp,RNAseq_DD_052,tx#198-2 m#349 spleen Treg (poly),2, 50000 ,0,sp_low,13,F11,N/A,349,pro,S,p,pro_S_p,6,6,72,28.03.29,15.80
+26,198_d13_ra,RNAseq_DD_054,mk#198 Tregs d13 (allo),1, 3000000 ,1,sp_low,12,B01,198,N/A,N/A,d,a,d_a,6,2,89,31.01.19,24.80
+27,198_d13_rp,RNAseq_DD_055,mk#198 Tregs d13 (poly),1, 3000000 ,1,sp_low,12,B02,198,N/A,N/A,d,p,d_p,6,2,89,31.01.19,23.60
+28,293_L_ra,RNAseq_DD_056,tx#198-1 m#293 liver Treg (allo),1, 20900 ,0,sp_low,14,C05,N/A,293,pro,L,a,pro_L_a,6,3,89,05.02.19,23.00
+29,293_C_ra,RNAseq_DD_057,tx#198-1 m#293 colon Treg (allo),1, 4200 ,0,pp_ulow,11,G05,N/A,293,pro,C,a,pro_C_a,3,7,89,16.05.19,73.60
+30,293_S_ra,RNAseq_DD_058,tx#198-1 m#293 spleen Treg (allo),1, 115700 ,0,sp_low,12,C08,N/A,293,pro,S,a,pro_S_a,6,3,89,05.02.19,22.60
+31,294_L_ra,RNAseq_DD_059,tx#198-1 m#294 liver Treg (allo),1, 17300 ,0,sp_low,14,E01,N/A,294,pro,L,a,pro_L_a,4,6,89,28.03.19,5.64
+32,294_C_ra,RNAseq_DD_060,tx#198-1 m#294 colon Treg (allo),1, 3580 ,0,pp_ulow,11,G06,N/A,294,pro,C,a,pro_C_a,3,7,89,16.05.19,73.60
+33,294_S_ra,RNAseq_DD_061,tx#198-1 m#294 spleen Treg (allo),1, 102000 ,0,sp_low,12,C09,N/A,294,pro,S,a,pro_S_a,6,3,89,05.02.19,1.56
+34,296_L_ra,RNAseq_DD_062,tx#198-1 m#296 liver Treg (allo),1, 14400 ,0,sp_low,14,C06,N/A,296,pro,L,a,pro_L_a,6,3,89,05.02.19,1.81
+35,296_C_ra,RNAseq_DD_063,tx#198-1 m#296 colon Treg (allo),1, 3100 ,0,pp_ulow,11,G07,N/A,296,pro,C,a,pro_C_a,3,7,89,16.05.19,73.60
+36,296_S_ra,RNAseq_DD_064,tx#198-1 m#296 spleen Treg (allo),1, 142000 ,0,sp_low,13,C10,N/A,296,pro,S,a,pro_S_a,6,3,89,05.02.19,38.40
+37,297_L_rp,RNAseq_DD_065,tx#198-1 m#297 liver Treg (poly),1, 11400 ,0,sp_low,14,C07,N/A,297,pro,L,p,pro_L_p,6,3,89,05.02.19,9.66
+38,297_C_rp,RNAseq_DD_066,tx#198-1 m#297 colon Treg (poly),1, 3400 ,0,pp_ulow,11,G08,N/A,297,pro,C,p,pro_C_p,3,7,89,16.05.19,73.60
+39,297_S_rp,RNAseq_DD_067,tx#198-1 m#297 spleen Treg (poly),1, 85700 ,0,sp_low,13,C11,N/A,297,pro,S,p,pro_S_p,6,3,89,05.02.19,41.20
+40,298_L_rp,RNAseq_DD_068,tx#198-1 m#298 liver Treg (poly),1, 7200 ,0,pp_ulow,11,G09,N/A,298,pro,L,p,pro_L_p,3,7,89,16.05.19,73.60
+41,298_C_rp,RNAseq_DD_069,tx#198-1 m#298 colon Treg (poly),1, 3000 ,0,pp_ulow,11,G10,N/A,298,pro,C,p,pro_C_p,3,7,89,16.05.19,73.60
+42,298_S_rp,RNAseq_DD_070,tx#198-1 m#298 spleen Treg (poly),1, 30000 ,0,sp_low,14,D07,N/A,298,pro,S,p,pro_S_p,6,4,89,08.02.19,15.10
+43,299_L_rp,RNAseq_DD_071,tx#198-1 m#299 liver Treg (poly),1, 15500 ,0,sp_low,13,D04,N/A,299,pro,L,p,pro_L_p,6,4,89,08.02.19,7.14
+44,299_C_rp,RNAseq_DD_072,tx#198-1 m#299 colon Treg (poly),1, 7100 ,0,pp_ulow,11,G11,N/A,299,pro,C,p,pro_C_p,3,7,89,16.05.19,73.60
+45,299_S_rp,RNAseq_DD_073,tx#198-1 m#299 spleen Treg (poly),1, 105000 ,1,sp_low,12,D01,N/A,299,pro,S,p,pro_S_p,6,4,89,08.02.19,26.60
+70,346_C_ra,RNAseq_DD_074,tx#198-2 m#346 colon Treg (allo),2, 13200 ,0,pp_ulow,11,G12,N/A,346,pro,C,a,pro_C_a,3,7,89,16.05.19,73.60
+102,208_d11_ra,RNAseq_DD_084,mk#208 Tregs d11 (allo),4, 12600000 ,1,sp_low,11,H01,208,N/A,N/A,d,a,d_a,6,8,148,12.09.19,5.92
+103,208_d11_rp,RNAseq_DD_085,mk#208 Tregs d11 (poly),4, 6000000 ,1,sp_low,11,B06,208,N/A,N/A,d,p,d_p,6,9,152,24.09.19,3.82
+137,210_d11_ra,RNAseq_DD_098,mk#210 Tregs d11 (allo),5, 3000000 ,1,sp_low,11,B05,210,N/A,N/A,d,a,d_a,6,9,152,24.09.19,3.76
+138,210_d11_rp,RNAseq_DD_099,mk#210 Tregs d11 (poly),5, 6000000 ,1,sp_low,11,H02,210,N/A,N/A,d,p,d_p,6,8,148,12.09.19,13.80
+29,293_C_ra,RNAseq_DD_120,tx#198-1 m#293 colon Treg (allo),1, 4200 ,0,pp_ulow,11,G05,N/A,293,pro,C,a,pro_C_a,3,7,165,16.05.19,73.60
+32,294_C_ra,RNAseq_DD_121,tx#198-1 m#294 colon Treg (allo),1, 3580 ,0,pp_ulow,11,G06,N/A,294,pro,C,a,pro_C_a,3,7,165,16.05.19,73.60
+35,296_C_ra,RNAseq_DD_122,tx#198-1 m#296 colon Treg (allo),1, 3100 ,0,pp_ulow,11,G07,N/A,296,pro,C,a,pro_C_a,3,7,165,16.05.19,73.60
+38,297_C_rp,RNAseq_DD_123,tx#198-1 m#297 colon Treg (poly),1, 3400 ,0,pp_ulow,11,G08,N/A,297,pro,C,p,pro_C_p,3,7,165,16.05.19,73.60
+40,298_L_rp,RNAseq_DD_124,tx#198-1 m#298 liver Treg (poly),1, 7200 ,0,pp_ulow,11,G09,N/A,298,pro,L,p,pro_L_p,3,7,165,16.05.19,73.60
+41,298_C_rp,RNAseq_DD_125,tx#198-1 m#298 colon Treg (poly),1, 3000 ,0,pp_ulow,11,G10,N/A,298,pro,C,p,pro_C_p,3,7,165,16.05.19,73.60
+43,299_L_rp,RNAseq_DD_126,tx#198-1 m#299 liver Treg (poly),1, 15500 ,0,sp_low,13,D04,N/A,299,pro,L,p,pro_L_p,6,4,165,08.02.19,7.14
+44,299_C_rp,RNAseq_DD_127,tx#198-1 m#299 colon Treg (poly),1, 7100 ,0,pp_ulow,11,G11,N/A,299,pro,C,p,pro_C_p,3,7,165,16.05.19,73.60
+65,199_d12_rp,RNAseq_DD_128,mk#199 Tregs d12 (poly),2, 3000000 ,0,sp_low,12,B04,199,N/A,N/A,d,p,d_p,6,2,165,31.01.19,11.70
+70,346_C_ra,RNAseq_DD_129,tx#198-2 m#346 colon Treg (allo),2, 13200 ,0,pp_ulow,11,G12,N/A,346,pro,C,a,pro_C_a,3,7,165,16.05.19,73.60
+201,002_S_rn_pos,RNAseq_DD_133,Foxp3gfp_pool#002_spleen_rn_Cd62l+,N/A, 1200000 ,1,sp_low,12,B01,N/A,2,wt,S,pos,wt_S_pos,6,11,277,05.06.20,8.66
+202,002_S_rn_neg,RNAseq_DD_134,Foxp3gfp_pool#002_spleen_rn_Cd62l-,N/A, 1400000 ,1,sp_low,12,B02,N/A,2,wt,S,neg,wt_S_neg,6,11,277,05.06.20,11.40
+203,003_S_rn_pos,RNAseq_DD_135,Foxp3gfp_pool#003_spleen_rn_Cd62l+,N/A, 900000 ,1,sp_low,12,B03,N/A,3,wt,S,pos,wt_S_pos,6,11,277,05.06.20,8.60
+204,003_S_rn_neg,RNAseq_DD_136,Foxp3gfp_pool#003_spleen_rn_Cd62l-,N/A, 960000 ,1,sp_low,12,B04,N/A,3,wt,S,neg,wt_S_neg,6,11,277,05.06.20,10.80
+205,004_S_rn_pos,RNAseq_DD_137,Foxp3gfp_pool#004_spleen_rn_Cd62l+,N/A, 700000 ,1,sp_low,12,B05,N/A,4,wt,S,pos,wt_S_pos,6,11,277,05.06.20,4.94
+206,004_S_rn_neg,RNAseq_DD_138,Foxp3gfp_pool#004_spleen_rn_Cd62l-,N/A, 600000 ,1,sp_low,12,B06,N/A,4,wt,S,neg,wt_S_neg,6,11,277,05.06.20,11.10
+207,001_L_rn_pos,RNAseq_DD_139,Foxp3gfp_pool#001_liver_rn_Cd62l+,N/A, 8200 ,0,sp_low,14,B07,N/A,1,wt,L,pos,wt_L_pos,6,11,277,05.06.20,7.20
+208,001_L_rn_neg,RNAseq_DD_140,Foxp3gfp_pool#001_liver_rn_Cd62l-,N/A, 14000 ,0,sp_low,14,B08,N/A,1,wt,L,neg,wt_L_neg,6,11,277,05.06.20,17.50
+209,002_L_rn_pos,RNAseq_DD_141,Foxp3gfp_pool#002_liver_rn_Cd62l+,N/A, 9500 ,0,sp_low,14,C01,N/A,2,wt,L,pos,wt_L_pos,6,11,277,05.06.20,1.33
+210,002_L_rn_neg,RNAseq_DD_142,Foxp3gfp_pool#002_liver_rn_Cd62l-,N/A, 31400 ,0,sp_low,14,C02,N/A,2,wt,L,neg,wt_L_neg,6,11,277,05.06.20,3.14
+211,003_L_rn_pos,RNAseq_DD_143,Foxp3gfp_pool#003_liver_rn_Cd62l+,N/A, 4300 ,0,sp_low,14,C03,N/A,3,wt,L,pos,wt_L_pos,6,11,277,05.06.20,16.90
+213,004_L_rn_pos,RNAseq_DD_144,Foxp3gfp_pool#004_liver_rn_Cd62l+,N/A, 8400 ,0,sp_low,14,C05,N/A,4,wt,L,pos,wt_L_pos,6,11,277,05.06.20,1.08
+214,004_L_rn_neg,RNAseq_DD_145,Foxp3gfp_pool#004_liver_rn_Cd62l-,N/A, 33000 ,0,sp_low,14,C06,N/A,4,wt,L,neg,wt_L_neg,6,11,277,05.06.20,8.36
+215,005_C_rn_neg,RNAseq_DD_146,Foxp3gfp_pool#005_colon_rn_Cd62l-,N/A, 53000 ,0,sp_low,14,C07,N/A,5,wt,C,neg,wt_C_neg,6,11,277,05.06.20,8.16
+217,241_d12_ra,RNAseq_DD_148,mk#241_treg_allo,10, 10000000 ,1,sp_low,12,E01,241,N/A,N/A,d,a,d_a,6,12,338,16.09.20,4.72
+218,241_d12_rp,RNAseq_DD_149,mk#241_treg_poly,10, 10000000 ,1,sp_low,12,G01,241,N/A,N/A,d,p,d_p,6,13,339,09.12.20,6.40
+219,4181_S_ra,RNAseq_DD_150,tx#198-10_m#4181_S_ra,10, 24600 ,0,sp_low,13,F01,N/A,4181,prc,S,a,prc_S_a,6,12,338,16.09.20,6.46
+220,4181_L_ra,RNAseq_DD_151,tx#198-10_m#4181_L_ra,10, 4600 ,0,sp_low,14,F10,N/A,4181,prc,L,a,prc_L_a,6,12,338,16.09.20,2.78
+221,4181_C_ra,RNAseq_DD_152,tx#198-10_m#4181_C_ra,10, 17000 ,0,sp_low,13,E08,N/A,4181,prc,C,a,prc_C_a,6,12,338,16.09.20,18.90
+222,4183_S_ra,RNAseq_DD_153,tx#198-10_m#4183_S_ra,10, 14600 ,1,sp_low,12,E03,N/A,4183,prc,S,a,prc_S_a,6,12,338,16.09.20,12.10
+223,4183_L_ra,RNAseq_DD_154,tx#198-10_m#4183_L_ra,10, 11600 ,0,sp_low,14,F03,N/A,4183,prc,L,a,prc_L_a,6,12,338,16.09.20,8.86
+224,4183_C_ra,RNAseq_DD_155,tx#198-10_m#4183_C_ra,10, 86000 ,0,sp_low,14,F02,N/A,4183,prc,C,a,prc_C_a,6,12,338,16.09.20,14.50
+225,4190_S_ra,RNAseq_DD_156,tx#198-10_m#4190_S_ra,10, 6600 ,0,sp_low,13,E05,N/A,4190,prc,S,a,prc_S_a,6,12,338,16.09.20,7.96
+226,4190_L_ra,RNAseq_DD_157,tx#198-10_m#4190_L_ra,10, 7900 ,0,sp_low,14,F04,N/A,4190,prc,L,a,prc_L_a,6,12,338,16.09.20,4.84
+227,4190_C_ra,RNAseq_DD_158,tx#198-10_m#4190_C_ra,10, 62000 ,0,sp_low,14,F07,N/A,4190,prc,C,a,prc_C_a,6,12,338,16.09.20,6.02
+228,4192_S_rp,RNAseq_DD_159,tx#198-10_m#4192_S_rp,10, 22000 ,0,sp_low,14,F06,N/A,4192,prc,S,p,prc_S_p,6,12,338,16.09.20,5.86
+229,4192_L_rp,RNAseq_DD_160,tx#198-10_m#4192_L_rp,10, 2000 ,0,sp_low,14,F08,N/A,4192,prc,L,p,prc_L_p,6,12,338,16.09.20,1.17
+230,4192_C_rp,RNAseq_DD_161,tx#198-10_m#4192_C_rp,10, 4600 ,0,sp_low,13,E07,N/A,4192,prc,C,p,prc_C_p,6,12,338,16.09.20,12.90
+231,4193_S_rp,RNAseq_DD_162,tx#198-10_m#4193_S_rp,10, 14000 ,0,sp_low,13,G06,N/A,4193,prc,S,p,prc_S_p,6,13,339,09.12.20,2.80
+232,4193_L_rp,RNAseq_DD_163,tx#198-10_m#4193_L_rp,10, 5700 ,0,sp_low,14,F09,N/A,4193,prc,L,p,prc_L_p,6,12,338,16.09.20,2.88
+233,4193_C_rp,RNAseq_DD_164,tx#198-10_m#4193_C_rp,10, 38000 ,0,sp_low,13,E10,N/A,4193,prc,C,p,prc_C_p,6,12,338,16.09.20,6.18
+234,4196_S_rp,RNAseq_DD_165,tx#198-10_m#4196_S_rp,10, 20000 ,0,sp_low,13,E06,N/A,4196,prc,S,p,prc_S_p,6,12,338,16.09.20,12.30
+235,4196_L_rp,RNAseq_DD_166,tx#198-10_m#4196_L_rp,10, 3900 ,0,sp_low,14,F05,N/A,4196,prc,L,p,prc_L_p,6,12,338,16.09.20,2.82
+236,4196_C_rp,RNAseq_DD_167,tx#198-10_m#4196_C_rp,10, 35000 ,0,sp_low,13,E09,N/A,4196,prc,C,p,prc_C_p,6,12,338,16.09.20,11.10
+237,245_d12_ra,RNAseq_DD_168,mk#245_treg_allo,12, 10000000 ,1,sp_low,12,G03,245,N/A,N/A,d,a,d_a,6,13,339,09.12.20,3.30
+238,245_d12_rp,RNAseq_DD_169,mk#245_treg_poly,12, 10000000 ,1,sp_low,12,G02,245,N/A,N/A,d,p,d_p,6,13,339,09.12.20,3.70
+239,4208_S_ra,RNAseq_DD_170,tx#198-12_m#4208_S_ra,12, 28000 ,0,sp_low,14,H04,N/A,4208,prc,S,a,prc_S_a,6,13,339,09.12.20,7.80
+240,4208_L_ra,RNAseq_DD_171,tx#198-12_m#4208_L_ra,12, 6400 ,0,sp_low,14,H07,N/A,4208,prc,L,a,prc_L_a,6,13,339,09.12.20,1.31
+241,4208_C_ra,RNAseq_DD_172,tx#198-12_m#4208_C_ra,12, 52000 ,0,sp_low,13,G09,N/A,4208,prc,C,a,prc_C_a,6,13,339,09.12.20,13.30
+242,4209_S_ra,RNAseq_DD_173,tx#198-12_m#4209_S_ra,12, 9100 ,0,sp_low,14,H05,N/A,4209,prc,S,a,prc_S_a,6,13,339,09.12.20,8.02
+243,4209_L_ra,RNAseq_DD_174,tx#198-12_m#4209_L_ra,12, 1800 ,0,sp_low,14,H09,N/A,4209,prc,L,a,prc_L_a,6,13,339,09.12.20,0.90
+244,4209_C_ra,RNAseq_DD_175,tx#198-12_m#4209_C_ra,12, 55000 ,1,sp_low,12,G04,N/A,4209,prc,C,a,prc_C_a,6,13,339,09.12.20,3.86
+245,400_S_ra,RNAseq_DD_176,tx#198-12_m#400_S_ra,12, 50000 ,0,sp_low,13,G10,N/A,400,prc,S,a,prc_S_a,6,13,339,09.12.20,11.60
+246,400_L_ra,RNAseq_DD_177,tx#198-12_m#400_L_ra,12, 7000 ,0,sp_low,14,H06,N/A,400,prc,L,a,prc_L_a,6,13,339,09.12.20,3.22
+247,400_C_ra,RNAseq_DD_178,tx#198-12_m#400_C_ra,12, 55000 ,1,sp_low,12,G05,N/A,400,prc,C,a,prc_C_a,6,13,339,09.12.20,4.38
+248,4214_S_rp,RNAseq_DD_179,tx#198-12_m#4214_S_rp,12, 21000 ,0,sp_low,14,H03,N/A,4214,prc,S,p,prc_S_p,6,13,339,09.12.20,4.66
+249,4214_L_rp,RNAseq_DD_180,tx#198-12_m#4214_L_rp,12, 3000 ,0,sp_low,14,H08,N/A,4214,prc,L,p,prc_L_p,6,13,339,09.12.20,0.58
+250,4214_C_rp,RNAseq_DD_181,tx#198-12_m#4214_C_rp,12, 47000 ,0,sp_low,13,G08,N/A,4214,prc,C,p,prc_C_p,6,13,339,09.12.20,8.38
+251,4216_S_rp,RNAseq_DD_182,tx#198-12_m#4216_S_rp,12, 40000 ,0,sp_low,14,H02,N/A,4216,prc,S,p,prc_S_p,6,13,339,09.12.20,7.34
+252,4216_L_rp,RNAseq_DD_183,tx#198-12_m#4216_L_rp,12, 1800 ,0,sp_low,14,H10,N/A,4216,prc,L,p,prc_L_p,6,13,339,09.12.20,0.70
+253,4216_C_rp,RNAseq_DD_184,tx#198-12_m#4216_C_rp,12, 60000 ,0,sp_low,13,G07,N/A,4216,prc,C,p,prc_C_p,6,13,339,09.12.20,7.78
+254,4205_S_rp,RNAseq_DD_185,tx#198-12_m#4205_S_rp,12, 50000 ,0,sp_low,13,H01,N/A,4205,prc,S,p,prc_S_p,6,13,339,09.12.20,5.80
+255,4205_L_rp,RNAseq_DD_186,tx#198-12_m#4205_L_rp,12, 5300 ,0,sp_low,14,H11,N/A,4205,prc,L,p,prc_L_p,6,13,339,09.12.20,1.61
+256,4205_C_rp,RNAseq_DD_187,tx#198-12_m#4205_C_rp,12, 53000 ,0,sp_low,13,G11,N/A,4205,prc,C,p,prc_C_p,6,13,339,09.12.20,5.34
+217,241_d12_ra,RNAseq_DD_188,mk#241_treg_allo,10, 10000000 ,1,sp_low,12,E01,241,N/A,N/A,d,a,d_a,6,12,340,16.09.20,4.72
+218,241_d12_rp,RNAseq_DD_189,mk#241_treg_poly,10, 10000000 ,1,sp_low,12,G01,241,N/A,N/A,d,p,d_p,6,13,340,09.12.20,6.40
+219,4181_S_ra,RNAseq_DD_190,tx#198-10_m#4181_S_ra,10, 24600 ,0,sp_low,13,F01,N/A,4181,prc,S,a,prc_S_a,6,12,340,16.09.20,6.46
+220,4181_L_ra,RNAseq_DD_191,tx#198-10_m#4181_L_ra,10, 4600 ,0,sp_low,14,F10,N/A,4181,prc,L,a,prc_L_a,6,12,340,16.09.20,2.78
+221,4181_C_ra,RNAseq_DD_192,tx#198-10_m#4181_C_ra,10, 17000 ,0,sp_low,13,E08,N/A,4181,prc,C,a,prc_C_a,6,12,340,16.09.20,18.90
+222,4183_S_ra,RNAseq_DD_193,tx#198-10_m#4183_S_ra,10, 14600 ,1,sp_low,12,E03,N/A,4183,prc,S,a,prc_S_a,6,12,340,16.09.20,12.10
+223,4183_L_ra,RNAseq_DD_194,tx#198-10_m#4183_L_ra,10, 11600 ,0,sp_low,14,F03,N/A,4183,prc,L,a,prc_L_a,6,12,340,16.09.20,8.86
+224,4183_C_ra,RNAseq_DD_195,tx#198-10_m#4183_C_ra,10, 86000 ,0,sp_low,14,F02,N/A,4183,prc,C,a,prc_C_a,6,12,340,16.09.20,14.50
+225,4190_S_ra,RNAseq_DD_196,tx#198-10_m#4190_S_ra,10, 6600 ,0,sp_low,13,E05,N/A,4190,prc,S,a,prc_S_a,6,12,340,16.09.20,7.96
+226,4190_L_ra,RNAseq_DD_197,tx#198-10_m#4190_L_ra,10, 7900 ,0,sp_low,14,F04,N/A,4190,prc,L,a,prc_L_a,6,12,340,16.09.20,4.84
+227,4190_C_ra,RNAseq_DD_198,tx#198-10_m#4190_C_ra,10, 62000 ,0,sp_low,14,F07,N/A,4190,prc,C,a,prc_C_a,6,12,340,16.09.20,6.02
+228,4192_S_rp,RNAseq_DD_199,tx#198-10_m#4192_S_rp,10, 22000 ,0,sp_low,14,F06,N/A,4192,prc,S,p,prc_S_p,6,12,340,16.09.20,5.86
+229,4192_L_rp,RNAseq_DD_200,tx#198-10_m#4192_L_rp,10, 2000 ,0,sp_low,14,F08,N/A,4192,prc,L,p,prc_L_p,6,12,340,16.09.20,1.17
+230,4192_C_rp,RNAseq_DD_201,tx#198-10_m#4192_C_rp,10, 4600 ,0,sp_low,13,E07,N/A,4192,prc,C,p,prc_C_p,6,12,340,16.09.20,12.90
+231,4193_S_rp,RNAseq_DD_202,tx#198-10_m#4193_S_rp,10, 14000 ,0,sp_low,13,G06,N/A,4193,prc,S,p,prc_S_p,6,13,340,09.12.20,2.80
+232,4193_L_rp,RNAseq_DD_203,tx#198-10_m#4193_L_rp,10, 5700 ,0,sp_low,14,F09,N/A,4193,prc,L,p,prc_L_p,6,12,340,16.09.20,2.88
+233,4193_C_rp,RNAseq_DD_204,tx#198-10_m#4193_C_rp,10, 38000 ,0,sp_low,13,E10,N/A,4193,prc,C,p,prc_C_p,6,12,340,16.09.20,6.18
+234,4196_S_rp,RNAseq_DD_205,tx#198-10_m#4196_S_rp,10, 20000 ,0,sp_low,13,E06,N/A,4196,prc,S,p,prc_S_p,6,12,340,16.09.20,12.30
+235,4196_L_rp,RNAseq_DD_206,tx#198-10_m#4196_L_rp,10, 3900 ,0,sp_low,14,F05,N/A,4196,prc,L,p,prc_L_p,6,12,340,16.09.20,2.82
+236,4196_C_rp,RNAseq_DD_207,tx#198-10_m#4196_C_rp,10, 35000 ,0,sp_low,13,E09,N/A,4196,prc,C,p,prc_C_p,6,12,340,16.09.20,11.10
+237,245_d12_ra,RNAseq_DD_208,mk#245_treg_allo,12, 10000000 ,1,sp_low,12,G03,245,N/A,N/A,d,a,d_a,6,13,340,09.12.20,3.30
+238,245_d12_rp,RNAseq_DD_209,mk#245_treg_poly,12, 10000000 ,1,sp_low,12,G02,245,N/A,N/A,d,p,d_p,6,13,340,09.12.20,3.70
+239,4208_S_ra,RNAseq_DD_210,tx#198-12_m#4208_S_ra,12, 28000 ,0,sp_low,14,H04,N/A,4208,prc,S,a,prc_S_a,6,13,340,09.12.20,7.80
+240,4208_L_ra,RNAseq_DD_211,tx#198-12_m#4208_L_ra,12, 6400 ,0,sp_low,14,H07,N/A,4208,prc,L,a,prc_L_a,6,13,340,09.12.20,1.31
+241,4208_C_ra,RNAseq_DD_212,tx#198-12_m#4208_C_ra,12, 52000 ,0,sp_low,13,G09,N/A,4208,prc,C,a,prc_C_a,6,13,340,09.12.20,13.30
+242,4209_S_ra,RNAseq_DD_213,tx#198-12_m#4209_S_ra,12, 9100 ,0,sp_low,14,H05,N/A,4209,prc,S,a,prc_S_a,6,13,340,09.12.20,8.02
+243,4209_L_ra,RNAseq_DD_214,tx#198-12_m#4209_L_ra,12, 1800 ,0,sp_low,14,H09,N/A,4209,prc,L,a,prc_L_a,6,13,340,09.12.20,0.90
+244,4209_C_ra,RNAseq_DD_215,tx#198-12_m#4209_C_ra,12, 55000 ,1,sp_low,12,G04,N/A,4209,prc,C,a,prc_C_a,6,13,340,09.12.20,3.86
+245,400_S_ra,RNAseq_DD_216,tx#198-12_m#400_S_ra,12, 50000 ,0,sp_low,13,G10,N/A,400,prc,S,a,prc_S_a,6,13,340,09.12.20,11.60
+246,400_L_ra,RNAseq_DD_217,tx#198-12_m#400_L_ra,12, 7000 ,0,sp_low,14,H06,N/A,400,prc,L,a,prc_L_a,6,13,340,09.12.20,3.22
+247,400_C_ra,RNAseq_DD_218,tx#198-12_m#400_C_ra,12, 55000 ,1,sp_low,12,G05,N/A,400,prc,C,a,prc_C_a,6,13,340,09.12.20,4.38
+248,4214_S_rp,RNAseq_DD_219,tx#198-12_m#4214_S_rp,12, 21000 ,0,sp_low,14,H03,N/A,4214,prc,S,p,prc_S_p,6,13,340,09.12.20,4.66
+249,4214_L_rp,RNAseq_DD_220,tx#198-12_m#4214_L_rp,12, 3000 ,0,sp_low,14,H08,N/A,4214,prc,L,p,prc_L_p,6,13,340,09.12.20,0.58
+250,4214_C_rp,RNAseq_DD_221,tx#198-12_m#4214_C_rp,12, 47000 ,0,sp_low,13,G08,N/A,4214,prc,C,p,prc_C_p,6,13,340,09.12.20,8.38
+251,4216_S_rp,RNAseq_DD_222,tx#198-12_m#4216_S_rp,12, 40000 ,0,sp_low,14,H02,N/A,4216,prc,S,p,prc_S_p,6,13,340,09.12.20,7.34
+252,4216_L_rp,RNAseq_DD_223,tx#198-12_m#4216_L_rp,12, 1800 ,0,sp_low,14,H10,N/A,4216,prc,L,p,prc_L_p,6,13,340,09.12.20,0.70
+253,4216_C_rp,RNAseq_DD_224,tx#198-12_m#4216_C_rp,12, 60000 ,0,sp_low,13,G07,N/A,4216,prc,C,p,prc_C_p,6,13,340,09.12.20,7.78
+254,4205_S_rp,RNAseq_DD_225,tx#198-12_m#4205_S_rp,12, 50000 ,0,sp_low,13,H01,N/A,4205,prc,S,p,prc_S_p,6,13,340,09.12.20,5.80
+255,4205_L_rp,RNAseq_DD_226,tx#198-12_m#4205_L_rp,12, 5300 ,0,sp_low,14,H11,N/A,4205,prc,L,p,prc_L_p,6,13,340,09.12.20,1.61
+256,4205_C_rp,RNAseq_DD_227,tx#198-12_m#4205_C_rp,12, 53000 ,0,sp_low,13,G11,N/A,4205,prc,C,p,prc_C_p,6,13,340,09.12.20,5.34
+257,010_S_rn_pos,RNAseq_DD_228,Foxp3gfp_pool#010_spleen_rn_Cd62l+,N/A, 779000 ,1,sp_low,12,G01,N/A,10,wt,S,pos,wt_S_pos,6,14,374,14.04.21,10.30
+258,010_S_rn_neg,RNAseq_DD_229,Foxp3gfp_pool#010_spleen_rn_Cd62l-,N/A, 497000 ,1,sp_low,12,G02,N/A,10,wt,S,neg,wt_S_neg,6,14,374,14.04.21,7.06
+259,010_L_rn_pos,RNAseq_DD_230,Foxp3gfp_pool#010_liver_rn_Cd62l+,N/A, 3400 ,0,sp_low,14,H04,N/A,10,wt,L,pos,wt_L_pos,6,14,374,14.04.21,1.02
+260,010_L_rn_neg,RNAseq_DD_231,Foxp3gfp_pool#010_liver_rn_Cd62l-,N/A, 53000 ,0,sp_low,14,G06,N/A,10,wt,L,neg,wt_L_neg,6,14,374,14.04.21,18.30
+261,007_C_rn_neg,RNAseq_DD_232,Foxp3gfp_pool#007_colon_rn_Cd62l-,N/A, 8188 ,0,sp_low,14,H06,N/A,7,wt,C,neg,wt_C_neg,6,14,374,14.04.21,3.16
+262,008_C_rn_neg,RNAseq_DD_233,Foxp3gfp_pool#008_colon_rn_Cd62l-,N/A, 6000 ,0,sp_low,14,H08,N/A,8,wt,C,neg,wt_C_neg,6,14,374,14.04.21,3.16
+263,009_C_rn_neg,RNAseq_DD_234,Foxp3gfp_pool#009_colon_rn_Cd62l-,N/A, 8699 ,0,sp_low,14,H05,N/A,9,wt,C,neg,wt_C_neg,6,14,374,14.04.21,5.70
+264,010_C_rn_neg,RNAseq_DD_235,Foxp3gfp_pool#010_colon_rn_Cd62l-,N/A, 10700 ,0,sp_low,14,G03,N/A,10,wt,C,neg,wt_C_neg,6,14,374,14.04.21,4.12
+26,198_d13_ra,RNAseq_DD_240,mk#198 Tregs d13 (allo),1, 3000000 ,0,sp_low,12,B01,198,N/A,N/A,d,a,d_a,6,2,374,31.01.19,24.80
+27,198_d13_rp,RNAseq_DD_241,mk#198 Tregs d13 (poly),1, 3000000 ,1,sp_low,12,B02,198,N/A,N/A,d,p,d_p,6,2,374,31.01.19,23.60
+31,294_L_ra,RNAseq_DD_242,tx#198-1 m#294 liver Treg (allo),1, 17300 ,0,sp_low,14,E01,N/A,294,pro,L,a,pro_L_a,4,6,374,28.03.19,5.64
+34,296_L_ra,RNAseq_DD_243,tx#198-1 m#296 liver Treg (allo),1, 14400 ,0,sp_low,14,C06,N/A,296,pro,L,a,pro_L_a,6,3,374,05.02.19,1.81
+36,296_S_ra,RNAseq_DD_244,tx#198-1 m#296 spleen Treg (allo),1, 142000 ,0,sp_low,13,C10,N/A,296,pro,S,a,pro_S_a,6,3,374,05.02.19,38.40
+37,297_L_rp,RNAseq_DD_245,tx#198-1 m#297 liver Treg (poly),1, 11400 ,0,sp_low,14,C07,N/A,297,pro,L,p,pro_L_p,6,3,374,05.02.19,9.66
+42,298_S_rp,RNAseq_DD_246,tx#198-1 m#298 spleen Treg (poly),1, 30000 ,0,sp_low,14,D07,N/A,298,pro,S,p,pro_S_p,6,4,374,08.02.19,15.10
+43,299_L_rp,RNAseq_DD_247,tx#198-1 m#299 liver Treg (poly),1, 15500 ,0,sp_low,13,D04,N/A,299,pro,L,p,pro_L_p,6,4,374,08.02.19,7.14
+45,299_S_rp,RNAseq_DD_248,tx#198-1 m#299 spleen Treg (poly),1, 105000 ,1,sp_low,12,D01,N/A,299,pro,S,p,pro_S_p,6,4,374,08.02.19,26.60
+64,199_d12_ra,RNAseq_DD_249,mk#199 Tregs d12 (allo),2, 3000000 ,1,sp_low,12,B03,199,N/A,N/A,d,a,d_a,6,2,374,31.01.19,18.40
+65,199_d12_rp,RNAseq_DD_250,mk#199 Tregs d12 (poly),2, 3000000 ,1,sp_low,12,B04,199,N/A,N/A,d,p,d_p,6,2,374,31.01.19,11.70
+66,341_L_ra,RNAseq_DD_251,tx#198-2 m#341 liver Treg (allo),2, 14600 ,0,sp_low,13,E02,N/A,341,pro,L,a,pro_L_a,4,6,374,28.03.19,8.44
+67,341_C_ra,RNAseq_DD_252,tx#198-2 m#341 colon Treg (allo),2, 20000 ,0,sp_low,13,E03,N/A,341,pro,C,a,pro_C_a,4,6,374,28.03.19,8.30
+71,346_S_ra,RNAseq_DD_253,tx#198-2 m#346 spleen Treg (allo),2, 120000 ,1,sp_low,12,D03,N/A,346,pro,S,a,pro_S_a,6,4,374,08.02.19,23.80
+73,348_C_ra,RNAseq_DD_254,tx#198-2 m#348 colon Treg (allo),2, 18000 ,0,sp_low,13,E04,N/A,348,pro,C,a,pro_C_a,6,6,374,28.03.19,10.10
+74,348_S_ra,RNAseq_DD_255,tx#198-2 m#348 spleen Treg (allo),2, 111000 ,1,sp_low,13,F03,N/A,348,pro,S,a,pro_S_a,6,6,374,28.03.20,28.40
+76,343_C_rp,RNAseq_DD_256,tx#198-2 m#343 colon Treg (poly),2, 30400 ,0,sp_low,13,E05,N/A,343,pro,C,p,pro_C_p,6,6,374,28.03.22,10.50
+78,347_L_rp,RNAseq_DD_257,tx#198-2 m#347 liver Treg (poly),2, 13500 ,0,sp_low,14,F01,N/A,347,pro,L,p,pro_L_p,6,6,374,28.03.24,1.15
+79,347_C_rp,RNAseq_DD_258,tx#198-2 m#347 colon Treg (poly),2, 37000 ,0,sp_low,13,E07,N/A,347,pro,C,p,pro_C_p,6,6,374,28.03.25,12.30
+80,347_S_rp,RNAseq_DD_259,tx#198-2 m#347 spleen Treg (poly),2, 60000 ,0,sp_low,13,E08,N/A,347,pro,S,p,pro_S_p,6,6,374,28.03.26,33.00
+81,349_L_rp,RNAseq_DD_260,tx#198-2 m#349 liver Treg (poly),2, 20600 ,0,sp_low,13,F09,N/A,349,pro,L,p,pro_L_p,6,6,374,28.03.27,6.54
+82,349_C_rp,RNAseq_DD_261,tx#198-2 m#349 colon Treg (poly),2, 30000 ,0,sp_low,13,F10,N/A,349,pro,C,p,pro_C_p,6,6,374,28.03.28,10.70
+83,349_S_rp,RNAseq_DD_262,tx#198-2 m#349 spleen Treg (poly),2, 50000 ,0,sp_low,13,F11,N/A,349,pro,S,p,pro_S_p,6,6,374,28.03.29,15.80
+102,208_d11_ra,RNAseq_DD_263,mk#208 Tregs d11 (allo),4, 12600000 ,1,sp_low,11,H01,208,N/A,N/A,d,a,d_a,6,8,374,12.09.19,5.92
+209,002_L_rn_pos,RNAseq_DD_272,Foxp3gfp_pool#002_liver_rn_Cd62l+,N/A, 9500 ,0,sp_low,14,C01,N/A,2,wt,L,pos,wt_L_pos,6,11,374,05.06.20,1.33
+210,002_L_rn_neg,RNAseq_DD_273,Foxp3gfp_pool#002_liver_rn_Cd62l-,N/A, 31400 ,0,sp_low,14,C02,N/A,2,wt,L,neg,wt_L_neg,6,11,374,05.06.20,3.14
+213,004_L_rn_pos,RNAseq_DD_274,Foxp3gfp_pool#004_liver_rn_Cd62l+,N/A, 8400 ,0,sp_low,14,C05,N/A,4,wt,L,pos,wt_L_pos,6,11,374,05.06.20,1.08
