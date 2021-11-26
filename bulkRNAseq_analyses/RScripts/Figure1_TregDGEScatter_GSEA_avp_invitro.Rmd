@@ -36,15 +36,26 @@ knitr::write_bib(.packages(), "Figure1_TregDGEScatter_GSEA_avp_invitro_packages.
 
 ```{r RDS, include=FALSE}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
-stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rds")
+stid<-readRDS("./METADIR/stid.rds")
 ```
 
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
 
 ***
+
+## Creating Directories
+* Hereafter, directories for the analysis output are generated.
+* This is necessary in case the "bulkRNAseq_analyses_initial_setup.Rmd" has not been run yet.
+* Figures will be exported to **"FIGDIR"** whereas tables, such as differential gene expression statistics, will be written into **"ANALDIR"**.
+```{r directories, warning=FALSE}
+# analysis directory
+dir.create(path = "./ANALDIR")
+# figure directory
+dir.create(path = "./FIGDIR")
+```
 
 # Data Preparation
 * For the analysis, the data and metadata have to be prepared and properly annotated.
