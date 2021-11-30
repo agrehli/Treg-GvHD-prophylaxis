@@ -602,6 +602,32 @@ bclsn.jt.filtered.clusterID.ordered <-bclsn.jt.filtered.clusterID[rev(bclsn.hr.f
 nrow(bclsn.jt.filtered.clusterID.ordered)
 ```
 
+## Cluster and Background Gene Lists
+* Gene symbols for clusters 1,2,3 and 4 are extracted in the order of appearance in above heat map from top to bottom.
+* Respective background genes resulting from a filtering only by logCPM and logRPKM are defined, as well.
+* Additionally, GeneIDs from colon down and up genes are extracted for gene set rotation analyses of respective comparison results in another sample subset.
+```{r}
+# down in colon, up in spleen and liver
+cluster1.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[1]]
+length(cluster1.genes)
+# liver specific genes
+cluster2.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[2]]
+length(cluster2.genes)
+# spleen specific genes
+cluster3.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[3]]
+length(cluster3.genes)
+# colon specific genes
+cluster4.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[4]]
+length(cluster4.genes)
+# background gene list
+bclsn.jt.fil<-subset(bclsn.jt,(logCPM.cvnc > 1 & logCPM.cvl > 1 & logCPM.cvs > 1 & logCPM.lvs > 1) & (logRPKM.cvnc > 1 & logRPKM.cvl > 1  & logRPKM.cvs > 1 & logRPKM.lvs > 1))
+bclsn.bg.genes<-bclsn.jt.fil$GeneSymbol.x
+length(bclsn.bg.genes)
+# GeneIDs from colon down and up genes for gene set rotation analyses of respective comparisons in other sample subset
+cluster1.geneIDs<-bclsn.jt.filtered.clusterID.ordered$GeneID[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[1]]
+cluster4.geneIDs<-bclsn.jt.filtered.clusterID.ordered$GeneID[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[4]]
+```
+
 ## Basic Heat Map (Supplementary Figure 3 g)
 * Following filtering for DEGOI and hierarchical clustering of genes and samples, data is presented as heat map.
 ```{r, fig.height=6.5, fig.width=4.5}
@@ -630,25 +656,25 @@ text(x=-4.05,
      y=1.5,
      col="white",
      cex=0.75,
-     labels = "259",
+     labels = length(cluster1.genes),
      srt=90)
 text(x=-4.05,
      y=0.6,
      col="white",
      cex=0.75,
-     labels = "46",
+     labels = length(cluster2.genes),
      srt=90)
 text(x=-4.05,
      y=0.2,
      col="white",
      cex=0.75,
-     labels = "41",
+     labels = length(cluster3.genes),
      srt=90)
 text(x=-4.05,
      y=-3,
      col="white",
      cex=0.75,
-     labels = "578 genes",
+     labels = paste0(length(cluster4.genes)," genes"),
      srt=90)
 
 #text(x=-3.83,
@@ -680,7 +706,7 @@ text(x=-4.05,
 * which is also exported into the figure directory.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3g_bclsn.Heatmap_indivZscores_qstat.bclsn.treat.lfc1.5.cor.pdf", height=6.5, width=4.5)
+pdf(file="./FIGDIR/SupplementaryFigure3g_bclsn.Heatmap_indivZscores_qstat.bclsn.treat.lfc1.5.pdf", height=6.5, width=4.5)
 heatmap.2(data.matrix(bclsn.jt.filtered[,metad.bclsn$sample_ID]), 
           Rowv=as.dendrogram(bclsn.hr.filtered), 
           Colv=as.dendrogram(bclsn.hc.filtered), 
@@ -725,31 +751,6 @@ text(x=-4.05,
 dev.off()
 ```
 
-## Cluster and Background Gene Lists
-* Gene symbols for clusters 1,2,3 and 4 are extracted in the order of appearance in above heat map from top to bottom.
-* Respective background genes resulting from a filtering only by logCPM and logRPKM are defined, as well.
-* Additionally, GeneIDs from colon down and up genes are extracted for gene set rotation analyses of respective comparison results in another sample subset.
-```{r}
-# down in colon, up in spleen and liver
-cluster1.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[1]]
-length(cluster1.genes)
-# liver specific genes
-cluster2.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[2]]
-length(cluster2.genes)
-# spleen specific genes
-cluster3.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[3]]
-length(cluster3.genes)
-# colon specific genes
-cluster4.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[4]]
-length(cluster4.genes)
-# background gene list
-bclsn.jt.fil<-subset(bclsn.jt,(logCPM.cvnc > 1 & logCPM.cvl > 1 & logCPM.cvs > 1 & logCPM.lvs > 1) & (logRPKM.cvnc > 1 & logRPKM.cvl > 1  & logRPKM.cvs > 1 & logRPKM.lvs > 1))
-bclsn.bg.genes<-bclsn.jt.fil$GeneSymbol.x
-length(bclsn.bg.genes)
-# GeneIDs from colon down and up genes for gene set rotation analyses of respecive comparisons in other sample subset
-cluster1.geneIDs<-bclsn.jt.filtered.clusterID.ordered$GeneID[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[1]]
-cluster4.geneIDs<-bclsn.jt.filtered.clusterID.ordered$GeneID[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[4]]
-```
 
 ## Export of gene lists for Metascape
 * Cluster and background gene lists are exported for a custom metascape analysis.
