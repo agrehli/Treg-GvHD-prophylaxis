@@ -538,39 +538,31 @@ write.table(spc.cp.qstat.scat.filt$GeneSymbol,
 * Hereafter, different sets of GOI are defined.
 * Most importantly, genes related to suppression are highlighted for all three tissues to corroborate the protective role of colon Treg in the prophylaxis setting.  
 ```{r}
-# spleen plot
+# spleen
+## replication signature, purple Figure 4a
+replication.sig <-c("Aurka","Smc2","Cdc20","Cdk1","E2f1")
+## response to interferon beta/alpha, colored green in Figure 4a
+ifn.res.spc.sig <- c("Ifit1", "Ifitm3","Iigp1","Lgals3bp",
+                       "Ifi204","Irgm1" )
+## R-MMU-5669034: TNFs bind their physiological receptors, colored pink in Figure 4a
+tnf.bind.r.sig <-c("Lta","Tnfsf11","Tnfsf8","Tnfsf4","Tnfrsf25")
 
-## cell cycle signature # Aurka,Cdkn3,Cdc20,Cdk1,E2f1 --> NOT IDENTIFIED
-cellCycle.sig <-c("Aurka","Cdkn3","Cdc20","Cdk1","E2f1")
-
-## ifn signature colored green in Fig 4 a,b
-## from metascape --> GO Biological Processes	GO:0035457	cellular response to interferon-alpha	-2.476343477	-0.967	4/11	15951,15957,15959,246730	Ifi204,Ifit1,Ifit3,Oas1a --> how did Irf7 get in there? --> NOT IDENTIFIED
-ifn.spc.sig <-c("Irf7","Ifi204","Ifit1","Ifit3","Oas1a")
-
-## Where do these genes come from?
-## From metascape_results from spc.dn --> IDENTIFIED
-# Reactome Gene Sets	R-MMU-5669034	TNFs bind their physiological receptors (Lta,Tnfsf11,Tnfsf8,Tnfsf4,Tnfrsf25)
-cytoRec.sig <-c("Lta","Tnfsf11","Tnfsf8","Tnfsf4","Tnfrsf25")
-
-# liver plot
-## ifn signature colored green in Fig 4 a,b
-## From metascape 1_Member	GO Biological Processes	GO:0035456	response to interferon-beta	-7.554770767	-3.537	6/43	15957,54396,60440,66141,240327,100033459	Ifit1,Irgm2,Iigp1,Ifitm3,Gm4951,Ifi208 --> IDENTIFIED
-ifn.lpc.sig <-c("Ifitm3","Ifi208","Ifit1","Irgm2","Iigp1")
-
-## nfkb targets? --> did not find Il6ra or Rora in the hallmark list (https://www.gsea-msigdb.org/gsea/msigdb/cards/HALLMARK_TNFA_SIGNALING_VIA_NFKB.html)
-## KEGG Pathway	mmu04659	Th17 cell differentiation (Fos,Il6ra,Jun,Nfkbia,Rora) --> blue in plot --> IDENTIFIED
-mapk.sig <-c("Fos","Il6ra","Jun","Nfkbia","Rora")
+# liver
+## response to interferon beta/alpha, colored green in Figure 4b
+ifn.res.lpc.sig <- c("Ifit1", "Ifitm3","Iigp1","Lgals3bp",
+                       "Ifi208","Irgm2")
+## KEGG Pathway	mmu04659	Th17 cell differentiation --> upregulated in absence of Tconv-secreted Il2, colored blue in Figure 4b
+th17.diff.sig <-c("Fos","Il6ra","Jun","Nfkbia","Rora")
 
 #colon plot
-## negative regulation of what? --> #leukocyte differentiation in metascape!!
-## smalles pathway I found: 1_Member	GO Biological Processes	GO:0046632	alpha-beta T cell differentiation	-3.861926687	-1.346	9/94	12053,12458,12522,12775,19883,21414,21949,22164,192656	Bcl6,Ccr6,Cd83,Ccr7,Rora,Tcf7,Tnfsf8,Tnfsf4,Ripk2 --> IDENTIFIED
-negReg.sig <-c("Bcl6","Ccr7","Cd83","Rora","Tnfsf8","Tnfsf4")
-#Bcl6,Ccr7,Cd83,Cd83,Rora,Tnfsf8,Tnfsf4
+## GO Biological Processes	GO:0046632	alpha-beta T cell differentiation, colored brown in Figure 4c
+tcell.diff.sig <-c("Bcl6","Ccr7","Cd83","Rora","Tnfsf8","Tnfsf4")
 
-# suppressive signature --> hand-picked, immunosuppression and other Treg functions up to killing!
+#commonly highlighted suppression signature --> hand-picked, immunosuppression, other cannonical Treg functions and cytotoxicity, colored black in Figure 4a-c
 supp.sig<-c("Gzmb","Il10","Gzma","Fasl","Prf1","Ctla4","Entpd1","Tgfb1","Tgfb3","Il2ra","Nt5e","Fgl2","Il12a","Ebi3","Cd274","Pdcd1lg2")
 supp.sig <- sort(supp.sig)
 ```
+
 
 ### Spleen Scatterplot with GOI hightlighted (Figure 4a)
 * Hereafter, the scatter plot for spleen samples is generated and plotted. 
@@ -611,11 +603,11 @@ spc.scat.spleen <- ggplot(spc.cp.qstat.scat.filt) +
                   point.padding=unit(0.00,"cm"),
                   box.padding=unit(0.1,"cm"), 
                   max.overlaps = 25,
-                  color = "black",                   #nudge_x = -4,
+                  color = "black",
                   direction = "both", 
                   fontface="italic") +
  geom_text_repel(data = subset(spc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% cellCycle.sig),aes(label=GeneSymbol),
+                                GeneSymbol %in% replication.sig),aes(label=GeneSymbol),
                  force = 50, 
                  force_pull = 1, 
                  size=2, 
@@ -625,11 +617,10 @@ spc.scat.spleen <- ggplot(spc.cp.qstat.scat.filt) +
                  box.padding=unit(0.1,"cm"), max.overlaps = 25,
                  color = "magenta3", 
                  nudge_x = -8,
-                 #nudge_y = 2,
                  direction = "both", 
                  fontface="italic") +
  geom_text_repel(data = subset(spc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% ifn.spc.sig),aes(label=GeneSymbol),
+                                GeneSymbol %in% ifn.res.spc.sig),aes(label=GeneSymbol),
                  force = 50, 
                  force_pull = 1, 
                  size=2, 
@@ -638,13 +629,13 @@ spc.scat.spleen <- ggplot(spc.cp.qstat.scat.filt) +
                  point.padding=unit(0.00,"cm"),
                  box.padding=unit(0.1,"cm"), 
                  max.overlaps = 25,
-                 color = "green3",   
+                 color = "green4",   
                  nudge_x = -1,
                  nudge_y = 8,
                  direction = "both", 
                  fontface="italic") +
  geom_text_repel(data = subset(spc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% cytoRec.sig),aes(label=GeneSymbol),
+                                GeneSymbol %in% tnf.bind.r.sig),aes(label=GeneSymbol),
                  force = 50, 
                  force_pull = 1, 
                  size=2, min.segment.length=0,
@@ -656,7 +647,7 @@ spc.scat.spleen <- ggplot(spc.cp.qstat.scat.filt) +
                  nudge_x = 4,
                  direction = "both", 
                  fontface="italic") +
-  ggtitle(label = "DEGs pro. vs. ctrl.BMT", subtitle = "spleen re-isolated Treg \nsuppression signature") +
+  ggtitle(label = "DEGs pro. vs. ctrl.BMT", subtitle = "spl. re-iso. Treg, black: supp.sig, purple: repl. \ngreen: ifn.I.response, pink: tnf.bind.r.sig") +
   ylab(bquote(log[2]~CPM ~"("*GvHD*")"))+
   xlab(bquote(log[2]~CPM ~"("*no~GvHD*")"))+
   theme(plot.title = element_text(size = 10, face = "bold"),
@@ -724,7 +715,7 @@ lpc.scat.liver <- ggplot(lpc.cp.qstat.scat.filt) +
                   direction = "both", 
                   fontface="italic") +
   geom_text_repel(data = subset(lpc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% ifn.lpc.sig),aes(label=GeneSymbol),
+                                GeneSymbol %in% ifn.res.lpc.sig),aes(label=GeneSymbol),
                   force = 50, 
                   force_pull = 1, 
                   size=2, 
@@ -733,13 +724,13 @@ lpc.scat.liver <- ggplot(lpc.cp.qstat.scat.filt) +
                   point.padding=unit(0.00,"cm"),
                   box.padding=unit(0.1,"cm"), 
                   max.overlaps = 25,
-                  color = "green3",   
+                  color = "green4",   
                   nudge_x = -4,
-                  nudge_y = 1,
+                  nudge_y = 2,
                   direction = "both", 
                   fontface="italic") +
  geom_text_repel(data = subset(lpc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% mapk.sig),aes(label=GeneSymbol),
+                                GeneSymbol %in% th17.diff.sig),aes(label=GeneSymbol),
                   force = 50, 
                  force_pull = 1, 
                  size=2, 
@@ -753,7 +744,7 @@ lpc.scat.liver <- ggplot(lpc.cp.qstat.scat.filt) +
                  nudge_y = -1,
                  direction = "both", 
                  fontface="italic") +
-  ggtitle(label = "DEGs pro. vs. ctrl. BMT", subtitle = "liver re-isolated Treg \nsuppression signature") +
+  ggtitle(label = "DEGs pro. vs. ctrl. BMT", subtitle = "liver re-isolated Treg, black: supp.sig \ngreen: ifn.I.response, blue: th17.diff.sig") +
   ylab(bquote(log[2]~CPM ~"("*GvHD*")"))+
   xlab(bquote(log[2]~CPM ~"("*no~GvHD*")"))+
   theme(plot.title = element_text(size = 10, face = "bold"),
@@ -820,11 +811,11 @@ cpc.scat.colon <- ggplot(cpc.cp.qstat.scat.filt) +
                   max.overlaps = 25,
                   color = "black",
                   nudge_x = -2,
-                  nudge_y = 1,
+                  nudge_y = 2,
                   direction = "both", 
                   fontface="italic") +
   geom_text_repel(data = subset(cpc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% negReg.sig),aes(label=GeneSymbol),
+                                GeneSymbol %in% tcell.diff.sig),aes(label=GeneSymbol),
                   force = 50, 
                   force_pull = 1, 
                   size=2, 
@@ -838,7 +829,7 @@ cpc.scat.colon <- ggplot(cpc.cp.qstat.scat.filt) +
                   nudge_y = -1,
                   direction = "both", 
                   fontface="italic") +
-  ggtitle(label = "DEGs pro. vs. ctrl. BMT", subtitle = "colon re-isolated Treg \nsuppression signature") +
+  ggtitle(label = "DEGs pro. vs. ctrl. BMT", subtitle = "colon re-isolated Treg \nblack:supp.sig, brown: tcell.diff.sig") +
   ylab(bquote(log[2]~CPM ~"("*GvHD*")"))+
   xlab(bquote(log[2]~CPM ~"("*no~GvHD*")"))+
   theme(plot.title = element_text(size = 10, face = "bold"),
