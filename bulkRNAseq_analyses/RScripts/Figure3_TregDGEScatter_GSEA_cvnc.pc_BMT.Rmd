@@ -37,8 +37,8 @@ knitr::write_bib(.packages(), "Figure3_TregDGEScatter_GSEA_cvnc.pc_BMT_packages.
 
 ```{r}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rds")
+counts.m<-readRDS("./RCTDIR/counts.m.rds")
+metad.m<-readRDS("./METADIR/metad.m.rds")
 stid<-readRDS("./METADIR/stid.rds")
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
@@ -74,15 +74,15 @@ which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
 * In this analysis, we focus on donor Treg re-isolated from recipient organs 7d after transfer (BMT w/o Tconv & BMT w Tconv).
 * A subsetting index is generated accordingly.
 ```{r}
-cvnc.pc.ind<-(grepl("prc",metad.m.rm$appl)|grepl("pro",metad.m.rm$appl))&(grepl("S", metad.m.rm$org)|grepl("C", metad.m.rm$org)|grepl("L", metad.m.rm$org))
+cvnc.pc.ind<-(grepl("prc",metad.m$appl)|grepl("pro",metad.m$appl))&(grepl("S", metad.m$org)|grepl("C", metad.m$org)|grepl("L", metad.m$org))
 print(paste(sum(cvnc.pc.ind),"samples enter the analysis!"))
 ```
 
 ## Counts
 * Here, the comprehensive counts data frame is reduced using the subsetting index.
 ```{r}
-#Subsetting the respective counts object (counts.m.rm)
-counts.cvnc.pc<-counts.m.rm[,cvnc.pc.ind]
+#Subsetting the respective counts object (counts.m)
+counts.cvnc.pc<-counts.m[,cvnc.pc.ind]
 paste(ncol(counts.cvnc.pc),"samples are selected:")
 colnames(counts.cvnc.pc)
 ```
@@ -93,7 +93,7 @@ colnames(counts.cvnc.pc)
 * An additional group variable assigning colon-re-isolated samples to one group and spleen- or liver-migrated Treg to the other is introduced, as well.
 * This enables the comparison of lymphoid vs. non-lymphoid tissue-homing Treg in the deployed BMT models, underlying this analysis.
 ```{r}
-metad.cvnc.pc<-metad.m.rm[cvnc.pc.ind,]
+metad.cvnc.pc<-metad.m[cvnc.pc.ind,]
 metad.cvnc.pc$orig.ord<-1:nrow(metad.cvnc.pc)
 metad.cvnc.pc<-metad.cvnc.pc[order(metad.cvnc.pc$grp),]
 metad.cvnc.pc<-metad.cvnc.pc[order(metad.cvnc.pc$org),]
@@ -118,7 +118,7 @@ rm(counts.cvnc.pc.ord)
 * In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
 ```{r}
 if (sum(colnames(counts.cvnc.pc)==metad.cvnc.pc$sample_ID)==sum(cvnc.pc.ind)) {
-  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with!")
 }else {
   print("Something is inconsistent, check the code above for errors during subsetting!")
 }
@@ -255,7 +255,8 @@ tm_fig2_panel_LT<-rev(c("Stat1","Ccr7","S1pr1","Sell","Bcl2","Tcf7"))
 
 ### Scatterplot with GOI highlighted (Figure 3 b)
 * Hereafter, the scatter plot is generated and plotted.
-```{r, fig.height=2.6, fig.width=2.2, out.width="20%", warning=FALSE}
+```{r, fig.height=2.6, fig.width=2.2, out.width="20%"}
+#, warning=FALSE
 cvnc.pc.scat.colon.tm <- ggplot(cvnc.pc.tr.qstat.scat.filt) + 
   aes(x=logCPMnonColon, y=logCPMcolon) +
   scale_x_continuous(limits = c(-2,14),
@@ -269,7 +270,7 @@ cvnc.pc.scat.colon.tm <- ggplot(cvnc.pc.tr.qstat.scat.filt) +
   geom_point(colour=rgb(50,50,50,30,maxColorValue = 255), shape=16, size = .375) +
   geom_point(data = cvnc.pc.tr.qstat.scat.filt.UP, aes(x=logCPMnonColon, y=logCPMcolon), colour="sienna", shape=16, size = .5, alpha=.75) +
   geom_point(data = cvnc.pc.tr.qstat.scat.filt.DN, aes(x=logCPMnonColon, y=logCPMcolon), colour="slateblue", shape=16, size = .5, alpha=.75) +
-geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt, direction = "both",
+geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt,
                                 GeneSymbol %in% tm_fig2_panel_NLT),aes(label=GeneSymbol),
                   force = 50,
                   force_pull = 1,
@@ -284,7 +285,7 @@ geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt, direction = "both",
                   direction = "both",
                   color = "brown4",
                   fontface="italic")+
-  geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt, direction = "both",
+  geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt,
                                 GeneSymbol %in% tm_fig2_panel_LT),aes(label=GeneSymbol),
                   force = 50,
                   force_pull = 1,
@@ -313,7 +314,8 @@ geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt, direction = "both",
         plot.background = element_rect(fill="white",colour = "white"),
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())
+        panel.grid.minor = element_blank(),
+        aspect.ratio = 1)
 cvnc.pc.scat.colon.tm
 ```
 

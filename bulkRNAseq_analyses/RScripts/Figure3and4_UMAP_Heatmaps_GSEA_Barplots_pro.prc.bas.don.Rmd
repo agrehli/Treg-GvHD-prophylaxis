@@ -45,8 +45,8 @@ knitr::write_bib(.packages(), "Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.b
 
 ```{r}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rds")
+counts.m<-readRDS("./RCTDIR/counts.m.rds")
+metad.m<-readRDS("./METADIR/metad.m.rds")
 stid<-readRDS("./METADIR/stid.rds")
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
@@ -80,18 +80,17 @@ which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
 
 ## Subsetting Index
 * In this analysis, we focus on resident Treg and donor Treg re-isolated from recipient organs 7d after transfer (BMT w/o Tconv & BMT w Tconv).
-* A subsetting index is generated accordingly.
+* A subsetting index is not necessary.
 ```{r}
-pcbd.ind<-grepl(pattern = "the",x=metad.m.rm$appl)|grepl(pattern = "P",x=metad.m.rm$org)|grepl(pattern = "I",x=metad.m.rm$org)|grepl(pattern = "B",x=metad.m.rm$org)
-pcbd.ind<-pcbd.ind==F
-print(paste(sum(pcbd.ind),"samples enter the analysis!"))
+# no subsetting index required
+print(paste(nrow(metad.m),"samples enter the analysis!"))
 ```
 
 ## Counts
 * Here, the comprehensive counts data frame is reduced using the subsetting index.
 ```{r}
-#Subsetting the respective counts object (counts.m.rm)
-counts.pcbd<-counts.m.rm[,pcbd.ind]
+#Subsetting the respective counts object (counts.m)
+counts.pcbd<-counts.m
 paste(ncol(counts.pcbd),"samples are selected:")
 colnames(counts.pcbd)
 ```
@@ -101,7 +100,7 @@ colnames(counts.pcbd)
 * The original order of samples is introduced for downstream re-ordering of the read count table.
 * A globally used group variable is introduced, as well.
 ```{r, echo= FALSE}
-metad.pcbd<-metad.m.rm[pcbd.ind,]
+metad.pcbd<-metad.m
 metad.pcbd$orig.ord<-1:nrow(metad.pcbd)
 metad.pcbd<-metad.pcbd[order(metad.pcbd$grp),]
 counts.pcbd.ind<-metad.pcbd$orig.ord
@@ -125,7 +124,7 @@ rm(counts.pcbd.ord)
 ## Consistency Check
 * In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
 ```{r}
-if (sum(colnames(counts.pcbd)==metad.pcbd$sample_ID)==sum(pcbd.ind)) {
+if (sum(colnames(counts.pcbd)==metad.pcbd$sample_ID)==nrow(metad.m)) {
   print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
 }else {
   print("Something is inconsistent, check the code above for errors during subsetting!")
