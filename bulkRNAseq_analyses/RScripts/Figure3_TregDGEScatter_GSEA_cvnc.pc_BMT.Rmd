@@ -1,6 +1,6 @@
 ---
 title: "Figure 3 DGE Scatter & GSEA Bar plots for BMT Treg in Colon vs. non-Colon"
-subtitle: "Figure 3 DGE Scatter comparing transplanted colon- vs. non-colon-homing Treg. GSEA Barplots for Genes up/down in colon-resident Treg for BMT Treg ranked according to colon vs. non-colon DGE comparison. Also, Supplementary Figure 3 subfigures based on the same subset of samples are generated."
+subtitle: "Figure 3 DGE Scatter comparing transplanted colon- vs. non-colon-homing Treg. GSEA Barplots for Genes up/down in colon-resident, CD62L- Treg for BMT Treg ranked according to colon vs. non-colon DGE comparison. Also, Supplementary Figure 3 subfigures based on the same subset of samples are generated."
 author: "David Dittmar"
 date: "`r Sys.Date()`"
 bibliography: Rscripts.bib
@@ -23,8 +23,12 @@ library(edgeR)
 library(AnnotationDbi)
 library(org.Mm.eg.db) #for mouse
 library(tibble)
+library(dplyr)
 library(ggplot2)
 library(ggrepel)
+library(ecoflux)
+library(pryr)
+#library(grid)
 ```
 
 ```{r setup, include=FALSE}
@@ -37,9 +41,9 @@ knitr::write_bib(.packages(), "Figure3_TregDGEScatter_GSEA_cvnc.pc_BMT_packages.
 
 ```{r}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
-stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+counts.m<-readRDS("./RCTDIR/counts.m.rds")
+metad.m<-readRDS("./METADIR/metad.m.rds")
+stid<-readRDS("./METADIR/stid.rds")
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
@@ -74,17 +78,18 @@ which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
 * In this analysis, we focus on donor Treg re-isolated from recipient organs 7d after transfer (BMT w/o Tconv & BMT w Tconv).
 * A subsetting index is generated accordingly.
 ```{r}
-cvnc.pc.ind<-(grepl("prc",metad.m.rm$appl)|grepl("pro",metad.m.rm$appl))&(grepl("S", metad.m.rm$org)|grepl("C", metad.m.rm$org)|grepl("L", metad.m.rm$org))
-print(paste(sum(cvnc.pc.ind),"samples enter the analysis!"))
+pc.ind<-(grepl("prc",metad.m$appl)|grepl("pro",metad.m$appl))&
+  (grepl("S", metad.m$org)|grepl("C", metad.m$org)|grepl("L", metad.m$org))
+print(paste(sum(pc.ind),"samples enter the analysis!"))
 ```
 
 ## Counts
 * Here, the comprehensive counts data frame is reduced using the subsetting index.
 ```{r}
-#Subsetting the respective counts object (counts.m.rm)
-counts.cvnc.pc<-counts.m.rm[,cvnc.pc.ind]
-paste(ncol(counts.cvnc.pc),"samples are selected:")
-colnames(counts.cvnc.pc)
+#Subsetting the respective counts object (counts.m)
+counts.pc<-counts.m[,pc.ind]
+paste(ncol(counts.pc),"samples are selected:")
+colnames(counts.pc)
 ```
 
 ## Metadata
@@ -93,32 +98,44 @@ colnames(counts.cvnc.pc)
 * An additional group variable assigning colon-re-isolated samples to one group and spleen- or liver-migrated Treg to the other is introduced, as well.
 * This enables the comparison of lymphoid vs. non-lymphoid tissue-homing Treg in the deployed BMT models, underlying this analysis.
 ```{r}
-metad.cvnc.pc<-metad.m.rm[cvnc.pc.ind,]
-metad.cvnc.pc$orig.ord<-1:nrow(metad.cvnc.pc)
-metad.cvnc.pc<-metad.cvnc.pc[order(metad.cvnc.pc$grp),]
-metad.cvnc.pc<-metad.cvnc.pc[order(metad.cvnc.pc$org),]
-metad.cvnc.pc$org.alt<-c(rep("colon",nrow(metad.cvnc.pc[metad.cvnc.pc$org=="C",])),rep("spleen/liver",nrow(metad.cvnc.pc[metad.cvnc.pc$org!="C",])))
-counts.cvnc.pc.ind<-metad.cvnc.pc$orig.ord
-head(metad.cvnc.pc, n = 4L)
+metad.pc<-metad.m[pc.ind,] %>% mutate(orig.ord = 1:sum(pc.ind)) %>% 
+  arrange(grp) %>% arrange(org) %>% mutate(
+    org.alt = case_when(
+    org == "C" ~ "colon",
+    org %in% c("L","S") ~ "spleen/liver"),
+    organ = case_when(
+      org=="C"~"colon",
+      org=="L"~"liver",
+      org=="S"~"spleen"))
+counts.pc.ind<-metad.pc$orig.ord
+head(metad.pc, n = 4L)
 #the group variable for all later assignments of colors/pchs.
-group.cvnc.pc<-factor(as.character(metad.cvnc.pc$org.alt))
-group.cvnc.pc
+group.pc<-factor(as.character(metad.pc$grp))
+group.pc
+organ.pc <- factor(as.character(metad.pc$organ))
+organ.pc
+cvnc.pc <- factor(as.character(metad.pc$org.alt))
+cvnc.pc
+c.count<-sum(metad.pc$org %in% c("C"))
+c.count
+sl.count<-sum(metad.pc$org %in% c("L","S"))
+sl.count
 ```
 
 ## Re-ordering Counts Data Frame Columns
 * Here, read counts are re-ordered according to the metadata object.
 ```{r}
-counts.cvnc.pc.ord<-counts.cvnc.pc[,counts.cvnc.pc.ind]
-head(counts.cvnc.pc.ord, n=4L)
-counts.cvnc.pc<-counts.cvnc.pc.ord
-rm(counts.cvnc.pc.ord)
+counts.pc.ord<-counts.pc[,counts.pc.ind]
+head(counts.pc.ord, n=4L)
+counts.pc<-counts.pc.ord
+rm(counts.pc.ord)
 ```
 
 ## Consistency Check
 * In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
 ```{r}
-if (sum(colnames(counts.cvnc.pc)==metad.cvnc.pc$sample_ID)==sum(cvnc.pc.ind)) {
-  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+if (sum(colnames(counts.pc)==metad.pc$sample_ID)==sum(pc.ind)) {
+  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with!")
 }else {
   print("Something is inconsistent, check the code above for errors during subsetting!")
 }
@@ -126,9 +143,10 @@ if (sum(colnames(counts.cvnc.pc)==metad.cvnc.pc$sample_ID)==sum(cvnc.pc.ind)) {
 
 ## DGE List Object
 * A DGEList object is generated, the main class of the edgeR package. 
-* For full functionality, the counts.cvnc.pct, group.avp.cvnc.pct and genes.df variables are used to do so.
+* For full functionality, the counts.pct, group.avp.cvnc.pct and genes.df variables are used to do so.
 ```{r}
-dgel.cvnc.pc<-DGEList(counts = counts.cvnc.pc, group = group.cvnc.pc, genes = genes.df)
+dgel.cvnc.pc<-DGEList(counts = counts.pc, group = organ.pc, 
+                      genes = genes.df)
 head(dgel.cvnc.pc$samples, n=4L)
 head(dgel.cvnc.pc$genes, n=4L)
 ```
@@ -149,21 +167,28 @@ print(paste(table(keep.cvnc.pc)[1],"genes are discarded while",table(keep.cvnc.p
 * Differential Gene Expression (DGE) is performed in the following part.
 
 ## Design for DGE
-* Hereafter, a design is created that contains parameters that are of analytic interest as well as a blocking factor for the number of pcr2 cycles applied in library preparation.
+* Hereafter, a design is created that contains the contrast of interest.
+* Blocking factors that can be adjusted are included in the model, as well.
 ```{r}
+# Contrast of interest
+cvnc.pc
 # Blocking Factor
-pcr2<-factor(metad.cvnc.pc$PCR2.Cy)
+pcr2<-factor(metad.pc$PCR2.Cy)
+treat<-factor(metad.pc$treat)
+appl<-factor(metad.pc$appl)
 # Design
-cvnc.pc.design.dge<-model.matrix(~0+group.cvnc.pc+pcr2)
-colnames(cvnc.pc.design.dge)<-c("colon", "spleen_liver", "twelve", "thirteen", "fourteen")
+cvnc.pc.design.dge<-model.matrix(~0+cvnc.pc+appl+treat+pcr2)
+colnames(cvnc.pc.design.dge)<-c("colon", "liver_spleen", "GvHD", "poly", 
+                                "twelve", "thirteen", "fourteen")
 as_tibble(cvnc.pc.design.dge)
 ```
 
 ## Dispersion Esitmation
-* Hereafter, dispersion is estimated.
+* Hereafter, the dispersion is estimated.
 ```{r}
 dgel.cvnc.pc<-estimateDisp(dgel.cvnc.pc,design=cvnc.pc.design.dge,robust=TRUE)
-dgel.cvnc.pc$common.dispersion
+print(paste0("The common dispersion amounts to ",
+             round(dgel.cvnc.pc$common.dispersion, digits = 8)))
 ```
 
 ## GLM Fitting
@@ -174,13 +199,13 @@ cvnc.pc.fit<-glmQLFit(dgel.cvnc.pc,cvnc.pc.design.dge)
 
 ## DGE for Contrast of Interest (COI)
 * The interest in this analysis lies in the differences between Treg re-isolated from colon versus spleen&liver. 
-* Thus, our contrast of interest is "colon - spleen_liver" for the DGE analysis. 
+* Thus, our contrast of interest is "colon - liver_spleen" for the DGE analysis. 
 * We can have a quick look at how many genes are DE with a FC > 1.5 and FDR < 0.05.
 ```{r}
 # Contrast of Interest
-cvnc.pc.con<-makeContrasts(colon - spleen_liver, levels=cvnc.pc.design.dge) 
+cvnc.pc.con<-makeContrasts(colon - liver_spleen, levels=cvnc.pc.design.dge) 
 # DGE testing against fc = 1.5.
-cvnc.pc.tr <- glmTreat(cvnc.pc.fit, contrast=cvnc.pc.con, lfc=log2(1.5))
+cvnc.pc.tr<-glmTreat(cvnc.pc.fit, contrast=cvnc.pc.con, lfc=log2(1.5))
 cvnc.pc.tr.qstat<-topTags(cvnc.pc.tr,n = Inf)
 cvnc.pc.tr.qdt<-decideTestsDGE(cvnc.pc.tr)
 summary(cvnc.pc.tr.qdt)
@@ -206,20 +231,24 @@ write.table(x = cvnc.pc.tr.qstat$table,
 ## Data Preparation
 * The data is filtered based on logCPM and logRPKM thresholds.
 * Necessary data transformations for the scatter plot are carried out as well: columns with individual logCPMs (calculated from logCPM and logFC)
+* The total number of genes, up and down regulated genes is printed.
 ```{r}
 # Extraction of data frame from glmTreat result
-cvnc.pc.tr.qstat.scat<-cvnc.pc.tr.qstat$table #is a data frame
-# Introduction of logRPKM column
-cvnc.pc.tr.qstat.scat$logRPKM <- cvnc.pc.tr.qstat.scat$logCPM - log2(cvnc.pc.tr.qstat.scat$Length * 0.001)
+cvnc.pc.tr.qstat.scat <- cvnc.pc.tr.qstat$table %>% #is a data frame
+  # Introduction of logRPKM column
+  mutate(logRPKM=logCPM-log2(Length * 0.001))
 # Commonly used filter criteria
-cvnc.pc.tr.qstat.scat.filt<-subset(cvnc.pc.tr.qstat.scat, logCPM > 1 & logRPKM > 1)
+cvnc.pc.tr.qstat.scat.filt <- filter(cvnc.pc.tr.qstat.scat, 
+                                      logCPM > 1 & logRPKM > 1) %>%
+  # Transformation for scatter plot --> individual log CPMs
+  mutate(logCPMnonColon = logCPM - logFC/2, # non-colon
+         logCPMcolon = logCPM + logFC/2) # colon
 nrow(cvnc.pc.tr.qstat.scat.filt)
-# Transformation for scatter plot
-cvnc.pc.tr.qstat.scat.filt$logCPMnonColon<-cvnc.pc.tr.qstat.scat.filt$logCPM - (cvnc.pc.tr.qstat.scat.filt$logFC/2) #non-colon
-cvnc.pc.tr.qstat.scat.filt$logCPMcolon<-cvnc.pc.tr.qstat.scat.filt$logCPM + (cvnc.pc.tr.qstat.scat.filt$logFC/2) #colon
-# Separation of up and down genes
-cvnc.pc.tr.qstat.scat.filt.UP<-subset(cvnc.pc.tr.qstat.scat.filt, logFC >= 0 & FDR < 0.05)
-cvnc.pc.tr.qstat.scat.filt.DN<-subset(cvnc.pc.tr.qstat.scat.filt, logFC <= 0 & FDR < 0.05)
+# Separation of significantly up and down regulated genes
+cvnc.pc.tr.qstat.scat.filt.UP<-filter(cvnc.pc.tr.qstat.scat.filt, logFC >= 0 &
+                                        FDR < 0.05)
+cvnc.pc.tr.qstat.scat.filt.DN<-filter(cvnc.pc.tr.qstat.scat.filt, logFC <= 0 &
+                                        FDR < 0.05)
 nrow(cvnc.pc.tr.qstat.scat.filt.UP)
 nrow(cvnc.pc.tr.qstat.scat.filt.DN)
 ```
@@ -248,14 +277,32 @@ write.table(rownames(cvnc.pc.tr.qstat.scat.filt.DN),
 * [Here you can have a look at the figure](https://pubmed.ncbi.nlm.nih.gov/30737144/#&gid=article-figures&pid=figure-2-uid-2)
 ```{r}
 # non-lymphoid tissue
-tm_fig2_panel_NLT<-rev(c("Ccr1","Ccr2","Gzmb","Il10","Il1rl1","Kdm6b","Gata3","Areg","S100a4","Itgae","Rora","Klrg1","Lgals1","Fgl2","Cmtm7","Cd44","Icos","Ctla4","Pim1","Ikzf2","Pdcd1","Cd83","Relb","Tnfrsf9","Tnfrsf4"))
+tm_fig2_panel_NLT<-rev(c("Ccr1","Ccr2","Gzmb","Il10","Il1rl1","Kdm6b","Gata3",
+                      "Areg","S100a4","Itgae","Rora","Klrg1","Lgals1","Fgl2",
+                      "Cmtm7","Cd44","Icos","Ctla4","Pim1","Ikzf2","Pdcd1",
+                      "Cd83","Relb","Tnfrsf9","Tnfrsf4"))
 # lymphoid tissue
 tm_fig2_panel_LT<-rev(c("Stat1","Ccr7","S1pr1","Sell","Bcl2","Tcf7"))
 ```
 
+### Color-coded geom_text_repel data frames
+* First, to be able to label data points for all categories with a single call to geom_text_repel, additional data frames are generated.
+```{r}
+cvnc.pc.qstat.scat.filt.ann <- cvnc.pc.tr.qstat.scat.filt %>%
+  mutate(
+    ann.col = case_when(
+      GeneSymbol %in% tm_fig2_panel_NLT ~ "brown4",
+      GeneSymbol %in% tm_fig2_panel_LT ~ "navy"),
+    goi.cat = case_when(
+      logFC <= 0 & FDR < 0.05 ~ paste0("down in colon (",as.character(nrow(cvnc.pc.tr.qstat.scat.filt.DN)),")"),
+      logFC >= 0 & FDR < 0.05 ~ paste0("up in colon (",as.character(nrow(cvnc.pc.tr.qstat.scat.filt.UP)),")"),
+      TRUE ~ "non DE")
+  )
+cvnc.pc.qstat.scat.filt.ann.label <- filter(cvnc.pc.qstat.scat.filt.ann, !is.na(ann.col))
+```
 ### Scatterplot with GOI highlighted (Figure 3 b)
 * Hereafter, the scatter plot is generated and plotted.
-```{r, fig.height=2.6, fig.width=2.2, out.width="20%", warning=FALSE}
+```{r, fig.height=2.6, fig.width=4.2, warning=FALSE}
 cvnc.pc.scat.colon.tm <- ggplot(cvnc.pc.tr.qstat.scat.filt) + 
   aes(x=logCPMnonColon, y=logCPMcolon) +
   scale_x_continuous(limits = c(-2,14),
@@ -266,42 +313,32 @@ cvnc.pc.scat.colon.tm <- ggplot(cvnc.pc.tr.qstat.scat.filt) +
                      breaks = c(0,3,6,9,12),
                      expand = c(0,0)
                      )+
-  geom_point(colour=rgb(50,50,50,30,maxColorValue = 255), shape=16, size = .375) +
-  geom_point(data = cvnc.pc.tr.qstat.scat.filt.UP, aes(x=logCPMnonColon, y=logCPMcolon), colour="sienna", shape=16, size = .5, alpha=.75) +
-  geom_point(data = cvnc.pc.tr.qstat.scat.filt.DN, aes(x=logCPMnonColon, y=logCPMcolon), colour="slateblue", shape=16, size = .5, alpha=.75) +
-geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% tm_fig2_panel_NLT),aes(label=GeneSymbol),
-                  force = 50,
-                  force_pull = 1,
-                  size=1.66,
-                  min.segment.length=0,
-                  segment.size=0.15,
-                  segment.color = "brown4",
-                  point.padding=unit(0.00,"cm"),
-                  box.padding=unit(0.1,"cm"),
-                  max.overlaps = 25,
-                  nudge_x = -1,
+  geom_point(colour=rgb(50,50,50,30,maxColorValue = 255), shape=16, size = .375)+
+  geom_point(data=filter(cvnc.pc.qstat.scat.filt.ann, goi.cat != "non DE"),
+             aes(x=logCPMnonColon, y=logCPMcolon, color=goi.cat), 
+             shape=16, size = .5, alpha=.75) +
+  scale_color_manual(name = "Significant DEGs",
+                     values = c("slateblue","sienna"),
+                     guide = guide_legend(override.aes = list(size = 3)))+
+  geom_text_repel(data = cvnc.pc.qstat.scat.filt.ann.label,
+                  aes(label=GeneSymbol, color = ann.col),
+                  seed = 42,
                   direction = "both",
-                  color = "brown4",
+                  force = 500,
+                  force_pull = 0,
+                  size=1.66,
+                  min.segment.length=0.0,
+                  segment.size=0.15,
+                  segment.color = cvnc.pc.qstat.scat.filt.ann.label$ann.col,
+                  color = cvnc.pc.qstat.scat.filt.ann.label$ann.col,
+                  max.overlaps = 25,
+                  point.padding = 0.0,
                   fontface="italic")+
-  geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% tm_fig2_panel_LT),aes(label=GeneSymbol),
-                  force = 50,
-                  force_pull = 1,
-                  size=1.66,
-                  min.segment.length=0,
-                  segment.size=0.15,
-                  segment.color = "navy",
-                  point.padding=unit(0.00,"cm"),
-                  box.padding=unit(0.1,"cm"),
-                  max.overlaps = 25,
-                  nudge_x = 1,
-                  direction = "both",
-                  color = "navy",
-                  fontface="italic") +
-  ggtitle(label = "DEGs colon vs. non-colon", subtitle = "transplanted Treg \nNLT and LT from Miragaia et al. 2019") +
-  xlab(bquote(log[2]~CPM *"("*spleen*","*liver*")"))+
-  ylab(bquote(log[2]~CPM *"("*colon*")"))+
+  ggtitle(label = "NLT & LT signature in BMT Treg") +
+  #xlab(bquote(log[2]~CPM *"("*liver*"&"*spleen*")"))+
+  #ylab(bquote(log[2]~CPM *"("*colon*")"))+
+  xlab(bquote(log[2]~CPM ~liver*"&"*spleen*" (n=47)"))+
+  ylab(bquote(log[2]~CPM ~colon*" (n=24)"))+
   theme(plot.title = element_text(size = 10, face = "bold"),
         plot.subtitle = element_text(size = 6, face = "bold"),
         axis.title = element_text(size = 8),
@@ -313,14 +350,17 @@ geom_text_repel(data = subset(cvnc.pc.tr.qstat.scat.filt, direction = "both",
         plot.background = element_rect(fill="white",colour = "white"),
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())
+        panel.grid.minor = element_blank(),
+        legend.key = element_blank(),
+        aspect.ratio = 1)
 cvnc.pc.scat.colon.tm
 ```
 
 * The scatterplot is also exported into the figure directory.
 
 ```{r, warning=FALSE}
-pdf(file="./FIGDIR/Figure3b_TregDGEScatter_cvnc.pc_tmGenes.pdf", height=2.6, width=2.2)
+pdf(file="./FIGDIR/Figure3b_TregDGEScatter_cvnc.pc_tmGenes.pdf", 
+    height=2.6, width=4.2)
 cvnc.pc.scat.colon.tm
 dev.off()
 ```
@@ -328,14 +368,16 @@ dev.off()
 ***
 
 # GSEA with baseline colon signatures
-* Please not, you should have run "Figure3_TregDGEScatter_GSEA_Heatmap_Metascape_cvnc.b.Cd62Lneg.Rmd" before proceeding.
+* Please note, you should have run "Figure3_TregDGEScatter_GSEA_Heatmap_Metascape_cvnc.b.Cd62Lneg.Rmd" before proceeding.
 * The question addressed here is, whether differential genes in organ-resident Treg also tend to be differentially expressed in transplanted Treg.
 
 ## Reading in DGE from Baseline Colon Treg
 * Data from analogous baseline Treg analysis is read in, hereafter. 
 ```{r}
-bc.up <- read.delim(file = "./ANALDIR/SupplementaryFigure3g_cluster4.colon.up.GeneIDs.txt")
-bc.dn <- read.delim(file = "./ANALDIR/SupplementaryFigure3g_cluster1.colon.down.GeneIDs.txt")                  
+bc.up <- read.delim(
+  file = "./ANALDIR/SupplementaryFigure3g_cluster4.colon.up.GeneIDs.txt")
+bc.dn <- read.delim(
+  file = "./ANALDIR/SupplementaryFigure3g_cluster1.colon.down.GeneIDs.txt")
 ```
 
 * First, indices have to be generated for the underlying generalized linear model of this analysis.
@@ -346,26 +388,48 @@ ind1 <- rownames(cvnc.pc.fit) %in% bc.up[[1]]
 ind2 <- rownames(cvnc.pc.fit) %in% bc.dn[[1]]
 ind <- list(ind1,ind2)
 names(ind) <- c("up in colon","down in colon")
-gse.cvnc.pc.treat.lfc0.6 <- fry(dgel.cvnc.pc, index=ind, design=cvnc.pc.design.dge ,contrast=cvnc.pc.con)
+gse.cvnc.pc.treat.lfc0.6 <- fry(dgel.cvnc.pc, index=ind, 
+                                design=cvnc.pc.design.dge ,contrast=cvnc.pc.con)
 gse.cvnc.pc.treat.lfc0.6
 ```
 
 ## GSEA Barcode plot (Figure 3 c) 
-* Herafter, the actual barcode plot is generated and visualized
+* Herafter, the actual barcode plot is generated and visualized.
+* The adjusted p value for the enrichments visualized is extracted from the fry results.
 ```{r, fig.height=5, fig.width=5}
-barcodeplot(cvnc.pc.tr$table$logFC, 
-            index=ind1, 
-            index2=ind2,
-            labels=c("down in colon","up in colon"), 
-            xlab = bquote(log[2]*"FC"),
+cvnc.pc.bc.b.cvnc %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(cvnc.pc.tr$table$logFC,
+              index=ind1,
+              index2=ind2,
+              labels=c("down in colon","up in colon"),
+              xlab = bquote(log[2]*"FC"),
               col.bars = c("peru","lightslateblue"))
 par(new=TRUE)
 plot.new( )
 plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,5,"Brown bars: Genes up in resident Treg in colon", adj = c(0,.5))
-text(-5,4,expression(""*italic(P)*"adj.< 4.7x10"^-40), adj = c(0,.5))
-text(5,-3.8,"Blue bars:Genes down resident Treg in colon", adj = c(1,.5))
-text(5,-4.8,expression(""*italic(P)*"adj.< 1.9x10"^-37), adj = c(1,.5))
+text(-5,5,"Brown bars:\nGenes up in resident colon Treg", adj = c(0,.5))
+text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gse.cvnc.pc.treat.lfc0.6["up in colon",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gse.cvnc.pc.treat.lfc0.6["up in colon",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+text(5.0,-3.8,"Steelblue bars:\nGenes down resident colon Treg", adj = c(1,.5))
+text(c(3.0, 5.0),c(-4.7,-4.6),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gse.cvnc.pc.treat.lfc0.6["down in colon",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gse.cvnc.pc.treat.lfc0.6["down in colon",]$FDR))-2),
+           f = ceiling),
+         digits = 1)),adj = c(1,.5))
+}
+cvnc.pc.bc.b.cvnc
 ```
 
 * There is a large overlap between resident and BMT samples: Hence transplanted Treg acquire organ phenotype rapidly.
@@ -373,20 +437,7 @@ text(5,-4.8,expression(""*italic(P)*"adj.< 1.9x10"^-37), adj = c(1,.5))
 
 ```{r}
 pdf(file="./FIGDIR/Figure3c_cvnc.pc.Barcodeplot_residentColonSignatures.pdf", height=5, width=5)
-barcodeplot(cvnc.pc.tr$table$logFC, 
-            index=ind1, 
-            index2=ind2,
-            labels=c("down in colon","up in colon"), 
-            xlab = bquote(log[2]*"FC"),
-              col.bars = c("peru","lightslateblue")
-            )
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,5,"Brown bars: Genes up in resident Treg in colon", adj = c(0,.5))
-text(-5,4,expression(""*italic(P)*"adj.< 4.7x10"^-40), adj = c(0,.5))
-text(5,-3.8,"Blue bars: Genes down resident Treg in colon", adj = c(1,.5))
-text(5,-4.8,expression(""*italic(P)*"adj.< 1.9x10"^-37), adj = c(1,.5))
+cvnc.pc.bc.b.cvnc
 dev.off()
 ```
 
@@ -396,12 +447,29 @@ dev.off()
 * On the same subset of samples (all Treg re-isolated from tissues following transplant), a DGE analysis is performed.
 * The comparison of "allo" vs. "poly" Treg is addressed here.
 
+## Metadata
+* For better readability, a new group variable is introduced
+```{r}
+metad.pc<-metad.pc %>% mutate(
+  treat.alt=case_when(
+    treat == "a" ~ "allo_BMT",
+    treat == "p" ~ "poly_BMT"
+  )
+)
+#the group variable for all later assignments of colors/pchs.
+avp.pc<-factor(as.character(metad.pc$treat.alt))
+avp.pc
+allo.count<-sum(avp.pc == "allo_BMT")
+allo.count
+poly.count<-sum(avp.pc == "poly_BMT")
+poly.count
+```
+
 ## DGE List Object
 * For the purpose of this analysis we require an additional DGEList object.
 * A fitting group variable is defined to do so.
 ```{r}
-group.avp.pc<-factor(as.character(metad.cvnc.pc$grp))
-dgel.avp.pc<-DGEList(counts = counts.cvnc.pc, group = group.avp.pc, genes = genes.df)
+dgel.avp.pc<-DGEList(counts = counts.pc, group = group.pc, genes = genes.df)
 head(dgel.avp.pc$samples, n=4L)
 head(dgel.avp.pc$genes, n=4L)
 ```
@@ -410,7 +478,7 @@ head(dgel.avp.pc$genes, n=4L)
 * The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
 * Only genes fulfilling that criterion are kept and also normalization factors are calculated.
 ```{r}
-keep.avp.pc <- filterByExpr(dgel.avp.pc, group = group.avp.pc)
+keep.avp.pc <- filterByExpr(dgel.avp.pc)
 dgel.avp.pc <- dgel.avp.pc[keep.avp.pc, , keep.lib.sizes=FALSE]
 dgel.avp.pc <- calcNormFactors(dgel.avp.pc)
 print(paste(table(keep.avp.pc)[[2]],"genes remain in the analysis after filtering!"))
@@ -424,18 +492,20 @@ print(paste(table(keep.avp.pc)[[2]],"genes remain in the analysis after filterin
 ## Design for DGE
 In the design for DGE it is critical to include the following factors:
 
-* treat: allo/ poly, which is our contrast of interest
+* avp.pc: allo/ poly, which is our contrast of interest
 * appl: prophylaxis/control as blocking factor
 * org: colon/liver/spleen as blocking factors
 * pcr2: this is the only applicable technical variable for batch-correction and should also be included as blocking factor
 
 ```{r}
-treat<-factor(metad.cvnc.pc$treat)
-appl<-factor(metad.cvnc.pc$appl)
-org<-factor(metad.cvnc.pc$org)
-pcr2<-factor(metad.cvnc.pc$PCR2.Cy)
-avp.pc.design.dge<-model.matrix(~0+treat+appl+org+pcr2)
-colnames(avp.pc.design.dge)<- c("allo","poly","prophylaxis","liver","spleen","twelve","thirteen","fourteen")
+# contrast of interest
+avp.pc
+# blocking factors
+appl
+organ.pc
+pcr2
+avp.pc.design.dge<-model.matrix(~0+avp.pc+appl+organ.pc+pcr2)
+colnames(avp.pc.design.dge)<- c(levels(avp.pc),"prophylaxis","liver","spleen","twelve","thirteen","fourteen")
 as_tibble(avp.pc.design.dge)
 ```
 
@@ -443,7 +513,7 @@ as_tibble(avp.pc.design.dge)
 * Hereafter, dispersion is estimated.
 ```{r}
 dgel.avp.pc<-estimateDisp(dgel.avp.pc,design=avp.pc.design.dge,robust=TRUE)
-dgel.avp.pc$common.dispersion
+dgel.avp.pc$common.dispersion #0.1035074
 ```
 
 ## GLM Fitting
@@ -458,7 +528,7 @@ avp.pc.fit<-glmQLFit(dgel.avp.pc,avp.pc.design.dge)
 * We can have a quick look at how many genes are DE with a FC > 1.5 and FDR < 0.05.
 ```{r}
 #Contrast of intrest
-avp.pc.con<-makeContrasts(allo - poly, levels=avp.pc.design.dge)
+avp.pc.con<-makeContrasts(allo_BMT - poly_BMT, levels=avp.pc.design.dge)
 # DGE testing against fc = 1.5
 avp.pc.tr <- glmTreat(avp.pc.fit, contrast=avp.pc.con, lfc=log2(1.5))
 avp.pc.tr.qstat<-topTags(avp.pc.tr,n = Inf)
@@ -486,17 +556,22 @@ write.table(x = avp.pc.tr.qstat$table,
 * The data is filtered based on logCPM and logRPKM thresholds.
 * Necessary data transformations for the scatter plot are carried out as well: columns with individual logCPMs (calculated from logCPM and logFC)
 ```{r}
-avp.pc.tr.qstat.scat<-avp.pc.tr.qstat$table #is a data frame
-avp.pc.tr.qstat.scat$logRPKM <- avp.pc.tr.qstat.scat$logCPM - log2(avp.pc.tr.qstat.scat$Length * 0.001)
-# Commonly used filter criteria  
-avp.pc.tr.qstat.scat.filt<-subset(avp.pc.tr.qstat.scat, logCPM > 1 & logRPKM > 1)
+# Extraction of data frame from glmTreat result
+avp.pc.tr.qstat.scat <- avp.pc.tr.qstat$table %>% #is a data frame
+  # Introduction of logRPKM column
+  mutate(logRPKM=logCPM-log2(Length * 0.001))
+# Commonly used filter criteria
+avp.pc.tr.qstat.scat.filt <- filter(avp.pc.tr.qstat.scat, 
+                                      logCPM > 1 & logRPKM > 1) %>%
+  # Transformation for scatter plot --> individual log CPMs
+  mutate(logCPMpoly = logCPM - logFC/2, # non-colon
+         logCPMallo = logCPM + logFC/2) # colon
 nrow(avp.pc.tr.qstat.scat.filt)
-# Transformation for scatter
-avp.pc.tr.qstat.scat.filt$logCPMpoly<-avp.pc.tr.qstat.scat.filt$logCPM - (avp.pc.tr.qstat.scat.filt$logFC/2) # poly
-avp.pc.tr.qstat.scat.filt$logCPMallo<-avp.pc.tr.qstat.scat.filt$logCPM + (avp.pc.tr.qstat.scat.filt$logFC/2) # allo
-# Separation of up and down genes
-avp.pc.tr.qstat.scat.filt.UP<-subset(avp.pc.tr.qstat.scat.filt, logFC >= 0 & FDR < 0.05)
-avp.pc.tr.qstat.scat.filt.DN<-subset(avp.pc.tr.qstat.scat.filt, logFC <= 0 & FDR < 0.05)
+# Separation of significantly up and down regulated genes
+avp.pc.tr.qstat.scat.filt.UP<-filter(avp.pc.tr.qstat.scat.filt, logFC >= 0 &
+                                        FDR < 0.05)
+avp.pc.tr.qstat.scat.filt.DN<-filter(avp.pc.tr.qstat.scat.filt, logFC <= 0 &
+                                        FDR < 0.05)
 nrow(avp.pc.tr.qstat.scat.filt.UP)
 nrow(avp.pc.tr.qstat.scat.filt.DN)
 ```
@@ -524,15 +599,40 @@ write.table(rownames(avp.pc.tr.qstat.scat.filt.DN),
 * Approach: Intersection of "Treg-meta-signature" and "Immnav-Treg-signature" by Aubert et al. 2020, extended with genes Itgb7 and Sell.
 ```{r}
 # Reading in the intersection of "Treg-meta-signature" and "Immnav-Treg-signature" published by Aubert et al. 2020
-aubert.treg.intersect<-readRDS(file = file.path(getwd(),"PUBDATDIR/aubert.treg.intersect.rds"))
+aubert.treg.intersect<-readRDS(file ="./PUBDATDIR/aubert.treg.intersect.rds")
 # Extension of the GOI by Itgb7 and Sell
 aubert.treg.intersect<-c(aubert.treg.intersect,"Itgb7","Sell")
 aubert.treg.intersect
 ```
 
+### Color-coded geom_text_repel data frames
+* First we prepare some labels to be able to label data points for all categories with a single call to geom_text_repel.
+```{r}
+avp.pc.qstat.scat.filt.ann<-avp.pc.tr.qstat.scat.filt %>%
+  mutate(
+    ann.col = case_when(
+      GeneSymbol %in% intersect(avp.pc.tr.qstat.scat.filt.UP$GeneSymbol,aubert.treg.intersect) ~ "orange",
+      GeneSymbol %in% intersect(avp.pc.tr.qstat.scat.filt.DN$GeneSymbol,aubert.treg.intersect) ~ "steelblue",
+      GeneSymbol %in% aubert.treg.intersect ~ "dimgrey"),
+    goi.cat = case_when(
+      logFC >= 0 & FDR < 0.05 ~ paste0("up in allo (",as.character(nrow(avp.pc.tr.qstat.scat.filt.UP)),")"),
+      logFC <= 0 & FDR < 0.05 ~ paste0("down in allo (",as.character(nrow(avp.pc.tr.qstat.scat.filt.DN)),")"),
+      TRUE ~ "non DE"),
+    goi.cat.col = case_when(
+      logFC >= 0 & FDR < 0.05 ~ "orange",
+      logFC <= 0 & FDR < 0.05 ~ "steelblue")
+  )
+# reduce df to labels to be printed in plot
+avp.pc.qstat.scat.filt.ann.label <- filter(avp.pc.qstat.scat.filt.ann, !is.na(ann.col))
+nrow(avp.pc.qstat.scat.filt.ann.label)
+# number of allo and poly samples
+nrow(filter(metad.pc, treat == "a"))
+nrow(filter(metad.pc, treat == "p"))
+```
+
 ### Scatterplot with GOI highlighted (Supplementary Figures 3 a)
 * Treg signature genes highlighted
-```{r, fig.height=2.6, fig.width=2.2, out.width="20%"}
+```{r, fig.height=2.6}
 avp.pc.scat <- ggplot(avp.pc.tr.qstat.scat.filt) + 
   aes(x=logCPMpoly, y=logCPMallo) +
   scale_x_continuous(limits = c(-1,16),
@@ -544,27 +644,32 @@ avp.pc.scat <- ggplot(avp.pc.tr.qstat.scat.filt) +
                      expand = c(0,0)
                      )+
   geom_point(colour=rgb(50,50,50,30,maxColorValue = 255), shape=16, size = .375) +
-  geom_point(data = avp.pc.tr.qstat.scat.filt.DN, aes(x=logCPMpoly, y=logCPMallo), colour="steelblue", shape=16, size = .5, alpha=1) +
-  geom_point(data = avp.pc.tr.qstat.scat.filt.UP, aes(x=logCPMpoly, y=logCPMallo), colour="orange", shape=16, size = .5, alpha=1) +
-  geom_text_repel(data = subset(avp.pc.tr.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% aubert.treg.intersect),aes(label=GeneSymbol),
-                  force = 50,
-                  force_pull = 1,
-                  size=2, 
-                  min.segment.length=0, 
-                  segment.size=0.15, 
-                  point.padding=unit(0.00,"cm"),
-                  box.padding=unit(0.1,"cm"),
-                  max.overlaps = 25,
-                  color = "black",
-                  #nudge_x = -4,
+  geom_point(data=filter(avp.pc.qstat.scat.filt.ann, goi.cat != "non DE"),
+             aes(y=logCPMallo, x=logCPMpoly, color=goi.cat), 
+             shape=16, 
+             size = .5, 
+             alpha=.75) +
+  scale_color_manual(name = "Significant DEGs",
+                     values = c("steelblue","orange"),
+                     guide = guide_legend(override.aes = list(size = 3)))+
+  geom_text_repel(data = avp.pc.qstat.scat.filt.ann.label,
+                  aes(label=GeneSymbol, color = ann.col),
+                  seed = 42,
                   direction = "both",
+                  force = 500,
+                  force_pull = 0,
+                  size=1.66,
+                  min.segment.length=0.0,
+                  segment.size=0.15,
+                  segment.color = avp.pc.qstat.scat.filt.ann.label$ann.col,
+                  color = avp.pc.qstat.scat.filt.ann.label$ann.col,
+                  max.overlaps = 30,
+                  point.padding = 0.0,
                   fontface="italic")+
-  ggtitle(label = "DEGs allo vs. poly Treg", subtitle = "in vitro expanded Treg \nTreg signature Aubert et al. & Itgb7, Sell") +
-  ylab(bquote(CPM *"("*log[2]*")" *"("*allo~Treg*")"))+
-  xlab(bquote(CPM *"("*log[2]*")" *"("*poly~Treg*")"))+
+  ggtitle(label = "Signature genes in re-isolated Treg") +
+  xlab(bquote(log[2]~CPM ~poly~Treg*" (n = 35)"))+
+  ylab(bquote(log[2]~CPM ~allo~Treg*" (n = 36)"))+
   theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(size = 6, colour = "black"), #,angle = 90
         axis.text.y =element_text(size = 6, colour = "black"),
@@ -574,14 +679,16 @@ avp.pc.scat <- ggplot(avp.pc.tr.qstat.scat.filt) +
         plot.background = element_rect(fill="white",colour = "white"),
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())
+        panel.grid.minor = element_blank(),
+        legend.key = element_blank(),
+        aspect.ratio = 1)
 avp.pc.scat
 ```
 
 * Herafter, the scatterplot is exported into the figure directory.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3a_TregDGEScatter_avp.pc_TregSignature.pdf", height=2.6, width=2.2)
+pdf(file="./FIGDIR/SupplementaryFigure3a_TregDGEScatter_avp.pc_TregSignature.pdf", height=2.6, width=4.2)
 avp.pc.scat
 dev.off()
 ```
@@ -608,34 +715,35 @@ gse.avp.pc
 ## GSEA Barcode plot (Supplementary Figure 3 b)
 * Barcode plot presenting logFC (allo vs. poly transplanted & re-isolated Treg) ranked Genes that are upregulated in allo *in vitro* expanded Treg.
 ```{r, fig.height=3.2, fig.width=6}
-barcodeplot(avp.pc.tr$table$logFC, 
-            index=ind1, 
-            labels=c("poly","allo"), 
-            xlab = bquote(log[2]*"FC"),
+avp.pc.bc.avp.ivt %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(avp.pc.tr$table$logFC, 
+              index=ind1, 
+              labels=c("up in poly","allo"), 
+              xlab = bquote(log[2]*"FC"),
               col.bars = "orange")
-
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.5,"Orange bars: Genes up in allo expanded donor Treg", adj = c(0,.5))
-text(-5,3,expression(italic(P)[adj.] *"<"* ~3.5*"x10"^-15), adj = c(0,.5))
-
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.5,"Orange bars: Genes up in allo expanded donor Treg", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gse.avp.pc["up in allo",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gse.avp.pc["up in allo",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+avp.pc.bc.avp.ivt
 ```
 
 * Barcode plot is also exported.
 
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure3b_avp.cp.Barcodeplot_GenesUpInIvtAllo.pdf", height=3.2, width=6)
-barcodeplot(avp.pc.tr$table$logFC, 
-            index=ind1, 
-            labels=c("poly","allo"), 
-            xlab = bquote(log[2]*"FC"),
-              col.bars = "orange")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.5,"Orange bars:Genes up in allo expanded donor Treg", adj = c(0,.5))
-text(-5,2.8,expression(italic(P)[adj.] *"<"* ~3.5*"x10"^-15), adj = c(0,.5))
+avp.pc.bc.avp.ivt
 dev.off()
 ```
 
@@ -689,42 +797,46 @@ dev.off()
 ```{r}
 #hallmark
 Mm.H <- readRDS(url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.h.all.v7.1.entrez.rds"))
-H.ind.cvnc.pc <- ids2indices(Mm.H, id=dgel.avp.pc$genes$EntrezID)
-gst.camera.cvnc.pc <- camera.DGEList(dgel.avp.pc,index=H.ind.cvnc.pc,design=avp.pc.design.dge,contrast=avp.pc.con,inter.gene.cor=0.05)
-gst.camera.cvnc.pc
+H.ind.avp.pc <- ids2indices(Mm.H, id=dgel.avp.pc$genes$EntrezID)
+gst.camera.avp.pc <- camera.DGEList(dgel.avp.pc,index=H.ind.avp.pc,
+                                    design=avp.pc.design.dge,
+                                    contrast=avp.pc.con,inter.gene.cor=0.05)
+gst.camera.avp.pc
 ```
 
 ## GSEA Barcode Plot for Interferon Alpha Response Hallmark Gene Set (Supplementary Figure 3 d)
 * The top Hallmark gene set found enriched is presented as barcode plot, hereafter.  
 ```{r, fig.height=3.2, fig.width=6}
 #hallmark HALLMARK_INTERFERON_ALPHA_RESPONSE 
-barcodeplot(avp.pc.tr$table$logFC,
-            index=H.ind.cvnc.pc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels=c("poly","allo"), 
-            col.bars = "steelblue",
-            main="HALLMARK_INTERFERON_ALPHA_RESPONSE")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(5,4.5,"Steelblue bars: HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(1,.5))
-text(5,2.8,expression(italic(P)[adj.] *"<"* ~1.9*"x10"^-4), adj = c(1,.5))
+avp.pc.bc.ifnar %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(avp.pc.tr$table$logFC,
+              index=H.ind.avp.pc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
+              xlab = bquote(log[2]*"FC"),
+              labels=c("up in poly","allo"), 
+              col.bars = "steelblue")
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(5,4.5,"Steelblue bars: HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(1,.5))
+  text(c(3,5),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.camera.avp.pc["HALLMARK_INTERFERON_ALPHA_RESPONSE",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.camera.avp.pc["HALLMARK_INTERFERON_ALPHA_RESPONSE",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(1,.5))
+}
+avp.pc.bc.ifnar
 ```
 
 * Barcode plot is exported, hereafter.
 
 ```{r}
 pdf(file= "./FIGDIR/SupplementaryFigure3d_avp.pc.Barcodeplot_HALL_IFN.pdf", height=3.2, width=6)
-barcodeplot(avp.pc.tr$table$logFC,
-            index=H.ind.cvnc.pc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels=c("poly","allo"), 
-            col.bars = "steelblue")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(5,4.5,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(1,.5))
-text(5,2.8,expression(italic(P)[adj.] *"<"* ~1.9*"x10"^-4), adj = c(1,.5))
+avp.pc.bc.ifnar
 dev.off()
 ```
 

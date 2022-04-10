@@ -35,9 +35,9 @@ knitr::write_bib(.packages(), "Figure1_TregSigHeatmap_fresh.allo.poly_packages.b
 
 ```{r}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
-stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rds")
+stid<-readRDS("./METADIR/stid.rds")
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
@@ -201,7 +201,6 @@ heatmap.2(x = aubert.hm.matrix,
           srtCol = 0,
           offsetCol = 0,
           adjCol = c(0.45,1.5),
-          #cexCol = 1,
           cexCol=1,
           key=T,
           symbreaks = FALSE,

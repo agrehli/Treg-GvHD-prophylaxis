@@ -40,22 +40,14 @@ library(gplots)
 knitr::opts_chunk$set(echo = TRUE, include = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 # ...packages.bib file is also written here
-<<<<<<< HEAD:bulkRNAseq_analyses/RScripts/Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
-<<<<<<< HEAD:bulkRNAseq_analyses/RScripts/Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
 knitr::write_bib(.packages(), "Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
-=======
-knitr::write_bib(.packages(), "Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
->>>>>>> 19f38bac8e4f0993bf53add236471e3d5dd943fb:bulkRNAseq_analyses/RScripts/Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
-=======
-knitr::write_bib(.packages(), "Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don_packages.bib")
->>>>>>> main:bulkRNAseq_analyses/RScripts/Figure3&4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd
 ```
 
 ```{r}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
-stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+counts.m<-readRDS("./RCTDIR/counts.m.rds")
+metad.m<-readRDS("./METADIR/metad.m.rds")
+stid<-readRDS("./METADIR/stid.rds")
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
@@ -88,18 +80,17 @@ which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
 
 ## Subsetting Index
 * In this analysis, we focus on resident Treg and donor Treg re-isolated from recipient organs 7d after transfer (BMT w/o Tconv & BMT w Tconv).
-* A subsetting index is generated accordingly.
+* A subsetting index is not necessary.
 ```{r}
-pcbd.ind<-grepl(pattern = "the",x=metad.m.rm$appl)|grepl(pattern = "P",x=metad.m.rm$org)|grepl(pattern = "I",x=metad.m.rm$org)|grepl(pattern = "B",x=metad.m.rm$org)
-pcbd.ind<-pcbd.ind==F
-print(paste(sum(pcbd.ind),"samples enter the analysis!"))
+# no subsetting index required
+print(paste(nrow(metad.m),"samples enter the analysis!"))
 ```
 
 ## Counts
 * Here, the comprehensive counts data frame is reduced using the subsetting index.
 ```{r}
-#Subsetting the respective counts object (counts.m.rm)
-counts.pcbd<-counts.m.rm[,pcbd.ind]
+#Subsetting the respective counts object (counts.m)
+counts.pcbd<-counts.m
 paste(ncol(counts.pcbd),"samples are selected:")
 colnames(counts.pcbd)
 ```
@@ -109,7 +100,7 @@ colnames(counts.pcbd)
 * The original order of samples is introduced for downstream re-ordering of the read count table.
 * A globally used group variable is introduced, as well.
 ```{r, echo= FALSE}
-metad.pcbd<-metad.m.rm[pcbd.ind,]
+metad.pcbd<-metad.m
 metad.pcbd$orig.ord<-1:nrow(metad.pcbd)
 metad.pcbd<-metad.pcbd[order(metad.pcbd$grp),]
 counts.pcbd.ind<-metad.pcbd$orig.ord
@@ -133,7 +124,7 @@ rm(counts.pcbd.ord)
 ## Consistency Check
 * In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
 ```{r}
-if (sum(colnames(counts.pcbd)==metad.pcbd$sample_ID)==sum(pcbd.ind)) {
+if (sum(colnames(counts.pcbd)==metad.pcbd$sample_ID)==nrow(metad.m)) {
   print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
 }else {
   print("Something is inconsistent, check the code above for errors during subsetting!")
@@ -408,13 +399,28 @@ dev.off()
 * Also, levels are adjusted for the desired order of samples in the plots, hereafter.
 ```{r}
 #only setting and allo/poly or Sell+/-
-appl.treat.pcbd<-factor(c(as.character(c(rep("d_a",6),rep("d_p",6))),
-                        as.character(paste0(metad.pcbd$appl,"_",metad.pcbd$treat))[13:length(paste0(metad.pcbd$appl,"_",metad.pcbd$treat))]),
-                       levels = c("d_a","d_p","pro_a","pro_p","prc_a","prc_p","wt_neg","wt_pos"))
+#appl.treat.pcbd<-factor(c(as.character(c(rep("d_a",6),rep("d_p",6))),
+                        #as.character(paste0(metad.pcbd$appl,"_",metad.pcbd$treat))[13:length(paste0(metad.pcbd$appl,"_",metad.pcbd$treat))]),
+#                       levels = #c("d_a","d_p","pro_a","pro_p","prc_a","prc_p","wt_neg","wt_pos"))
+#appl.treat.pcbd
+#only organ 
+#org.pcbd<-factor(as.character(metad.pcbd$org))
+#org.pcbd
+
+#only setting and allo/poly or Sell+/-
+appl.treat.pcbd<-metad.pcbd %>% 
+  mutate(
+    appl.treat=case_when(
+    org == "d" ~ paste0(org,"_",treat),
+    org != "d" ~paste0(appl,"_",treat)
+  ))
+appl.treat.pcbd <- factor(appl.treat.pcbd$appl.treat)
+levels(appl.treat.pcbd) <- levels(appl.treat.pcbd)[c(1,2,7,8,5,6,3,4,9,10)]
 appl.treat.pcbd
 #only organ 
 org.pcbd<-factor(as.character(metad.pcbd$org))
 org.pcbd
+
 ```
 
 ## Transposed Individual Observations and Annotation
@@ -492,7 +498,8 @@ cl6.goi<-c("Pycard","Arhgef2","Cap1")
 cl7.goi<-c("Tcf7","Lef1","Foxp1")
 cl8.goi<-c("Pgk1","Eno1","Ldha")
 cl9.goi<-c("Irf7","Stat2","Trim21")
-avp.goi<-c("Penk","Tgm2","Lag3","Rbpj","Gpld1")
+avp.goi<-c("Penk","Tgm2","Lag3","Rbpj","Gpld1",
+           "Trbv16","Nrn1","Nrgn","Ccdc184") # potential new GOIs for avp preserved barplots
 ```
 
 ### List
@@ -840,6 +847,392 @@ pdf(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.combined.barplot.expression.co
 bar.p.mod.avp.grid
 dev.off()
 ```
+
+### Potential additional barplots
+
+* different genes were retained different between allo and poly when therapy samples were included
+* this is why, hereafter, all genes interesecting between ivt.allo.up and tpc.allo.up are plotted
+* for now, I exclude the baseline samples from the plot, stressing the allo vs. poly differences in transplanted Treg
+*"Penk"    "Trbv16"  "Nrn1"    "Nrgn"    "Ccdc184"
+
+#### Penk
+* Log~2~RPKM values are used to represent Penk gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Penk.n<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Penk"),
+                           aes(x = group,
+                               y = 2^(LOG.2.RPKM+0),
+                               fill = group,
+                               shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,4096),
+                     breaks = c(1,4,16,64,256,1024,4096),
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = bquote(log[2]*"RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Penk.n
+bar.p.mod.avp.Penk
+```
+
+#### Trbv16
+```{r, fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Trbv16<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Trbv16"),
+                           aes(x = group,
+                               y = 2^(LOG.2.RPKM-4),
+                               fill = group,
+                               shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,128),
+                     breaks = c(1,4,16,64),
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               alpha = 0.5,
+               width = 0.85)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, 
+                                   hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none",
+        aspect.ratio = 1)+
+  labs(x="Treg group", 
+       y = bquote(log[2]*"RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Trbv16
+```
+
+
+***
+
+
+#### Nrn1
+```{r,fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Nrn1<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Nrn1"),
+                           aes(x = group,
+                               y = 2^(LOG.2.RPKM+0),
+                               fill = group,
+                               shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,1024),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               alpha = 0.50,
+               width = 0.85)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, 
+                                   hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none",
+        aspect.ratio = 1)+
+  labs(x="Treg group", 
+       y = bquote(log[2]*"RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Nrn1
+```
+
+
+#### Nrgn
+```{r,fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Nrgn<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Nrgn"),
+                           aes(x = group,
+                               y = 2^(LOG.2.RPKM+0),
+                               fill = group,
+                               shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,256),
+                     breaks = c(1,4,16,64,256),
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               alpha = 0.50,
+               width = 0.85)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, 
+                                   hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none",
+        aspect.ratio = 1)+
+  labs(x="Treg group", 
+       y = bquote(log[2]*"RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Nrgn
+```
+#### Ccdc184
+```{r,fig.height=2.0, fig.width=1.5}
+bar.p.mod.avp.Ccdc184<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Ccdc184"),
+                           aes(x = group,
+                               y = 2^(LOG.2.RPKM+2),
+                               fill = group,
+                               shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,4096),
+                     breaks = c(1,4,16,64,256,1024,4096),
+                     labels = trans_format(trans = function(x) log2(x)-6,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               alpha = 0.50,
+               width = 0.85)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, 
+                                   hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none",
+        aspect.ratio = 1)+
+  labs(x="Treg group", 
+       y = bquote(log[2]*"RPKM")) +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.avp.Ccdc184
+```
+
+#### Combined Plot
+
+* All generated bar plots are arranged as plot grid, hereafter.
+
+```{r, fig.height=2, fig.width=7.5}
+bar.p.mod.avp.grid.thesis <- plot_grid(bar.p.mod.avp.Penk.n,
+                                 bar.p.mod.avp.Trbv16,
+                                 bar.p.mod.avp.Nrn1,
+                                 bar.p.mod.avp.Nrgn,
+                                bar.p.mod.avp.Ccdc184,
+                                 ncol=5, align="v")
+bar.p.mod.avp.grid.thesis
+```
+
+* export the preliminary plot arrangement
+
+```{r}
+pdf(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.combined.barplot.expression.correct.yaxis.labels.potential.pdf", 
+    height=2, width=7.5)
+bar.p.mod.avp.grid.thesis
+dev.off()
+```
+
+* single plots with blank background
+
+```{r}
+pdf(file = "./FIGDIR/03.pcbd.Penk.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
+bar.p.mod.avp.Penk
+dev.off()
+pdf(file = "./FIGDIR/03.pcbd.Trbv16.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
+bar.p.mod.avp.Trbv16
+dev.off()
+pdf(file = "./FIGDIR/03.pcbd.Nrn1.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
+bar.p.mod.avp.Nrn1
+dev.off()
+pdf(file = "./FIGDIR/03.pcbd.Nrgn.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
+bar.p.mod.avp.Nrgn
+dev.off()
+pdf(file = "./FIGDIR/03.pcbd.Ccdc184.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
+bar.p.mod.avp.Ccdc184
+dev.off()
+```
+
+
+***
+
+
 
 ***
 

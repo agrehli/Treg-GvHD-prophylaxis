@@ -20,8 +20,6 @@ library(edgeR)
 library(AnnotationDbi)
 library(org.Mm.eg.db) #for mouse
 library(tibble)
-#library(ggplot2)
-#library(ggrepel)
 ```
 
 ```{r setup, include=FALSE}
@@ -34,9 +32,9 @@ knitr::write_bib(.packages(), "Figure3_GSEA_prc.pro_avp.c.l.s.indiv_packages.bib
 
 ```{r RDS files}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rm.2021-06-09.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rm.2021-06-09.rds")
-stid<-readRDS("./METADIR/stid_2020-12-21.rds")
+counts.m.rm<-readRDS("./RCTDIR/counts.m.rds")
+metad.m.rm<-readRDS("./METADIR/metad.m.rds")
+stid<-readRDS("./METADIR/stid.rds")
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
