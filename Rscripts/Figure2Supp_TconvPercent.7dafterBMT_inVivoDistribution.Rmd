@@ -1,0 +1,198 @@
+---
+title: "FigureSupp_TconvPercent.7dafterBMT_inVivoDistribution"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---                                                   
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::write_bib(.packages(), "Figure2Supp_TconvPercent.7dafterBMT_inVivoDistribution.packages.bib")
+```
+
+## Bar charts showing the cell WBCpercs for re-isolated Treg 
+
+R packages
+
+```{r, message=FALSE, warnings=FALSE}
+library(ggplot2)
+library(scales)
+library(car)
+```
+
+data formating 
+
+```{r}
+Tconv.data <- read.delim("./data/TconvDistributionPerc.txt", header=TRUE)
+Tconv.data$organ <- factor(Tconv.data$organ,levels = c("BM","spleen","liver","mLN","colon"))
+Tconv.data$category <- factor(Tconv.data$category,levels = c("organ_resident","allo_Tx","poly_Tx","noTreg_Tx"))
+```
+
+generating the plot for Figure 2e
+
+```{r, fig.width=8.5, fig.height=5.5}
+p <- ggplot(Tconv.data, aes(x=category, y=WBCperc, fill=category)) + coord_cartesian(ylim = c(0,100))
+p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
+p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=4, stackratio = 1, binwidth=1) 
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), text = element_text(size = 24))
+p <- p + scale_fill_manual(values = c("gray","darkorange","steelblue3","firebrick3"))
+p <- p + labs(title="re-isolated Tconv (GvHD)",x="organ", y = "% of WBC")
+p <- p + facet_wrap(~organ, nrow=1)
+p
+pdf("./figures/TconvOrganDistPerc.pdf", height=5.5, width=8.5)
+p
+dev.off()
+
+```
+
+## Statistics
+
+running statistical testing 
+homogeneity of variance assumption: levene
+normality assumpttion: shapiro
+Anova with Tukey
+
+(adding corresponding bars and asterisks to the plot in Adobe Illustrator)
+
+```{r}
+Tconv.data$category <- factor(Tconv.data$category,levels = c("organ_resident","allo_Tx","poly_Tx","noTreg_Tx"))
+Tconv.dataLiver <- Tconv.data[ which(Tconv.data$organ=='liver' & Tconv.data$type=='Tx'), ]
+Tconv.dataColon <- Tconv.data[ which(Tconv.data$organ=='colon' & Tconv.data$type=='Tx'), ]
+Tconv.dataSpleen <- Tconv.data[ which(Tconv.data$organ=='spleen' & Tconv.data$type=='Tx'), ]
+Tconv.dataBM <- Tconv.data[ which(Tconv.data$organ=='BM' & Tconv.data$type=='Tx'), ]
+Tconv.datamLN <- Tconv.data[ which(Tconv.data$organ=='mLN' & Tconv.data$type=='Tx'), ]
+```
+
+### Tconv.data liver
+
+```{r}
+leveneTest(WBCperc~category, data=Tconv.dataLiver, center=mean)  # n.s.
+shapiro.test(Tconv.dataLiver$WBCperc[1:7]) 						 # n.s.
+shapiro.test(Tconv.dataLiver$WBCperc[8:13])						 # sign.
+shapiro.test(Tconv.dataLiver$WBCperc[14:17])                      # n.s.
+```
+
+```{r}
+Tconv.liver.res.aov <- aov(WBCperc~category, data=Tconv.dataLiver)
+summary (Tconv.liver.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.liver.res.aov)
+```
+
+poly_Tx-allo_Tx   p < 0.05 *
+noTreg_Tx-allo_Tx p < 0.001 ***
+
+
+### Tconv.data colon
+
+```{r}
+leveneTest(WBCperc~category, data=Tconv.dataColon, center=mean)  # n.s.
+shapiro.test(Tconv.dataColon$WBCperc[1:7]) 						 # n.s.
+shapiro.test(Tconv.dataColon$WBCperc[8:13])						 # n.s.
+shapiro.test(Tconv.dataColon$WBCperc[14:17])                      # n.s.
+```
+
+```{r}
+Tconv.colon.res.aov <- aov(WBCperc~category, data=Tconv.dataColon)
+summary (Tconv.colon.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.colon.res.aov)
+```
+
+noTreg_Tx-allo_Tx p < 0.001 ***
+noTreg_Tx-poly_Tx p < 0.01 **
+
+
+### Tconv.data spleen
+
+```{r}
+leveneTest(WBCperc~category, data=Tconv.dataSpleen, center=mean)  # sign
+shapiro.test(Tconv.dataSpleen$WBCperc[1:7]) 						 # sign
+shapiro.test(Tconv.dataSpleen$WBCperc[8:13])						 # n.s.
+shapiro.test(Tconv.dataSpleen$WBCperc[14:17])                      # n.s.
+```
+
+```{r}
+Tconv.spleen.res.aov <- aov(WBCperc~category, data=Tconv.dataSpleen)
+summary (Tconv.spleen.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.spleen.res.aov)
+```
+
+poly_Tx-allo_Tx    p < 0.05 *
+noTreg_Tx-allo_Tx  p < 0.001 ***
+noTreg_Tx-poly_Tx  P < 0.01 **
+
+
+
+### Tconv.data BM
+
+```{r}
+leveneTest(WBCperc~category, data=Tconv.dataBM, center=mean)  # n.s.
+shapiro.test(Tconv.dataBM$WBCperc[1:4]) 						 # n.s.
+shapiro.test(Tconv.dataBM$WBCperc[5:8])						 # n.s.
+shapiro.test(Tconv.dataBM$WBCperc[9:12])                      # n.s.
+```
+
+```{r}
+Tconv.BM.res.aov <- aov(WBCperc~category, data=Tconv.dataBM)
+summary (Tconv.BM.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.BM.res.aov)
+```
+
+poly_Tx-allo_Tx   p < 0.05 *
+noTreg_Tx-allo_Tx  p < 0.001 ***
+noTreg_Tx-poly_Tx p < 0.05 *
+
+
+### Tconv.data mLN
+
+```{r}
+leveneTest(WBCperc~category, data=Tconv.datamLN, center=mean)  # significant
+shapiro.test(Tconv.datamLN$WBCperc[1:4]) 						 # n.s.
+shapiro.test(Tconv.datamLN$WBCperc[5:8])						 # n.s.
+shapiro.test(Tconv.datamLN$WBCperc[9:12])                      # n.s.
+```
+
+```{r}
+Tconv.mLN.res.aov <- aov(WBCperc~category, data=Tconv.datamLN)
+summary (Tconv.mLN.res.aov)
+```
+
+```{r}
+TukeyHSD(Tconv.mLN.res.aov)
+```
+
+poly_Tx-allo_Tx   p < 0.05 *
+noTreg_Tx-allo_Tx  p < 0.001 ***
+noTreg_Tx-poly_Tx p < 0.001 ***
+
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2Supp_TconvPercent.7dafterBMT_inVivoDistribution_SessionInfo.txt")
+```
+
+
+
+
+

@@ -1,0 +1,176 @@
+---
+title: "Figure2Supp_TregPercent.7dafterBMT_inVivoDistribution"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::write_bib(.packages(), "Figure2Supp_TregPercent.7dafterBMT_inVivoDistribution.packages.bib")
+```
+
+## Bar charts showing the cell WBCpercs for re-isolated Treg 
+
+R packages
+
+```{r, message=FALSE, warnings=FALSE}
+library(ggplot2)
+library(scales)
+library(car)
+```
+
+data formating 
+
+```{r}
+Treg.data <- read.delim("./data/TregDistributionPerc.txt", header=TRUE)
+Treg.data$organ <- factor(Treg.data$organ,levels = c("BM","spleen","liver","mLN","colon"))
+Treg.data$category <- factor(Treg.data$category,levels = c("organ_resident","allo_noGvHD","allo_GvHD","poly_noGvHD","poly_GvHD"))
+```
+
+generating the plot for Figure 2d
+
+```{r, fig.width=9, fig.height=5.5, warning=FALSE}
+p <- ggplot(Treg.data, aes(x=category, y=WBCperc, fill=category)) + coord_cartesian(ylim = c(0,55))
+p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
+p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=4, stackratio = 1, binwidth=.5) 
+p <- p + stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), text = element_text(size = 24))
+p <- p + scale_fill_manual(values = c("gray","orange","darkorange","steelblue2","steelblue3"))
+p <- p + labs(title="re-isolated Treg (GvHD)",x="organ", y = "% of WBC")
+p <- p + facet_wrap(~organ, nrow=1)
+p
+pdf("./figures/TregOrganDistPerc.pdf", height=5.5, width=9)
+p
+dev.off()
+```
+
+## Statistics
+
+running statistical testing 
+homogeneity of variance assumption: levene
+normality assumpttion: shapiro
+Anova with Tukey
+
+(adding corresponding bars and asterisks to the plot in Adobe Illustrator)
+
+```{r}
+Treg.data$category <- factor(Treg.data$category,levels = c("organ_resident","allo_noGvHD","poly_noGvHD","allo_GvHD","poly_GvHD"))
+Treg.dataLiver <- Treg.data[ which(Treg.data$organ=='liver' & (Treg.data$type=='GvHD' | Treg.data$type=='noGvHD')), ]
+Treg.dataColon <- Treg.data[ which(Treg.data$organ=='colon' & (Treg.data$type=='GvHD' | Treg.data$type=='noGvHD')), ]
+Treg.dataSpleen <- Treg.data[ which(Treg.data$organ=='spleen' & (Treg.data$type=='GvHD' | Treg.data$type=='noGvHD')), ]
+Treg.dataBM <- Treg.data[ which(Treg.data$organ=='BM' & (Treg.data$type=='GvHD')), ]
+Treg.datamLN <- Treg.data[ which(Treg.data$organ=='mLN' & (Treg.data$type=='GvHD')), ]
+```
+
+### liver Treg.data
+
+```{r}
+leveneTest(WBCperc~category, data=Treg.dataLiver, center=mean)  # n.s.
+shapiro.test(Treg.dataLiver$WBCperc[1:6]) 						 # n.s.
+shapiro.test(Treg.dataLiver$WBCperc[7:12])						 # n.s.
+shapiro.test(Treg.dataLiver$WBCperc[13:19])                      # n.s.
+shapiro.test(Treg.dataLiver$WBCperc[20:25])                      # n.s.
+
+Treg.liver.res.aov <- aov(WBCperc~category, data=Treg.dataLiver)
+summary (Treg.liver.res.aov)
+```
+
+```{r}
+TukeyHSD(Treg.liver.res.aov)
+```
+poly_GvHD-allo_GvHD  p < 0.01 **
+
+
+
+### spleen Treg.data
+
+```{r}
+leveneTest(WBCperc~category, data=Treg.dataSpleen, center=mean)  # n.s.
+shapiro.test(Treg.dataSpleen$WBCperc[1:6]) 						 # n.s.
+shapiro.test(Treg.dataSpleen$WBCperc[7:12])						 # n.s.
+shapiro.test(Treg.dataSpleen$WBCperc[13:19])                      # significant
+shapiro.test(Treg.dataSpleen$WBCperc[20:25])                      # significant
+
+Treg.spleen.res.aov <- aov(WBCperc~category, data=Treg.dataSpleen)
+summary (Treg.spleen.res.aov)
+
+```
+ANOVA assumptions not met. Use Kruskal-Wallis instead
+
+```{r}
+kruskal.test(WBCperc~category, data=Treg.dataSpleen)
+```
+
+no significant differences
+
+
+### colon Treg.data
+
+```{r}
+leveneTest(WBCperc~category, data=Treg.dataColon, center=mean)  # n.s.
+shapiro.test(Treg.dataColon$WBCperc[1:6]) 						 # n.s.
+shapiro.test(Treg.dataColon$WBCperc[7:12])						 # n.s.
+shapiro.test(Treg.dataColon$WBCperc[13:19])                      # n.s.
+shapiro.test(Treg.dataColon$WBCperc[20:25])                      # n.s.
+
+Treg.colon.res.aov <- aov(WBCperc~category, data=Treg.dataColon)
+summary (Treg.colon.res.aov)
+```
+
+```{r}
+TukeyHSD(Treg.colon.res.aov)
+```
+
+
+### BM Treg.data
+
+different set up: t-test
+check validity first (F-test, Shapiro)
+```{r}
+var.test(WBCperc~category, data=Treg.dataBM, center=mean)  # n.s.
+shapiro.test(Treg.dataBM$WBCperc[1:4]) 						 # n.s.
+shapiro.test(Treg.dataBM$WBCperc[5:8])						 # n.s.
+```
+
+
+```{r}
+Treg.BM.res.t.test <- t.test(WBCperc~category, data=Treg.dataBM, var.equal = TRUE)
+Treg.BM.res.t.test
+```
+
+no significant differences
+
+### mLN Treg.data
+
+different set up: t-test
+
+```{r}
+var.test(WBCperc~category, data=Treg.datamLN, center=mean)  # n.s.
+shapiro.test(Treg.datamLN$WBCperc[1:4]) 						 # n.s.
+shapiro.test(Treg.datamLN$WBCperc[5:8])						 # n.s.
+```
+
+
+```{r}
+Treg.mLN.res.t.test <- t.test(WBCperc~category, data=Treg.datamLN, var.equal = TRUE)
+Treg.mLN.res.t.test
+```
+poly_GvHD-allo_GvHD  p < 0.01 **
+
+
+
+
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2Supp_TregPercent.7dafterBMT_inVivoDistribution_SessionInfo.txt")
+```

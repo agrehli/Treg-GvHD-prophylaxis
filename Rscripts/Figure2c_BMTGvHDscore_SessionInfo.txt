@@ -13,7 +13,7 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] car_3.0-12    carData_3.0-4 scales_1.1.1  ggplot2_3.3.5
+[1] tidyr_1.1.4   scales_1.1.1  ggplot2_3.3.5
 
 loaded via a namespace (and not attached):
  [1] highr_0.9        bslib_0.3.1      compiler_4.0.3   pillar_1.6.4    
@@ -25,5 +25,5 @@ loaded via a namespace (and not attached):
 [25] vctrs_0.3.8      grid_4.0.3       tidyselect_1.1.1 glue_1.5.0      
 [29] R6_2.5.1         fansi_0.5.0      rmarkdown_2.11   farver_2.1.0    
 [33] purrr_0.3.4      magrittr_2.0.1   ellipsis_0.3.2   htmltools_0.5.2 
-[37] abind_1.4-5      assertthat_0.2.1 colorspace_2.0-2 utf8_1.2.2      
+[37] assertthat_0.2.1 colorspace_2.0-2 labeling_0.4.2   utf8_1.2.2      
 [41] stringi_1.7.5    munsell_0.5.0    crayon_1.4.2    

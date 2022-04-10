@@ -1,5 +1,5 @@
 ---
-title: "Figure2c_Survival"
+title: "Figure2b_Survival"
 author: Michael Rehli
 output: 
   html_document:
@@ -14,7 +14,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "Figure2c_Survival.packages.bib")
+knitr::write_bib(.packages(), "Figure2b_Survival.packages.bib")
 ```
 
 # Survival in BMT experiments
@@ -30,7 +30,7 @@ data loading and fitting
 
 ```{r}
 surv.data <- read.delim("./data/Fig2_survival.txt", header=TRUE)
-surv.data$group <- factor(surv.data$group,levels = c("BMonly","noTreg","alloTreg","polyTreg"))
+surv.data$group <- factor(surv.data$group,levels = c("BMonly","noTreg","allo","poly"))
 fit <- survfit(Surv(time, event) ~ group, data = surv.data)
 ```
 
@@ -54,10 +54,19 @@ p <- ggsurvplot(fit,
 p
 ```
 
+```{r}
+pdf("./figures/Figure2b_Survival.pdf", height=4.5, width=6)
+p
+dev.off()
+
+```
+
+
+
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2c_Survival_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2b_Survival_SessionInfo.txt")
 ```
 
 

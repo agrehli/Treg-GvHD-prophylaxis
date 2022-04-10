@@ -1,5 +1,5 @@
 ---
-title: "Figure2b_BMTGvHDscore"
+title: "Figure2c_BMTGvHDscore"
 author: Michael Rehli
 output: 
   html_document:
@@ -14,7 +14,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "Figure2b_BMTGvHDscore.packages.bib")
+knitr::write_bib(.packages(), "Figure2c_BMTGvHDscore.packages.bib")
 ```
 
 # GvHD scores in BMT experiments
@@ -47,10 +47,13 @@ p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor
 p <- p + scale_color_manual(values = c("gray","black","darkorange","steelblue3")) + scale_x_continuous(breaks = c(0,7,14,21,28,35,42,49,56,63), expand = c(0.01,0)) + scale_y_continuous(expand = c(0.02,0))
 p <- p + labs(title="",x="Time after alloBMT (d)", y = "Clinical GvHD scores")
 p
-#pdf("./figures/Figure2b_BMTGvHDscore.pdf", height=4.5, width=7.5)
-#p
-#dev.off()
+```
 
+
+```{r, fig.width=7.5, fig.height=4.5, warning=FALSE}
+pdf("./figures/Figure2c_BMTGvHDscore.pdf", height=4.5, width=7.5)
+p
+dev.off()
 ```
 
 # Statistics
@@ -87,7 +90,7 @@ print(c(i, myTukey[i]))
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2b_BMTGvHDscore_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2c_BMTGvHDscore_SessionInfo.txt")
 ```
 
 

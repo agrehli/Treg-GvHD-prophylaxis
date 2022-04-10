@@ -90,26 +90,26 @@ mLN	organ	577000	resident	organ_resident
 mLN	organ	339000	resident	organ_resident
 mLN	organ	844000	resident	organ_resident
 mLN	organ	757000	resident	organ_resident
-mLN	allo	58000	GvHD	allo_GvHD
-mLN	allo	44000	GvHD	allo_GvHD
-mLN	allo	70000	GvHD	allo_GvHD
-mLN	allo	34000	GvHD	allo_GvHD
-mLN	poly	75000	GvHD	poly_GvHD
-mLN	poly	44000	GvHD	poly_GvHD
-mLN	poly	25000	GvHD	poly_GvHD
-mLN	poly	33000	GvHD	poly_GvHD
+mLN	allo	104000	GvHD	allo_GvHD
+mLN	allo	139000	GvHD	allo_GvHD
+mLN	allo	294000	GvHD	allo_GvHD
+mLN	allo	50000	GvHD	allo_GvHD
+mLN	poly	112000	GvHD	poly_GvHD
+mLN	poly	86000	GvHD	poly_GvHD
+mLN	poly	46000	GvHD	poly_GvHD
+mLN	poly	79000	GvHD	poly_GvHD
 mLN	allo		noGvHD	allo_noGvHD
 mLN	poly		noGvHD	poly_noGvHD
 BM	organ	136000	resident	organ_resident
 BM	organ	111000	resident	organ_resident
 BM	organ	102000	resident	organ_resident
-BM	allo	104000	GvHD	allo_GvHD
-BM	allo	139000	GvHD	allo_GvHD
-BM	allo	294000	GvHD	allo_GvHD
-BM	allo	50000	GvHD	allo_GvHD
-BM	poly	112000	GvHD	poly_GvHD
-BM	poly	86000	GvHD	poly_GvHD
-BM	poly	46000	GvHD	poly_GvHD
-BM	poly	79000	GvHD	poly_GvHD
+BM	allo	58000	GvHD	allo_GvHD
+BM	allo	44000	GvHD	allo_GvHD
+BM	allo	70000	GvHD	allo_GvHD
+BM	allo	34000	GvHD	allo_GvHD
+BM	poly	75000	GvHD	poly_GvHD
+BM	poly	44000	GvHD	poly_GvHD
+BM	poly	25000	GvHD	poly_GvHD
+BM	poly	33000	GvHD	poly_GvHD
 BM	allo		noGvHD	allo_noGvHD
 BM	poly		noGvHD	poly_noGvHD

@@ -1,0 +1,70 @@
+---
+title: "FigureTRBVenrichment"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::write_bib(.packages(), "FigureTRBVenrichment.packages.bib")
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+# Figure showing the enrichment of colon specific TRBV
+
+R packages
+
+```{r, message=FALSE, warnings=FALSE}
+library(ggplot2)
+```
+
+data formating 
+
+```{r}
+dattestu <- read.csv("./data/TCRBset_26_12-1_12-2vsTCRBall_fischerexact_two.sided01_11_2021.csv", header=TRUE)
+colnames(dattestu)[1]<-"cluster"
+dattestu <- dattestu[c(-10,-13),]
+dattestu$modpadj<-(-1)*log10(dattestu$p.adj)
+dattestu$modpadj[dattestu$p.adj>=0.05]<-NA
+dattestu$logenrich<-log2(dattestu$enrichment)
+```
+
+plotting
+
+```{r, fig.width=4, fig.height=4}
+
+p <-  ggplot(dattestu,aes(y=factor(cluster,levels=cluster),x=logenrich)) +
+      geom_segment(aes(y=factor(cluster,levels=cluster), yend=factor(cluster,levels=cluster), x=0, xend=logenrich), color="grey") +
+      geom_point(aes(fill=modpadj,size=TRBVset), shape=21)  + 
+      scale_size(range=c(1,7.5),name="Colon TRBVs\n(26,12-1,12-2)") +
+      scale_fill_gradientn(colors=c("yellow","red","purple","blue","cyan"),na.value="grey",name=expression(-log[10]~"("*italic(P)[adj.]*")")) +
+      xlim(-1,1) +
+      geom_vline(xintercept = 0) +
+      scale_y_discrete(limits=rev) +
+      xlab (bquote(TRBV~enrichment~"("*log[2]*")" ) ) +
+      ylab ("Cluster") +
+      theme_bw() + theme(panel.grid.major = element_blank(), 
+                         panel.grid.minor = element_blank(), 
+                         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+                         text = element_text(size = 16),  
+                         legend.text=element_text(size=10),
+                         legend.title=element_text(size=12))
+p
+pdf("./figures/FigureTRBVenrichment.pdf", height=4, width=4)
+p
+dev.off()
+
+```
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureTRBVenrichment_SessionInfo.txt")
+```
+
