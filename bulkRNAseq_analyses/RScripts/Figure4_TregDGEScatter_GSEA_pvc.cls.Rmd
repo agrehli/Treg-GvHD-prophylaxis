@@ -25,8 +25,8 @@ knitr::write_bib(.packages(), "Figure4_TregDGEScatter_GSEA_pvc.cls_packages.bib"
 
 ```{r}
 # Load required counts, metadata and annotaion RDS files
-counts.m.rm<-readRDS("./RCTDIR/counts.m.rds")
-metad.m.rm<-readRDS("./METADIR/metad.m.rds")
+counts.m<-readRDS("./RCTDIR/counts.m.rds")
+metad.m<-readRDS("./METADIR/metad.m.rds")
 stid<-readRDS("./METADIR/stid.rds")
 ```
 
@@ -36,8 +36,11 @@ library(edgeR)
 library(AnnotationDbi)
 library(org.Mm.eg.db) #for mouse
 library(tibble)
+library(dplyr)
 library(ggplot2)
 library(ggrepel)
+library(pryr)
+library(ecoflux)
 ```
 * First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
 * This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
@@ -75,18 +78,21 @@ which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
 
 ### Colon
 ```{r}
-cpc.ind<-(grepl("pro",metad.m.rm$appl)|grepl("prc",metad.m.rm$appl))&grepl("C", metad.m.rm$org)
+cpc.ind<-(grepl("pro",metad.m$appl)|grepl("prc",metad.m$appl))&
+  grepl("C", metad.m$org)
 print(paste(sum(cpc.ind),"samples enter the analysis for Treg re-isolated from BMT colons!"))
 ```
 
 ### Liver
 ```{r}
-lpc.ind<-(grepl("pro",metad.m.rm$appl)|grepl("prc",metad.m.rm$appl))&grepl("L", metad.m.rm$org)
+lpc.ind<-(grepl("pro",metad.m$appl)|grepl("prc",metad.m$appl))&
+  grepl("L", metad.m$org)
 print(paste(sum(lpc.ind),"samples enter the analysis for Treg re-isolated from BMT livers!"))
 ```
 ### Spleen
 ```{r}
-spc.ind<-(grepl("pro",metad.m.rm$appl)|grepl("prc",metad.m.rm$appl))&grepl("S", metad.m.rm$org)
+spc.ind<-(grepl("pro",metad.m$appl)|grepl("prc",metad.m$appl))&
+  grepl("S", metad.m$org)
 print(paste(sum(spc.ind),"samples enter the analysis for Treg re-isolated from BMT spleens!"))
 ```
 
@@ -96,8 +102,8 @@ print(paste(sum(spc.ind),"samples enter the analysis for Treg re-isolated from B
 ### Colon
 * For colon:
 ```{r}
-#Subsetting the respective counts object (counts.m.rm)
-counts.cpc<-counts.m.rm[,cpc.ind]
+#Subsetting the respective counts object (counts.m)
+counts.cpc<-counts.m[,cpc.ind]
 paste(ncol(counts.cpc),"samples are selected:")
 colnames(counts.cpc)
 ```
@@ -105,8 +111,8 @@ colnames(counts.cpc)
 ### Liver
 * For liver:
 ```{r}
-#Subsetting the respective counts object (counts.m.rm)
-counts.lpc<-counts.m.rm[,lpc.ind]
+#Subsetting the respective counts object (counts.m)
+counts.lpc<-counts.m[,lpc.ind]
 paste(ncol(counts.lpc),"samples are selected:")
 colnames(counts.lpc)
 ```
@@ -114,8 +120,8 @@ colnames(counts.lpc)
 ### Spleen
 * For spleen:
 ```{r}
-#Subsetting the respective counts object (counts.m.rm)
-counts.spc<-counts.m.rm[,spc.ind]
+#Subsetting the respective counts object (counts.m)
+counts.spc<-counts.m[,spc.ind]
 paste(ncol(counts.spc),"samples are selected:")
 colnames(counts.spc)
 ```
@@ -127,7 +133,7 @@ colnames(counts.spc)
 
 ### Colon
 ```{r}
-metad.cpc<-metad.m.rm[cpc.ind,]
+metad.cpc<-metad.m[cpc.ind,]
 metad.cpc$orig.ord<-1:nrow(metad.cpc)
 metad.cpc<-metad.cpc[order(metad.cpc$appl),]
 metad.cpc<-metad.cpc[order(metad.cpc$grp),]
@@ -142,7 +148,7 @@ group.subcpc
 
 ### Liver
 ```{r}
-metad.lpc<-metad.m.rm[lpc.ind,]
+metad.lpc<-metad.m[lpc.ind,]
 metad.lpc$orig.ord<-1:nrow(metad.lpc)
 metad.lpc<-metad.lpc[order(metad.lpc$appl),]
 metad.lpc<-metad.lpc[order(metad.lpc$grp),]
@@ -157,7 +163,7 @@ group.sublpc
 
 ### Spleen
 ```{r}
-metad.spc<-metad.m.rm[spc.ind,]
+metad.spc<-metad.m[spc.ind,]
 metad.spc$orig.ord<-1:nrow(metad.spc)
 metad.spc<-metad.spc[order(metad.spc$appl),]
 metad.spc<-metad.spc[order(metad.spc$grp),]
@@ -200,19 +206,19 @@ rm(counts.spc.ord)
 ```{r}
 # Colon
 if (sum(colnames(counts.cpc)==metad.cpc$sample_ID)==sum(cpc.ind)) {
-  print("Colon Treg counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+  print("Colon Treg counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with!")
 }else {
   print("Something is inconsistent, check the code above for errors during subsetting!")
 }
 # Liver
 if (sum(colnames(counts.lpc)==metad.lpc$sample_ID)==sum(lpc.ind)) {
-  print("Liver Treg counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+  print("Liver Treg counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with!")
 }else {
   print("Something is inconsistent, check the code above for errors during subsetting!")
 }
 # Spleen
 if (sum(colnames(counts.spc)==metad.spc$sample_ID)==sum(spc.ind)) {
-  print("Spleen Treg counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+  print("Spleen Treg counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with!")
 }else {
   print("Something is inconsistent, check the code above for errors during subsetting!")
 }
@@ -269,33 +275,32 @@ print(paste(table(keep.spc)[1],"genes are discarded while",table(keep.spc)[2], "
 # Colon
 ## Blocking Factor
 pcr2.cpc<-factor(metad.cpc$PCR2.Cy)
+treat.cpc<-factor(metad.cpc$treat)
 ## Design
-cpc.design.dge<-model.matrix(~0+group.cpc+pcr2.cpc)
-colnames(cpc.design.dge)<-c("prc","pro","twelve","thirteen","fourteen")
+cpc.design.dge<-model.matrix(~0+group.cpc+treat.cpc+pcr2.cpc)
+colnames(cpc.design.dge)<-c("prc","pro","poly","twelve","thirteen","fourteen")
 print("For colon-migrated Treg:")
 as_tibble(cpc.design.dge)
 
 # Liver
 ## Blocking Factor
 pcr2.lpc<-factor(metad.lpc$PCR2.Cy)
+treat.lpc<-factor(metad.lpc$treat)
 ## Design
-lpc.design.dge<-model.matrix(~0+group.lpc+pcr2.lpc)
-colnames(lpc.design.dge)<-c("prc","pro","thirteen","fourteen")
+lpc.design.dge<-model.matrix(~0+group.lpc+treat.lpc+pcr2.lpc)
+colnames(lpc.design.dge)<-c("prc","pro","poly","thirteen","fourteen")
 print("For liver-migrated Treg:")
 as_tibble(lpc.design.dge)
 
 # Spleen
 ## Blocking Factor
 pcr2.spc<-factor(metad.spc$PCR2.Cy)
+treat.spc<-factor(metad.spc$treat)
 ## Design
-spc.design.dge<-model.matrix(~0+group.spc+pcr2.spc)
-colnames(spc.design.dge)<-c("prc","pro","thirteen","fourteen")
+spc.design.dge<-model.matrix(~0+group.spc+treat.spc+pcr2.spc)
+colnames(spc.design.dge)<-c("prc","pro","poly","thirteen","fourteen")
 print("For spleen-migrated Treg:")
 as_tibble(spc.design.dge)
-
-#subspc.design.dge<-model.matrix(~0+group.subspc+pcr2)
-#colnames(subspc.design.dge)<-c("prc_S_a","prc_S_p","pro_S_a","pro_S_p","thirteen","fourteen")
-#as_tibble(subspc.design.dge)
 ```
 
 ## Dispersion Esitmation
@@ -328,27 +333,27 @@ spc.fit<-glmQLFit(dgel.spc,spc.design.dge)
 * We can have a quick look at how many genes are DE with a FC > 1.5 and FDR < 0.05.  
 ```{r}
 # contrasts
-cpc.cp.con<-makeContrasts(pro - prc, levels=cpc.design.dge)
-lpc.cp.con<-makeContrasts(pro - prc, levels=lpc.design.dge)
-spc.cp.con<-makeContrasts(pro - prc, levels=spc.design.dge) 
+cpvc.con<-makeContrasts(pro - prc, levels=cpc.design.dge)
+lpvc.con<-makeContrasts(pro - prc, levels=lpc.design.dge)
+spvc.con<-makeContrasts(pro - prc, levels=spc.design.dge) 
 # glmTreat results
-cpc.cp.res <- glmTreat(cpc.fit, contrast=cpc.cp.con, lfc=log2(1.5))
-lpc.cp.res <- glmTreat(lpc.fit, contrast=lpc.cp.con, lfc=log2(1.5))
-spc.cp.res <- glmTreat(spc.fit, contrast=spc.cp.con, lfc=log2(1.5))
+cpvc.res <- glmTreat(cpc.fit, contrast=cpvc.con, lfc=log2(1.5))
+lpvc.res <- glmTreat(lpc.fit, contrast=lpvc.con, lfc=log2(1.5))
+spvc.res <- glmTreat(spc.fit, contrast=spvc.con, lfc=log2(1.5))
 # qstat variable for storing results
-cpc.cp.qstat<-topTags(cpc.cp.res,n=Inf)
-lpc.cp.qstat<-topTags(lpc.cp.res,n=Inf)
-spc.cp.qstat<-topTags(spc.cp.res,n=Inf)
+cpvc.qstat<-topTags(cpvc.res,n=Inf)
+lpvc.qstat<-topTags(lpvc.res,n=Inf)
+spvc.qstat<-topTags(spvc.res,n=Inf)
 # summaries
 print("For colon:")
-cpc.cp.qdt<-decideTestsDGE(cpc.cp.res)
-summary(cpc.cp.qdt)
+cpvc.qdt<-decideTestsDGE(cpvc.res)
+summary(cpvc.qdt)
 print("For liver:")
-lpc.cp.qdt<-decideTestsDGE(lpc.cp.res)
-summary(lpc.cp.qdt)
+lpvc.qdt<-decideTestsDGE(lpvc.res)
+summary(lpvc.qdt)
 print("For spleen:")
-spc.cp.qdt<-decideTestsDGE(spc.cp.res)
-summary(spc.cp.qdt)
+spvc.qdt<-decideTestsDGE(spvc.res)
+summary(spvc.qdt)
 ```
 
 
@@ -357,21 +362,21 @@ summary(spc.cp.qdt)
 * This is done for each analysis (organ).
 ```{r}
 # colon
-write.table(x = cpc.cp.qstat$table,
+write.table(x = cpvc.qstat$table,
             file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon_FC1.5.txt",
             quote=FALSE, 
             sep = "\t",
             col.names = TRUE,
             row.names = FALSE)
 # liver
-write.table(x = lpc.cp.qstat$table,
+write.table(x = lpvc.qstat$table,
             file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver_FC1.5.txt",
             quote=FALSE, 
             sep = "\t",
             col.names = TRUE,
             row.names = FALSE)
 # spleen
-write.table(x = spc.cp.qstat$table,
+write.table(x = spvc.qstat$table,
             file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen_FC1.5.txt",
             quote=FALSE, 
             sep = "\t",
@@ -392,56 +397,65 @@ write.table(x = spc.cp.qstat$table,
 # colon
 print("For colon:")
 # Extraction of data frame from glmTreat result
-cpc.cp.qstat.scat<-cpc.cp.qstat$table #is a data frame
-# Introduction of logRPKM column
-cpc.cp.qstat.scat$logRPKM <- cpc.cp.qstat.scat$logCPM - log2(cpc.cp.qstat.scat$Length * 0.001)
+cpvc.qstat.scat <- cpvc.qstat$table %>% #is a data frame
+  # Introduction of logRPKM column
+  mutate(logRPKM=logCPM-log2(Length * 0.001))
 # Commonly used filter criteria
-cpc.cp.qstat.scat.filt<-subset(cpc.cp.qstat.scat, logCPM > 1 & logRPKM > 1)
-nrow(cpc.cp.qstat.scat.filt)
-# Transformation for scatter plot
-cpc.cp.qstat.scat.filt$logCPMpro<-cpc.cp.qstat.scat.filt$logCPM + (cpc.cp.qstat.scat.filt$logFC/2) # prophylaxis
-cpc.cp.qstat.scat.filt$logCPMprc<-cpc.cp.qstat.scat.filt$logCPM - (cpc.cp.qstat.scat.filt$logFC/2) # BMT control
-# Separation of up and down genes
-cpc.cp.qstat.scat.filt.UP<-subset(cpc.cp.qstat.scat.filt, logFC >= 0 & FDR < 0.05)
-cpc.cp.qstat.scat.filt.DN<-subset(cpc.cp.qstat.scat.filt, logFC <= 0 & FDR < 0.05)
-nrow(cpc.cp.qstat.scat.filt.UP)
-nrow(cpc.cp.qstat.scat.filt.DN)
+cpvc.qstat.scat.filt <- filter(cpvc.qstat.scat, 
+                                      logCPM > 1 & logRPKM > 1) %>%
+  # Transformation for scatter plot --> individual log CPMs
+  mutate(logCPMprc = logCPM - logFC/2, # BMT control
+         logCPMpro = logCPM + logFC/2) # GvHD
+nrow(cpvc.qstat.scat.filt)
+# Separation of significantly up and down regulated genes
+cpvc.qstat.scat.filt.UP<-filter(cpvc.qstat.scat.filt, logFC >= 0 &
+                                        FDR < 0.05)
+cpvc.qstat.scat.filt.DN<-filter(cpvc.qstat.scat.filt, logFC <= 0 &
+                                        FDR < 0.05)
+nrow(cpvc.qstat.scat.filt.UP)
+nrow(cpvc.qstat.scat.filt.DN)
 
 # liver
 print("For liver:")
 # Extraction of data frame from glmTreat result
-lpc.cp.qstat.scat<-lpc.cp.qstat$table #is a data frame
-# Introduction of logRPKM column
-lpc.cp.qstat.scat$logRPKM <- lpc.cp.qstat.scat$logCPM - log2(lpc.cp.qstat.scat$Length * 0.001)
+lpvc.qstat.scat <- lpvc.qstat$table %>% #is a data frame
+  # Introduction of logRPKM column
+  mutate(logRPKM=logCPM-log2(Length * 0.001))
 # Commonly used filter criteria
-lpc.cp.qstat.scat.filt<-subset(lpc.cp.qstat.scat, logCPM > 1 & logRPKM > 1)
-nrow(lpc.cp.qstat.scat.filt)
-# Transformation for scatter plot
-lpc.cp.qstat.scat.filt$logCPMpro<-lpc.cp.qstat.scat.filt$logCPM + (lpc.cp.qstat.scat.filt$logFC/2) # prophylaxis
-lpc.cp.qstat.scat.filt$logCPMprc<-lpc.cp.qstat.scat.filt$logCPM - (lpc.cp.qstat.scat.filt$logFC/2) # BMT control
-# Separation of up and down genes
-lpc.cp.qstat.scat.filt.UP<-subset(lpc.cp.qstat.scat.filt, logFC >= 0 & FDR < 0.05)
-lpc.cp.qstat.scat.filt.DN<-subset(lpc.cp.qstat.scat.filt, logFC <= 0 & FDR < 0.05)
-nrow(lpc.cp.qstat.scat.filt.UP)
-nrow(lpc.cp.qstat.scat.filt.DN)
+lpvc.qstat.scat.filt <- filter(lpvc.qstat.scat, 
+                                      logCPM > 1 & logRPKM > 1) %>%
+  # Transformation for scatter plot --> individual log CPMs
+  mutate(logCPMprc = logCPM - logFC/2, # BMT control
+         logCPMpro = logCPM + logFC/2) # GvHD
+nrow(lpvc.qstat.scat.filt)
+# Separation of significantly up and down regulated genes
+lpvc.qstat.scat.filt.UP<-filter(lpvc.qstat.scat.filt, logFC >= 0 &
+                                        FDR < 0.05)
+lpvc.qstat.scat.filt.DN<-filter(lpvc.qstat.scat.filt, logFC <= 0 &
+                                        FDR < 0.05)
+nrow(lpvc.qstat.scat.filt.UP)
+nrow(lpvc.qstat.scat.filt.DN)
 
 # spleen
 print("For spleen:")
 # Extraction of data frame from glmTreat result
-spc.cp.qstat.scat<-spc.cp.qstat$table #is a data frame
-# Introduction of logRPKM column
-spc.cp.qstat.scat$logRPKM <- spc.cp.qstat.scat$logCPM - log2(spc.cp.qstat.scat$Length * 0.001)
+spvc.qstat.scat <- spvc.qstat$table %>% #is a data frame
+  # Introduction of logRPKM column
+  mutate(logRPKM=logCPM-log2(Length * 0.001))
 # Commonly used filter criteria
-spc.cp.qstat.scat.filt<-subset(spc.cp.qstat.scat, logCPM > 1 & logRPKM > 1)
-nrow(spc.cp.qstat.scat.filt)
-# Transformation for scatter plot
-spc.cp.qstat.scat.filt$logCPMpro<-spc.cp.qstat.scat.filt$logCPM + (spc.cp.qstat.scat.filt$logFC/2) # prophylaxis
-spc.cp.qstat.scat.filt$logCPMprc<-spc.cp.qstat.scat.filt$logCPM - (spc.cp.qstat.scat.filt$logFC/2) # BMT control
-# Separation of up and down genes
-spc.cp.qstat.scat.filt.UP<-subset(spc.cp.qstat.scat.filt, logFC >= 0 & FDR < 0.05)
-spc.cp.qstat.scat.filt.DN<-subset(spc.cp.qstat.scat.filt, logFC <= 0 & FDR < 0.05)
-nrow(spc.cp.qstat.scat.filt.UP)
-nrow(spc.cp.qstat.scat.filt.DN)
+spvc.qstat.scat.filt <- filter(spvc.qstat.scat, 
+                                      logCPM > 1 & logRPKM > 1) %>%
+  # Transformation for scatter plot --> individual log CPMs
+  mutate(logCPMprc = logCPM - logFC/2, # BMT control
+         logCPMpro = logCPM + logFC/2) # GvHD
+nrow(spvc.qstat.scat.filt)
+# Separation of significantly up and down regulated genes
+spvc.qstat.scat.filt.UP<-filter(spvc.qstat.scat.filt, logFC >= 0 &
+                                        FDR < 0.05)
+spvc.qstat.scat.filt.DN<-filter(spvc.qstat.scat.filt, logFC <= 0 &
+                                        FDR < 0.05)
+nrow(spvc.qstat.scat.filt.UP)
+nrow(spvc.qstat.scat.filt.DN)
 ```
 
 ## Exporting UP and DN regulated Genes with background
@@ -450,82 +464,82 @@ nrow(spc.cp.qstat.scat.filt.DN)
 ```{r}
 #extract filtered gene lists with background genes
 #colon
-write.table(rownames(cpc.cp.qstat.scat.filt.UP),
+write.table(rownames(cpvc.qstat.scat.filt.UP),
             file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.sig.UP.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
-write.table(rownames(cpc.cp.qstat.scat.filt.DN),
+write.table(rownames(cpvc.qstat.scat.filt.DN),
             file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.sig.DN.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 ## Gene Symbols for Metascape
-write.table(cpc.cp.qstat.scat.filt.UP$GeneSymbol,
+write.table(cpvc.qstat.scat.filt.UP$GeneSymbol,
             file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.sig.UP.genes.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
-write.table(cpc.cp.qstat.scat.filt.DN$GeneSymbol,
+write.table(cpvc.qstat.scat.filt.DN$GeneSymbol,
             file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.sig.DN.genes.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
-write.table(cpc.cp.qstat.scat.filt$GeneSymbol,
+write.table(cpvc.qstat.scat.filt$GeneSymbol,
             file = "./ANALDIR/Figure4c_TregDGE_GvHD.vs.noGvHD_colon.filt.bg.genes.txt",
             col.names = "GeneSymbol",
             quote = FALSE,
             row.names = FALSE)
 #liver
-write.table(rownames(lpc.cp.qstat.scat.filt.UP),
+write.table(rownames(lpvc.qstat.scat.filt.UP),
             file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver.filt.sig.UP.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
-write.table(rownames(lpc.cp.qstat.scat.filt.DN),
+write.table(rownames(lpvc.qstat.scat.filt.DN),
             file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver.filt.sig.DN.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 ## Gene Symbols for Metascape
-write.table(lpc.cp.qstat.scat.filt.UP$GeneSymbol,
+write.table(lpvc.qstat.scat.filt.UP$GeneSymbol,
             file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver.filt.sig.UP.genes.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
-write.table(lpc.cp.qstat.scat.filt.DN$GeneSymbol,
+write.table(lpvc.qstat.scat.filt.DN$GeneSymbol,
             file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver.filt.sig.DN.genes.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
-write.table(lpc.cp.qstat.scat.filt$GeneSymbol,
+write.table(lpvc.qstat.scat.filt$GeneSymbol,
             file = "./ANALDIR/Figure4b_TregDGE_GvHD.vs.noGvHD_liver.filt.bg.genes.txt",
             col.names = "GeneSymbol",
             quote = FALSE,
             row.names = FALSE)
 #spleen
-write.table(rownames(spc.cp.qstat.scat.filt.UP),
+write.table(rownames(spvc.qstat.scat.filt.UP),
             file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.sig.UP.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
-write.table(rownames(spc.cp.qstat.scat.filt.DN),
+write.table(rownames(spvc.qstat.scat.filt.DN),
             file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.sig.DN.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 ## Gene Symbols for Metascape
-write.table(spc.cp.qstat.scat.filt.UP$GeneSymbol,
+write.table(spvc.qstat.scat.filt.UP$GeneSymbol,
             file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.sig.UP.genes.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
-write.table(spc.cp.qstat.scat.filt.DN$GeneSymbol,
+write.table(spvc.qstat.scat.filt.DN$GeneSymbol,
             file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.sig.DN.genes.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
-write.table(spc.cp.qstat.scat.filt$GeneSymbol,
+write.table(spvc.qstat.scat.filt$GeneSymbol,
             file = "./ANALDIR/Figure4a_TregDGE_GvHD.vs.noGvHD_spleen.filt.bg.genes.txt",
             col.names = "GeneSymbol",
             quote = FALSE,
@@ -559,15 +573,70 @@ th17.diff.sig <-c("Fos","Il6ra","Jun","Nfkbia","Rora")
 tcell.diff.sig <-c("Bcl6","Ccr7","Cd83","Rora","Tnfsf8","Tnfsf4")
 
 #commonly highlighted suppression signature --> hand-picked, immunosuppression, other cannonical Treg functions and cytotoxicity, colored black in Figure 4a-c
-supp.sig<-c("Gzmb","Il10","Gzma","Fasl","Prf1","Ctla4","Entpd1","Tgfb1","Tgfb3","Il2ra","Nt5e","Fgl2","Il12a","Ebi3","Cd274","Pdcd1lg2")
+supp.sig<-c("Gzmb","Il10","Gzma","Fasl","Prf1","Ctla4","Entpd1","Tgfb1","Tgfb3",
+            "Il2ra","Nt5e","Fgl2","Ebi3","Cd274","Pdcd1lg2")
 supp.sig <- sort(supp.sig)
+```
+
+### Color-coded geom_text_repel data frames
+
+* Additional annotation data frames are constructed for easier plotting.
+
+```{r}
+#spleen
+spvc.qstat.scat.filt.ann<-spvc.qstat.scat.filt%>%
+  mutate(
+    label.col = case_when(
+      GeneSymbol %in% supp.sig ~ "black",
+      GeneSymbol %in% replication.sig ~ "magenta3",
+      GeneSymbol %in% ifn.res.spc.sig ~ "green4",
+      GeneSymbol %in% tnf.bind.r.sig ~ "deeppink"
+    ),
+    goi.cat = case_when(
+      logFC >= 0 & FDR < 0.05 ~ paste0("up in GvHD (",as.character(nrow(spvc.qstat.scat.filt.UP)),")"),
+      logFC <= 0 & FDR < 0.05 ~ paste0("down in GvHD (",as.character(nrow(spvc.qstat.scat.filt.DN)),")"),
+      TRUE ~ "non DE")
+  )
+spvc.qstat.scat.filt.ann.label<-spvc.qstat.scat.filt.ann[!is.na(spvc.qstat.scat.filt.ann$label.col),]
+
+#liver
+lpvc.qstat.scat.filt.ann<-lpvc.qstat.scat.filt%>%
+  mutate(
+    label.col = case_when(
+      GeneSymbol %in% supp.sig ~ "black",
+      GeneSymbol %in% ifn.res.lpc.sig ~ "green4",
+      GeneSymbol %in% th17.diff.sig ~ "dodgerblue"
+    ),
+    goi.cat = case_when(
+      logFC >= 0 & FDR < 0.05 ~ paste0("up in GvHD (",as.character(nrow(lpvc.qstat.scat.filt.UP)),")"),
+      logFC <= 0 & FDR < 0.05 ~ paste0("down in GvHD (",as.character(nrow(lpvc.qstat.scat.filt.DN)),")"),
+      TRUE ~ "non DE")
+  )
+lpvc.qstat.scat.filt.ann.label<-lpvc.qstat.scat.filt.ann[!is.na(lpvc.qstat.scat.filt.ann$label.col),]
+
+#colon
+cpvc.qstat.scat.filt.ann<-cpvc.qstat.scat.filt%>%
+  mutate(
+    label.col = case_when(
+      GeneSymbol %in% supp.sig ~ "black",
+      GeneSymbol %in% tcell.diff.sig ~ "sienna"
+    ),
+    goi.cat = case_when(
+      logFC >= 0 & FDR < 0.05 ~ paste0("up in GvHD (",as.character(nrow(cpvc.qstat.scat.filt.UP)),")"),
+      logFC <= 0 & FDR < 0.05 ~ paste0("down in GvHD (",as.character(nrow(cpvc.qstat.scat.filt.DN)),")"),
+      TRUE ~ "non DE")
+  )
+cpvc.qstat.scat.filt.ann.label<-cpvc.qstat.scat.filt.ann[!is.na(cpvc.qstat.scat.filt.ann$label.col),]
 ```
 
 
 ### Spleen Scatterplot with GOI hightlighted (Figure 4a)
-* Hereafter, the scatter plot for spleen samples is generated and plotted. 
-```{r, fig.height=2.6, fig.width=2.2, warning=FALSE}
-spc.scat.spleen <- ggplot(spc.cp.qstat.scat.filt) + 
+* Hereafter, the scatter plot for spleen samples is generated and plotted.
+* black: supp.sig, purple: repl., green: ifn.I.response, pink: tnf.bind.r.sig
+```{r, fig.height=2.6, fig.width=4.2, warning=FALSE}
+length(which(metad.spc$appl =="prc"))
+length(which(metad.spc$appl =="pro"))
+spvc.scat <- ggplot(spvc.qstat.scat.filt) + 
   aes(x=logCPMprc, y=logCPMpro) +
   scale_x_continuous(limits = c(-1,16),
                      breaks = c(0,3,6,9,12,15),
@@ -581,76 +650,33 @@ spc.scat.spleen <- ggplot(spc.cp.qstat.scat.filt) +
                         maxColorValue = 255), 
              shape=16, 
              size = .375) +
-  geom_point(data = spc.cp.qstat.scat.filt.DN, 
-             aes(x=logCPMprc, y=logCPMpro), 
-             colour="deeppink", 
-             shape=16, 
-             size = .5, 
+  geom_point(data=filter(spvc.qstat.scat.filt.ann, goi.cat != "non DE"),
+             aes(y=logCPMpro, x=logCPMprc, color=goi.cat), 
+             shape=16,
+             size = .5,
              alpha=.75) +
-  geom_point(data = spc.cp.qstat.scat.filt.UP, 
-             aes(x=logCPMprc, y=logCPMpro), 
-             colour="magenta", 
-             shape=16, 
-             size = .5, 
-             alpha=.75) +
-  geom_text_repel(data = subset(spc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% supp.sig),aes(label=GeneSymbol),
-                  force = 50, 
-                  force_pull = 1, 
-                  size=2, 
-                  min.segment.length=0, 
-                  segment.size=0.15, 
-                  point.padding=unit(0.00,"cm"),
-                  box.padding=unit(0.1,"cm"), 
-                  max.overlaps = 25,
-                  color = "black",
-                  direction = "both", 
-                  fontface="italic") +
- geom_text_repel(data = subset(spc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% replication.sig),aes(label=GeneSymbol),
-                 force = 50, 
-                 force_pull = 1, 
-                 size=2, 
-                 min.segment.length=0, 
-                 segment.size=0.15, 
-                 point.padding=unit(0.00,"cm"),
-                 box.padding=unit(0.1,"cm"), max.overlaps = 25,
-                 color = "magenta3", 
-                 nudge_x = -8,
-                 direction = "both", 
-                 fontface="italic") +
- geom_text_repel(data = subset(spc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% ifn.res.spc.sig),aes(label=GeneSymbol),
-                 force = 50, 
-                 force_pull = 1, 
-                 size=2, 
-                 min.segment.length=0,
-                 segment.size=0.15, 
-                 point.padding=unit(0.00,"cm"),
-                 box.padding=unit(0.1,"cm"), 
-                 max.overlaps = 25,
-                 color = "green4",   
-                 nudge_x = -1,
-                 nudge_y = 8,
-                 direction = "both", 
-                 fontface="italic") +
- geom_text_repel(data = subset(spc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% tnf.bind.r.sig),aes(label=GeneSymbol),
-                 force = 50, 
-                 force_pull = 1, 
-                 size=2, min.segment.length=0,
-                 segment.size=0.15, 
-                 point.padding=unit(0.00,"cm"),
-                 box.padding=unit(0.1,"cm"), 
-                 max.overlaps = 25,
-                 color = "deeppink", 
-                 nudge_x = 4,
-                 direction = "both", 
-                 fontface="italic") +
-  ggtitle(label = "DEGs pro. vs. ctrl.BMT", subtitle = "spl. re-iso. Treg, black: supp.sig, purple: repl. \ngreen: ifn.I.response, pink: tnf.bind.r.sig") +
-  ylab(bquote(log[2]~CPM ~"("*GvHD*")"))+
-  xlab(bquote(log[2]~CPM ~"("*no~GvHD*")"))+
-  theme(plot.title = element_text(size = 10, face = "bold"),
+  scale_color_manual(name = "Significant DEGs",
+                     values = c("deeppink","magenta"),
+                     guide = guide_legend(override.aes = list(size = 3)))+
+  geom_text_repel(data = spvc.qstat.scat.filt.ann.label,
+                  aes(label=GeneSymbol, color = ann.col),
+                  seed = 42,
+                  direction = "both",
+                  force = 500,
+                  force_pull = 0,
+                  size=1.66,
+                  min.segment.length=0.0,
+                  segment.size=0.15,
+                  segment.color = spvc.qstat.scat.filt.ann.label$label.col,
+                  color = spvc.qstat.scat.filt.ann.label$label.col,
+                  max.overlaps = 30,
+                  point.padding = 0.0,
+                  fontface="italic")+
+  ggtitle(label = "spleen, re-isolated Treg") +
+  #xlab(bquote(log[2]~CPM ~poly~Treg*" (n = 35)"))+
+  ylab(bquote(log[2]~CPM ~GvHD*" (n=12)"))+
+  xlab(bquote(log[2]~CPM ~no~GvHD*" (n=12)"))+
+  theme(plot.title = element_text(size = 10, face = "bold",colour = "deeppink4"),
         plot.subtitle = element_text(size = 6, face = "bold"),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(size = 6, colour = "black"), #,angle = 90
@@ -661,22 +687,27 @@ spc.scat.spleen <- ggplot(spc.cp.qstat.scat.filt) +
         plot.background = element_rect(fill="white",colour = "white"),
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())
-spc.scat.spleen
+        panel.grid.minor = element_blank(),
+        legend.key = element_blank(),
+        aspect.ratio = 1)
+spvc.scat
 ```
 
 * The scatterplot is also exported into the figure directory.  
 
 ```{r, warning=FALSE}
-pdf(file="./FIGDIR/Figure4a_TregDGEScatter_GvHD.vs.noGvHD_spleen.SuppressionSignature.pdf", height=2.6, width=2.2)
-spc.scat.spleen
+pdf(file="./FIGDIR/Figure4a_TregDGEScatter_GvHD.vs.noGvHD_spleen.SuppressionSignature.pdf", height=2.6, width=4.2)
+spvc.scat
 dev.off()
 ```
 
 ### Liver Scatterplot with GOI highlighted (Figure 4 b)
-* Hereafter, the scatter plot for liver samples is generated and plotted.  
-```{r, fig.height=2.6, fig.width=2.2, warning=FALSE}
-lpc.scat.liver <- ggplot(lpc.cp.qstat.scat.filt) + 
+* Hereafter, the scatter plot for liver samples is generated and plotted.
+* black: supp.sig, green: ifn.I.response, blue: th17.diff.sig
+```{r, fig.height=2.6, fig.width=4.2, warning=FALSE}
+length(which(metad.lpc$appl =="prc"))
+length(which(metad.lpc$appl =="pro"))
+lpvc.scat <- ggplot(lpvc.qstat.scat.filt) + 
   aes(x=logCPMprc, y=logCPMpro) +
   scale_x_continuous(limits = c(-1,16),
                      breaks = c(0,3,6,9,12,15),
@@ -686,68 +717,36 @@ lpc.scat.liver <- ggplot(lpc.cp.qstat.scat.filt) +
                      breaks = c(0,3,6,9,12,15),
                      expand = c(0,0)
                      )+
-  geom_point(colour=rgb(50,50,50,30,maxColorValue = 255), 
+  geom_point(colour=rgb(50,50,50,30,
+                        maxColorValue = 255), 
              shape=16, 
              size = .375) +
-  geom_point(data = lpc.cp.qstat.scat.filt.DN, 
-             aes(x=logCPMprc, y=logCPMpro), 
-             colour="dodgerblue", 
-             shape=16, 
-             size = .5, 
+  geom_point(data=filter(lpvc.qstat.scat.filt.ann, goi.cat != "non DE"),
+             aes(y=logCPMpro, x=logCPMprc, color=goi.cat), 
+             shape=16,
+             size = .5,
              alpha=.75) +
-  geom_point(data = lpc.cp.qstat.scat.filt.UP, 
-             aes(x=logCPMprc, y=logCPMpro), 
-             colour="steelblue", 
-             shape=16, 
-             size = .5, 
-             alpha=.75) +
-  geom_text_repel(data = subset(lpc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% supp.sig),aes(label=GeneSymbol),
-                  force = 50, 
-                  force_pull = 1, 
-                  size=2, 
-                  min.segment.length=0, 
-                  segment.size=0.15, 
-                  point.padding=unit(0.00,"cm"),
-                  box.padding=unit(0.1,"cm"), 
-                  max.overlaps = 25,
-                  color = "black",
-                  direction = "both", 
-                  fontface="italic") +
-  geom_text_repel(data = subset(lpc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% ifn.res.lpc.sig),aes(label=GeneSymbol),
-                  force = 50, 
-                  force_pull = 1, 
-                  size=2, 
-                  min.segment.length=0, 
-                  segment.size=0.15, 
-                  point.padding=unit(0.00,"cm"),
-                  box.padding=unit(0.1,"cm"), 
-                  max.overlaps = 25,
-                  color = "green4",   
-                  nudge_x = -4,
-                  nudge_y = 2,
-                  direction = "both", 
-                  fontface="italic") +
- geom_text_repel(data = subset(lpc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% th17.diff.sig),aes(label=GeneSymbol),
-                  force = 50, 
-                 force_pull = 1, 
-                 size=2, 
-                 min.segment.length=0, 
-                 segment.size=0.15, 
-                 point.padding=unit(0.00,"cm"),
-                 box.padding=unit(0.1,"cm"), 
-                 max.overlaps = 25,
-                 color = "steelblue", 
-                 nudge_x = 4,
-                 nudge_y = -1,
-                 direction = "both", 
-                 fontface="italic") +
-  ggtitle(label = "DEGs pro. vs. ctrl. BMT", subtitle = "liver re-isolated Treg, black: supp.sig \ngreen: ifn.I.response, blue: th17.diff.sig") +
-  ylab(bquote(log[2]~CPM ~"("*GvHD*")"))+
-  xlab(bquote(log[2]~CPM ~"("*no~GvHD*")"))+
-  theme(plot.title = element_text(size = 10, face = "bold"),
+  scale_color_manual(name = "Significant DEGs",
+                     values = c("dodgerblue","steelblue"),
+                     guide = guide_legend(override.aes = list(size = 3)))+
+  geom_text_repel(data = lpvc.qstat.scat.filt.ann.label,
+                  aes(label=GeneSymbol, color = ann.col),
+                  seed = 42,
+                  direction = "both",
+                  force = 500,
+                  force_pull = 0,
+                  size=1.66,
+                  min.segment.length=0.0,
+                  segment.size=0.15,
+                  segment.color = lpvc.qstat.scat.filt.ann.label$label.col,
+                  color = lpvc.qstat.scat.filt.ann.label$label.col,
+                  max.overlaps = 30,
+                  point.padding = 0.0,
+                  fontface="italic")+
+  ggtitle(label = "liver, re-isolated Treg") +
+  ylab(bquote(log[2]~CPM ~GvHD*" (n=11)"))+
+  xlab(bquote(log[2]~CPM ~no~GvHD*" (n=12)"))+
+  theme(plot.title = element_text(size = 10, face = "bold",colour = "steelblue4"),
         plot.subtitle = element_text(size = 6, face = "bold"),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(size = 6, colour = "black"), #,angle = 90
@@ -758,22 +757,27 @@ lpc.scat.liver <- ggplot(lpc.cp.qstat.scat.filt) +
         plot.background = element_rect(fill="white",colour = "white"),
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())
-lpc.scat.liver  
+        panel.grid.minor = element_blank(),
+        legend.key = element_blank(),
+        aspect.ratio = 1)
+lpvc.scat
 ```
 
 * The scatterplot is also exported into the figure directory.  
 
 ```{r, warning=FALSE}
-pdf(file="./FIGDIR/Figure4b_TregDGEScatter_GvHD.vs.noGvHD_liver.SuppressionSignature.pdf", height=2.6, width=2.2)
-lpc.scat.liver
+pdf(file="./FIGDIR/Figure4b_TregDGEScatter_GvHD.vs.noGvHD_liver.SuppressionSignature.pdf", height=2.6, width=4.2)
+lpvc.scat
 dev.off()
 ```
 
 ### Colon Scatterplot with GOI highlighted (Figure 4 c)
-* Hereafter, the scatter plot for colon samples is generated and plotted.  
-```{r, fig.height=2.6, fig.width=2.2}
-cpc.scat.colon <- ggplot(cpc.cp.qstat.scat.filt) + 
+* Hereafter, the scatter plot for colon samples is generated and plotted.
+* black: supp.sig, brown: tcell.diff.sig
+```{r, fig.height=2.6, fig.width=4.2, warning=FALSE}
+length(which(metad.cpc$appl =="prc"))
+length(which(metad.cpc$appl =="pro"))
+cpvc.scat <- ggplot(cpvc.qstat.scat.filt) + 
   aes(x=logCPMprc, y=logCPMpro) +
   scale_x_continuous(limits = c(-1,16),
                      breaks = c(0,3,6,9,12,15),
@@ -783,56 +787,36 @@ cpc.scat.colon <- ggplot(cpc.cp.qstat.scat.filt) +
                      breaks = c(0,3,6,9,12,15),
                      expand = c(0,0)
                      )+
-  geom_point(colour = rgb(50,50,50,30,
-                          maxColorValue = 255), 
+  geom_point(colour=rgb(50,50,50,30,
+                        maxColorValue = 255), 
              shape=16, 
              size = .375) +
-  geom_point(data = cpc.cp.qstat.scat.filt.DN, 
-             aes(x=logCPMprc, y=logCPMpro), 
-             colour="chocolate3", 
-             shape=16, 
-             size = .5, 
+  geom_point(data=filter(cpvc.qstat.scat.filt.ann, goi.cat != "non DE"),
+             aes(y=logCPMpro, x=logCPMprc, color=goi.cat), 
+             shape=16,
+             size = .5,
              alpha=.75) +
-  geom_point(data = cpc.cp.qstat.scat.filt.UP, 
-             aes(x=logCPMprc, y=logCPMpro), 
-             colour="sienna", 
-             shape=16, 
-             size = .5, 
-             alpha=.75) +
-  geom_text_repel(data = subset(cpc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% supp.sig),aes(label=GeneSymbol),
-                  force = 50, 
-                  force_pull = 1, 
-                  size=2, 
-                  min.segment.length=0, 
-                  segment.size=0.15, 
-                  point.padding=unit(0.00,"cm"),
-                  box.padding=unit(0.1,"cm"), 
-                  max.overlaps = 25,
-                  color = "black",
-                  nudge_x = -2,
-                  nudge_y = 2,
-                  direction = "both", 
-                  fontface="italic") +
-  geom_text_repel(data = subset(cpc.cp.qstat.scat.filt, direction = "both",
-                                GeneSymbol %in% tcell.diff.sig),aes(label=GeneSymbol),
-                  force = 50, 
-                  force_pull = 1, 
-                  size=2, 
-                  min.segment.length=0,
-                  segment.size=0.15, 
-                  point.padding=unit(0.00,"cm"),
-                  box.padding=unit(0.1,"cm"), 
-                  max.overlaps = 25,
-                  color = "sienna", 
-                  nudge_x = 4,
-                  nudge_y = -1,
-                  direction = "both", 
-                  fontface="italic") +
-  ggtitle(label = "DEGs pro. vs. ctrl. BMT", subtitle = "colon re-isolated Treg \nblack:supp.sig, brown: tcell.diff.sig") +
-  ylab(bquote(log[2]~CPM ~"("*GvHD*")"))+
-  xlab(bquote(log[2]~CPM ~"("*no~GvHD*")"))+
-  theme(plot.title = element_text(size = 10, face = "bold"),
+  scale_color_manual(name = "Significant DEGs",
+                     values = c("chocolate3","sienna"),
+                     guide = guide_legend(override.aes = list(size = 3)))+
+  geom_text_repel(data = cpvc.qstat.scat.filt.ann.label,
+                  aes(label=GeneSymbol, color = ann.col),
+                  seed = 42,
+                  direction = "both",
+                  force = 500,
+                  force_pull = 0,
+                  size=1.66,
+                  min.segment.length=0.0,
+                  segment.size=0.15,
+                  segment.color = cpvc.qstat.scat.filt.ann.label$label.col,
+                  color = cpvc.qstat.scat.filt.ann.label$label.col,
+                  max.overlaps = 30,
+                  point.padding = 0.0,
+                  fontface="italic")+
+  ggtitle(label = "colon, re-isolated Treg") +
+  ylab(bquote(log[2]~CPM ~GvHD*" (n=12)"))+
+  xlab(bquote(log[2]~CPM ~no~GvHD*" (n=12)"))+
+  theme(plot.title = element_text(size = 10, face = "bold",colour = "sienna4"),
         plot.subtitle = element_text(size = 6, face = "bold"),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(size = 6, colour = "black"), #,angle = 90
@@ -843,15 +827,17 @@ cpc.scat.colon <- ggplot(cpc.cp.qstat.scat.filt) +
         plot.background = element_rect(fill="white",colour = "white"),
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())
-cpc.scat.colon
-```  
+        panel.grid.minor = element_blank(),
+        legend.key = element_blank(),
+        aspect.ratio = 1)
+cpvc.scat
+```
 
 * The scatterplot is also exported into the figure directory.  
 
-```{r}
-pdf(file="./FIGDIR/Figure4c_TregDGEScatter_GvHD.vs.noGvHD_colon.SuppressionSignature.pdf", height=2.6, width=2.2)
-cpc.scat.colon
+```{r, warning=FALSE}
+pdf(file="./FIGDIR/Figure4c_TregDGEScatter_GvHD.vs.noGvHD_colon.SuppressionSignature.pdf", height=2.6, width=4.2)
+cpvc.scat
 dev.off()
 ```
 
@@ -868,21 +854,28 @@ dev.off()
 * GSEA is performed using the "camera.DGEList" function on the DGEList object with the index and contrast specified previously.  
 ```{r}
 # hallmark
-Mm.H <- readRDS(url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.h.all.v7.1.entrez.rds"))
+Mm.H <- readRDS(
+  url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.h.all.v7.1.entrez.rds"))
 #Colon
 H.ind.cpc <- ids2indices(Mm.H, id=dgel.cpc$genes$EntrezID)
 # GSEA
-gst.cpc.camera.hall <- camera.DGEList(dgel.cpc,index=H.ind.cpc,design=cpc.design.dge,contrast=cpc.cp.con,inter.gene.cor=0.05)
+gst.cpc.camera.hall <- camera.DGEList(
+  dgel.cpc,index=H.ind.cpc,design=cpc.design.dge,
+  contrast=cpvc.con,inter.gene.cor=0.05)
 gst.cpc.camera.hall
 # Liver
 H.ind.lpc <- ids2indices(Mm.H, id=dgel.lpc$genes$EntrezID)
 # GSEA
-gst.lpc.camera.hall <- camera.DGEList(dgel.lpc,index=H.ind.lpc,design=lpc.design.dge,contrast=lpc.cp.con,inter.gene.cor=0.05)
+gst.lpc.camera.hall <- camera.DGEList(
+  dgel.lpc,index=H.ind.lpc,design=lpc.design.dge,
+  contrast=lpvc.con,inter.gene.cor=0.05)
 gst.lpc.camera.hall
 # Spleen
 H.ind.spc <- ids2indices(Mm.H, id=dgel.spc$genes$EntrezID)
 # GSEA
-gst.spc.camera.hall <- camera.DGEList(dgel.spc,index=H.ind.spc,design=spc.design.dge,contrast=spc.cp.con,inter.gene.cor=0.05)
+gst.spc.camera.hall <- camera.DGEList(
+  dgel.spc,index=H.ind.spc,design=spc.design.dge,
+  contrast=spvc.con,inter.gene.cor=0.05)
 gst.spc.camera.hall
 ```
 * Analogous retrieval of Kegg gene sets and index generation.
@@ -893,17 +886,17 @@ Mm.K <- readRDS(url("http://bioinf.wehi.edu.au/MSigDB/v7.1/Mm.c2.cp.kegg.v7.1.en
 # Colon
 K.ind.cpc <- ids2indices(Mm.K, id=dgel.cpc$genes$EntrezID)
 # GSEA
-gst.cpc.camera.kegg <- camera.DGEList(dgel.cpc,index=K.ind.cpc,design=cpc.design.dge,contrast=cpc.cp.con,inter.gene.cor=0.05)
+gst.cpc.camera.kegg <- camera.DGEList(dgel.cpc,index=K.ind.cpc,design=cpc.design.dge,contrast=cpvc.con,inter.gene.cor=0.05)
 gst.cpc.camera.kegg
 # Liver
 K.ind.lpc <- ids2indices(Mm.K, id=dgel.lpc$genes$EntrezID)
 # GSEA
-gst.lpc.camera.kegg <- camera.DGEList(dgel.lpc,index=K.ind.lpc,design=lpc.design.dge,contrast=lpc.cp.con,inter.gene.cor=0.05)
+gst.lpc.camera.kegg <- camera.DGEList(dgel.lpc,index=K.ind.lpc,design=lpc.design.dge,contrast=lpvc.con,inter.gene.cor=0.05)
 gst.lpc.camera.kegg
 # Spleen
 K.ind.spc <- ids2indices(Mm.K, id=dgel.spc$genes$EntrezID)
 # GSEA
-gst.spc.camera.kegg <- camera.DGEList(dgel.spc,index=K.ind.spc,design=spc.design.dge,contrast=spc.cp.con,inter.gene.cor=0.05)
+gst.spc.camera.kegg <- camera.DGEList(dgel.spc,index=K.ind.spc,design=spc.design.dge,contrast=spvc.con,inter.gene.cor=0.05)
 gst.spc.camera.kegg
 ```
 
@@ -911,232 +904,262 @@ gst.spc.camera.kegg
 ### HALLMARK_INTERFERON_ALPHA_RESPONSE (Supplementary Figure 4 a)
 * Barcode plots representing the results for all three tissues.
 * Colon, Liver and Spleen:  
-```{r}
+```{r, fig.height=3.2, fig.width=6}
 # Colon
-barcodeplot(cpc.cp.res$table$logFC, 
+cpc.bc.IFNA.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(cpvc.res$table$logFC, 
             index=H.ind.cpc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
             xlab = bquote(log[2]*"FC"),
             labels = c("up in Control BMT","GvHD colon"),
             col.bars = "sienna")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
-text(-5,3.1,expression(n.s.), adj = c(0,.5))
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.cpc.camera.hall["HALLMARK_INTERFERON_ALPHA_RESPONSE",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.cpc.camera.hall["HALLMARK_INTERFERON_ALPHA_RESPONSE",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+cpc.bc.IFNA.pryr
+
 # Liver
-barcodeplot(lpc.cp.res$table$logFC, 
+lpc.bc.IFNA.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(lpvc.res$table$logFC, 
             index=H.ind.lpc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
             xlab = bquote(log[2]*"FC"),
             labels = c("up in Control BMT","GvHD liver"),
             col.bars = "dodgerblue")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
-text(-5,3.1,expression(""*italic(P)[adj.]~"< 1.1x10"^-4), adj = c(0,.5))
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.lpc.camera.hall["HALLMARK_INTERFERON_ALPHA_RESPONSE",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.lpc.camera.hall["HALLMARK_INTERFERON_ALPHA_RESPONSE",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+lpc.bc.IFNA.pryr
 # Spleen
-barcodeplot(spc.cp.res$table$logFC, 
+spc.bc.IFNA.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(spvc.res$table$logFC, 
             index=H.ind.spc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
             xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD spleen"),
+            labels = c("up in Control BMT","GvHD liver"),
             col.bars = "deeppink")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
-text(-5,3.1,expression(""*italic(P)[adj.]~"< 1.2x10"^-4), adj = c(0,.5))
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.spc.camera.hall["HALLMARK_INTERFERON_ALPHA_RESPONSE",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.spc.camera.hall["HALLMARK_INTERFERON_ALPHA_RESPONSE",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+spc.bc.IFNA.pryr
 ```
-* All three barplots are exported into one 3 paged .pdf file, hereafter.  
+* All three barplots are exported into the figure directory, hereafter.
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.cls_Hallmark_IFNA.pdf", height=3.2, width=6)
-# Colon
-barcodeplot(cpc.cp.res$table$logFC, 
-            index=H.ind.cpc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD colon"),
-            col.bars = "sienna")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
-text(-5,3.1,expression(n.s.), adj = c(0,.5))
-# Liver
-barcodeplot(lpc.cp.res$table$logFC, 
-            index=H.ind.lpc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD liver"),
-            col.bars = "dodgerblue")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
-text(-5,3.1,expression(""*italic(P)[adj.]~"< 1.1x10"^-4), adj = c(0,.5))
-# Spleen
-barcodeplot(spc.cp.res$table$logFC, 
-            index=H.ind.spc[["HALLMARK_INTERFERON_ALPHA_RESPONSE"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD spleen"),
-            col.bars = "deeppink")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_INTERFERON_ALPHA_RESPONSE", adj = c(0,.5))
-text(-5,3.1,expression(""*italic(P)[adj.]~"< 1.2x10"^-4), adj = c(0,.5))
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.colon_Hallmark_IFNA.pdf", height=3.2, width=6)
+cpc.bc.IFNA.pryr
+dev.off()
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.liver_Hallmark_IFNA.pdf", height=3.2, width=6)
+lpc.bc.IFNA.pryr
+dev.off()
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.spleen_Hallmark_IFNA.pdf", height=3.2, width=6)
+spc.bc.IFNA.pryr
 dev.off()
 ```
 
 ### HALLMARK_TNFA_SIGNALING_VIA_NFKB (Supplementary Figure 4 b)
 * Barcode plots representing the results for all three tissues.
 * Colon, Liver and Spleen:  
-```{r}
+```{r, fig.height=3.2, fig.width=6}
 # Colon
-barcodeplot(cpc.cp.res$table$logFC, 
+cpc.bc.TNFA.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(cpvc.res$table$logFC, 
             index=H.ind.cpc[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
             xlab = bquote(log[2]*"FC"),
             labels = c("up in Control BMT","GvHD colon"),
             col.bars = "sienna")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
-text(-5,3.1,expression(n.s.), adj = c(0,.5))
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.cpc.camera.hall["HALLMARK_TNFA_SIGNALING_VIA_NFKB",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.cpc.camera.hall["HALLMARK_TNFA_SIGNALING_VIA_NFKB",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+cpc.bc.TNFA.pryr
+
 # Liver
-barcodeplot(lpc.cp.res$table$logFC, 
+lpc.bc.TNFA.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(lpvc.res$table$logFC, 
             index=H.ind.lpc[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
             xlab = bquote(log[2]*"FC"),
             labels = c("up in Control BMT","GvHD liver"),
             col.bars = "dodgerblue")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
-text(5,3.1,expression(""*italic(P)[adj.]~"< 1.7x10"^-4), adj = c(1,.5))
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.lpc.camera.hall["HALLMARK_TNFA_SIGNALING_VIA_NFKB",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.lpc.camera.hall["HALLMARK_TNFA_SIGNALING_VIA_NFKB",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+lpc.bc.TNFA.pryr
 # Spleen
-barcodeplot(spc.cp.res$table$logFC, 
+spc.bc.TNFA.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(spvc.res$table$logFC, 
             index=H.ind.spc[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
             xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD spleen"),
+            labels = c("up in Control BMT","GvHD liver"),
             col.bars = "deeppink")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
-text(-5,3.1,expression(n.s.), adj = c(0,.5))
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.spc.camera.hall["HALLMARK_TNFA_SIGNALING_VIA_NFKB",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.spc.camera.hall["HALLMARK_TNFA_SIGNALING_VIA_NFKB",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+spc.bc.TNFA.pryr
 ```
-* All three barplots are exported into one 3 paged .pdf file, hereafter.  
+* All three barplots are exported into the figure directory, hereafter.
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure4b_Barcodeplot_pvc.cls_Hallmark_TNFA.pdf", height=3.2, width=6)
-# Colon
-barcodeplot(cpc.cp.res$table$logFC, 
-            index=H.ind.cpc[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD colon"),
-            col.bars = "sienna")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
-text(-5,3.1,expression(n.s.), adj = c(0,.5))
-# Liver
-barcodeplot(lpc.cp.res$table$logFC, 
-            index=H.ind.lpc[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD liver"),
-            col.bars = "dodgerblue")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
-text(5,3.1,expression(""*italic(P)[adj.]~"< 1.6x10"^-4), adj = c(1,.5))
-# Spleen
-barcodeplot(spc.cp.res$table$logFC, 
-            index=H.ind.spc[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD spleen"),
-            col.bars = "deeppink")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"HALLMARK_TNFA_SIGNALING_VIA_NFKB", adj = c(0,.5))
-text(-5,3.1,expression(n.s.), adj = c(0,.5))
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.colon_Hallmark_TNFA.pdf", height=3.2, width=6)
+cpc.bc.TNFA.pryr
+dev.off()
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.liver_Hallmark_TNFA.pdf", height=3.2, width=6)
+lpc.bc.TNFA.pryr
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.spleen_Hallmark_TNFA.pdf", height=3.2, width=6)
+spc.bc.TNFA.pryr
 dev.off()
 ```
 
 ### KEGG_DNA_REPLICATION (Supplementary Figure 4 c)
 * Barcode plots representing the results for all three tissues.
 * Colon, Liver and Spleen:  
-```{r}
+```{r, fig.height=3.2, fig.width=6}
 # Colon
-barcodeplot(cpc.cp.res$table$logFC, 
+cpc.bc.KREP.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(cpvc.res$table$logFC, 
             index=K.ind.cpc[["KEGG_DNA_REPLICATION"]], 
             xlab = bquote(log[2]*"FC"),
             labels = c("up in Control BMT","GvHD colon"),
             col.bars = "sienna")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
-text(-5,3.1,expression(n.s.), adj = c(0,.5))
-# Liver
-barcodeplot(lpc.cp.res$table$logFC, 
-            index=K.ind.lpc[["KEGG_DNA_REPLICATION"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD liver"),
-            col.bars = "dodgerblue")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
-text(-5,3.1,expression(""*italic(P)[adj.]~"< 0.013"), adj = c(0,.5))
-# Spleen
-barcodeplot(spc.cp.res$table$logFC, 
-            index=K.ind.spc[["KEGG_DNA_REPLICATION"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD spleen"),
-            col.bars = "deeppink")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
-text(-5,3.1,expression(""*italic(P)[adj.]~"adj.< 5.7x10"^-9), adj = c(0,.5))
-```
-* All three barcode plots are exported into one 3 paged .pdf file, hereafter.  
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.cpc.camera.kegg["KEGG_DNA_REPLICATION",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.cpc.camera.kegg["KEGG_DNA_REPLICATION",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+cpc.bc.KREP.pryr
 
-```{r}
-pdf(file="./FIGDIR/SupplementaryFigure4c_Barcodeplot_pvc.cls_Kegg_DNAReplication.pdf", height=3.2, width=6)
-# Colon
-barcodeplot(cpc.cp.res$table$logFC, 
-            index=K.ind.cpc[["KEGG_DNA_REPLICATION"]], 
-            xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD colon"),
-            col.bars = "sienna")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
-text(-5,3.1,expression(n.s.), adj = c(0,.5))
 # Liver
-barcodeplot(lpc.cp.res$table$logFC, 
+lpc.bc.KREP.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(lpvc.res$table$logFC, 
             index=K.ind.lpc[["KEGG_DNA_REPLICATION"]], 
             xlab = bquote(log[2]*"FC"),
             labels = c("up in Control BMT","GvHD liver"),
             col.bars = "dodgerblue")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
-text(-5,3.1,expression(""*italic(P)[adj.]~"< 0.013"), adj = c(0,.5))
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.lpc.camera.kegg["KEGG_DNA_REPLICATION",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.lpc.camera.kegg["KEGG_DNA_REPLICATION",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+lpc.bc.KREP.pryr
 # Spleen
-barcodeplot(spc.cp.res$table$logFC, 
+spc.bc.KREP.pryr %<a-% {
+  par(mar=c(4.1,2.1,0.1,0.1))
+  barcodeplot(spvc.res$table$logFC, 
             index=K.ind.spc[["KEGG_DNA_REPLICATION"]], 
             xlab = bquote(log[2]*"FC"),
-            labels = c("up in Control BMT","GvHD spleen"),
+            labels = c("up in Control BMT","GvHD liver"),
             col.bars = "deeppink")
-par(new=TRUE)
-plot.new( )
-plot.window( xlim=c(-5,5), ylim=c(-5,5) )
-text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
-text(-5,3.1,expression(""*italic(P)[adj.]~"adj.< 5.7x10"^-9), adj = c(0,.5))
+  par(new=TRUE)
+  plot.new( )
+  plot.window( xlim=c(-5,5), ylim=c(-5,5) )
+  text(-5,4.8,"KEGG_DNA_REPLICATION", adj = c(0,.5))
+  text(c(-5,-3.75),c(3.4,3.5),
+     c(expression(italic(P)["adj."]*"<"),
+       scientific_10x(
+         plyr::round_any(
+           x = gst.spc.camera.kegg["KEGG_DNA_REPLICATION",]$FDR,
+           accuracy = 10^(ceiling(
+             log10(gst.spc.camera.kegg["KEGG_DNA_REPLICATION",]$FDR))-2),
+           f = ceiling),
+         digits = 1)), adj = c(0,.5))
+}
+spc.bc.KREP.pryr
+```
+* All three barplots are exported into the figure directory, hereafter.
+```{r}
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.colon_Hallmark_KeggREP.pdf", height=3.2, width=6)
+cpc.bc.KREP.pryr
+dev.off()
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.liver_Hallmark_KeggREP.pdf", height=3.2, width=6)
+lpc.bc.KREP.pryr
+pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.spleen_Hallmark_KeggREP.pdf", height=3.2, width=6)
+spc.bc.KREP.pryr
 dev.off()
 ```
 
