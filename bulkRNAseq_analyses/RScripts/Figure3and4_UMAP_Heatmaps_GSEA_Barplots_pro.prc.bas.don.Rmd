@@ -399,28 +399,19 @@ dev.off()
 * Also, levels are adjusted for the desired order of samples in the plots, hereafter.
 ```{r}
 #only setting and allo/poly or Sell+/-
-#appl.treat.pcbd<-factor(c(as.character(c(rep("d_a",6),rep("d_p",6))),
-                        #as.character(paste0(metad.pcbd$appl,"_",metad.pcbd$treat))[13:length(paste0(metad.pcbd$appl,"_",metad.pcbd$treat))]),
-#                       levels = #c("d_a","d_p","pro_a","pro_p","prc_a","prc_p","wt_neg","wt_pos"))
-#appl.treat.pcbd
-#only organ 
-#org.pcbd<-factor(as.character(metad.pcbd$org))
-#org.pcbd
-
-#only setting and allo/poly or Sell+/-
-appl.treat.pcbd<-metad.pcbd %>% 
+metad.pcbd<-metad.pcbd %>% 
   mutate(
     appl.treat=case_when(
     org == "d" ~ paste0(org,"_",treat),
     org != "d" ~paste0(appl,"_",treat)
   ))
-appl.treat.pcbd <- factor(appl.treat.pcbd$appl.treat)
-levels(appl.treat.pcbd) <- levels(appl.treat.pcbd)[c(1,2,7,8,5,6,3,4,9,10)]
+appl.treat.pcbd <- factor(appl.treat.pcbd$appl.treat, 
+                          levels = c("d_a","d_p","pro_a","pro_p","prc_a","prc_p","wt_neg","wt_pos"))
+
 appl.treat.pcbd
 #only organ 
 org.pcbd<-factor(as.character(metad.pcbd$org))
 org.pcbd
-
 ```
 
 ## Transposed Individual Observations and Annotation
@@ -451,9 +442,9 @@ tail(pcbd.log.rpkm.df.tp, n=4L)
 * Here, a quick consistency check is performed.
 ```{r}
 sum(pcbd.log.rpkm.df.tp$sample_ID == metad.pcbd$sample_ID)
-sum(pcbd.log.rpkm.df.tp$group == group.pcbd)
+sum(pcbd.log.rpkm.df.tp$group == metad.pcbd$grp)
 sum(pcbd.log.rpkm.df.tp$organ == metad.pcbd$org)
-sum(pcbd.log.rpkm.df.tp$appl.exp == appl.treat.pcbd)
+sum(pcbd.log.rpkm.df.tp$appl.exp == metad.pcbd$appl.treat)
 ```
 
 ## Reshaping with Melt
@@ -462,12 +453,14 @@ sum(pcbd.log.rpkm.df.tp$appl.exp == appl.treat.pcbd)
 * Also, we order the data frame alphabetically according to the gene symbol.
 ```{r}
 bar.df<-reshape2::melt(pcbd.log.rpkm.df.tp,
-                       value.name="LOG.2.RPKM")
-bar.df$variable<-as.character(bar.df$variable)
-colnames(bar.df)[7]<- "gene_symbol"
-bar.df.ord<-bar.df[order(as.character(bar.df$gene_symbol)),]
-bar.df<-bar.df.ord
-rm(bar.df.ord)
+                       value.name="LOG.2.RPKM") %>%
+  mutate(variable = as.character(variable)) %>%
+  rename(gene_symbol = variable) %>% arrange(gene_symbol)
+#bar.df$variable<-as.character(bar.df$variable)
+#colnames(bar.df)[7]<- "gene_symbol"
+#bar.df.ord<-bar.df[order(as.character(bar.df$gene_symbol)),]
+#bar.df<-bar.df.ord
+#rm(bar.df.ord)
 head(bar.df)
 ```
 ## Data Shift
@@ -589,7 +582,7 @@ bar.p.mod.avp.Penk<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Pe
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Penk
 ```
@@ -663,7 +656,7 @@ bar.p.mod.avp.Rbpj<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Rb
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Rbpj
 ```
@@ -738,7 +731,7 @@ bar.p.mod.avp.Lag3<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="La
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Lag3
 ```
@@ -813,7 +806,7 @@ bar.p.mod.avp.Gpld1<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="G
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Gpld1
 ```
@@ -916,7 +909,7 @@ bar.p.mod.avp.Penk.n<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Penk"
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Penk.n
 bar.p.mod.avp.Penk
@@ -982,7 +975,7 @@ bar.p.mod.avp.Trbv16<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Trbv1
         legend.position = "none",
         aspect.ratio = 1)+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Trbv16
 ```
@@ -1051,7 +1044,7 @@ bar.p.mod.avp.Nrn1<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Nrn1"),
         legend.position = "none",
         aspect.ratio = 1)+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Nrn1
 ```
@@ -1117,7 +1110,7 @@ bar.p.mod.avp.Nrgn<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Nrgn"),
         legend.position = "none",
         aspect.ratio = 1)+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Nrgn
 ```
@@ -1181,7 +1174,7 @@ bar.p.mod.avp.Ccdc184<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Ccdc
         legend.position = "none",
         aspect.ratio = 1)+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Ccdc184
 ```
@@ -1938,7 +1931,7 @@ bar.p.mod.supp.Gzmb<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2004,7 +1997,7 @@ bar.p.mod.supp.Il10<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2070,7 +2063,7 @@ bar.p.mod.supp.Gzma<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2136,7 +2129,7 @@ bar.p.mod.supp.Fasl<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2201,7 +2194,7 @@ bar.p.mod.supp.Prf1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2266,7 +2259,7 @@ bar.p.mod.supp.Ctla4<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2331,7 +2324,7 @@ bar.p.mod.supp.Entpd1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2396,7 +2389,7 @@ bar.p.mod.supp.Tgfb1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2461,7 +2454,7 @@ bar.p.mod.supp.Tgfb3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2526,7 +2519,7 @@ bar.p.mod.supp.Il2ra<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2591,7 +2584,7 @@ bar.p.mod.supp.Nt5e<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2656,7 +2649,7 @@ bar.p.mod.supp.Fgl2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2721,7 +2714,7 @@ bar.p.mod.supp.Ebi3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2788,7 +2781,7 @@ bar.p.mod.supp.Cd274<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
@@ -2853,7 +2846,7 @@ bar.p.mod.supp.Pdcd1lg2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symb
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
         legend.position = "none")+
   labs(x="Treg group", 
-       y = bquote(log[2]*"RPKM")) +
+       y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 ```
 
