@@ -43,7 +43,7 @@ p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
 p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=6.5, stackratio = 1, binwidth=.02) 
 p <- p + stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
 p <- p + scale_y_log10(breaks = c(1000,10000,100000,1000000,10000000),labels = trans_format("log10", math_format(10^.x)),expand = c(0, 0)) 
-p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90), text = element_text(size = 24))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), text = element_text(size = 24))
 p <- p + scale_fill_manual(values = c("gray","orange","darkorange","steelblue2","steelblue3"))
 p <- p + annotation_logticks(sides="l", short = unit(.25,"mm"), mid = unit(.5,"mm"),   long = unit(1,"mm"))  
 p <- p + labs(title="re-isolated Treg (GvHD)",x="organ", y = "cells per organ")
@@ -68,6 +68,8 @@ Treg.data$category <- factor(Treg.data$category,levels = c("organ_resident","all
 Treg.dataLiver <- Treg.data[ which(Treg.data$organ=='Liver' & (Treg.data$type=='GvHD' | Treg.data$type=='noGvHD')), ]
 Treg.dataColon <- Treg.data[ which(Treg.data$organ=='Colon' & (Treg.data$type=='GvHD' | Treg.data$type=='noGvHD')), ]
 Treg.dataSpleen <- Treg.data[ which(Treg.data$organ=='Spleen' & (Treg.data$type=='GvHD' | Treg.data$type=='noGvHD')), ]
+Treg.dataBM <- Treg.data[ which(Treg.data$organ=='BM' & (Treg.data$type=='GvHD')), ]
+Treg.datamLN <- Treg.data[ which(Treg.data$organ=='mLN' & (Treg.data$type=='GvHD')), ]
 ```
 
 ### liver Treg.data
@@ -76,23 +78,17 @@ Treg.dataSpleen <- Treg.data[ which(Treg.data$organ=='Spleen' & (Treg.data$type=
 leveneTest(count~category, data=Treg.dataLiver, center=mean)  # variance is significantly different 
 shapiro.test(Treg.dataLiver$count[1:6]) 						 # significantly different
 shapiro.test(Treg.dataLiver$count[7:12])						 # n.s.
-shapiro.test(Treg.dataLiver$count[13:18])                      # n.s.
+shapiro.test(Treg.dataLiver$count[13:19])                      # n.s.
+shapiro.test(Treg.dataLiver$count[20:25])                      # n.s.
 
 Treg.liver.res.aov <- aov(count~category, data=Treg.dataLiver)
 summary (Treg.liver.res.aov)
 ```
 
-liver Treg.data (outlyer removed)
+ANOVA assumptions not met. Use Kruskal-Wallis instead
 
 ```{r}
-Treg.dataLiverRed <- Treg.dataLiver[c(1:4,7:10,13:16),]
-leveneTest(count~category, data=Treg.dataLiverRed, center=mean)  # n.s 
-shapiro.test(Treg.dataLiver$count[1:4]) 						 # n.s
-shapiro.test(Treg.dataLiver$count[7:10])						 # n.s.
-shapiro.test(Treg.dataLiver$count[13:16])                      # n.s.
-
-Treg.liver.red.res.aov <- aov(count~category, data=Treg.dataLiverRed)
-summary (Treg.liver.red.res.aov)
+kruskal.test(count~category, data=Treg.dataLiver)
 ```
 
 no significant differences
@@ -130,6 +126,41 @@ Treg.colon.res.aov <- aov(count~category, data=Treg.dataColon)
 summary (Treg.colon.res.aov)
 ```
 no significant differences
+
+### BM Treg.data
+
+different set up: t-test
+check validity first (F-test, Shapiro)
+```{r}
+var.test(count~category, data=Treg.dataBM, center=mean)  # n.s.
+shapiro.test(Treg.dataBM$count[1:4]) 						 # n.s.
+shapiro.test(Treg.dataBM$count[5:8])						 # n.s.
+```
+
+
+```{r}
+Treg.BM.res.t.test <- t.test(count~category, data=Treg.dataBM, var.equal = TRUE)
+Treg.BM.res.t.test
+```
+
+no significant differences
+
+### mLN Treg.data
+
+different set up: t-test
+
+```{r}
+var.test(count~category, data=Treg.datamLN, center=mean)  # n.s.
+shapiro.test(Treg.datamLN$count[1:4]) 						 # n.s.
+shapiro.test(Treg.datamLN$count[5:8])						 # n.s.
+```
+
+
+```{r}
+Treg.mLN.res.t.test <- t.test(count~category, data=Treg.datamLN, var.equal = TRUE)
+Treg.mLN.res.t.test
+```
+
 
 
 

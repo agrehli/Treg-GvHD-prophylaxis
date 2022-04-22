@@ -1,0 +1,34 @@
+R version 4.0.3 (2020-10-10)
+Platform: x86_64-apple-darwin17.0 (64-bit)
+Running under: macOS Big Sur 10.16
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRblas.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+
+locale:
+[1] de_DE.UTF-8/de_DE.UTF-8/de_DE.UTF-8/C/de_DE.UTF-8/de_DE.UTF-8
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] survminer_0.4.9 ggpubr_0.4.0    ggplot2_3.3.5   survival_3.2-13
+
+loaded via a namespace (and not attached):
+ [1] zoo_1.8-9         tidyselect_1.1.1  xfun_0.28         bslib_0.3.1      
+ [5] purrr_0.3.4       splines_4.0.3     lattice_0.20-45   carData_3.0-4    
+ [9] colorspace_2.0-2  vctrs_0.3.8       generics_0.1.1    htmltools_0.5.2  
+[13] yaml_2.2.1        survMisc_0.5.5    utf8_1.2.2        rlang_0.4.12     
+[17] jquerylib_0.1.4   pillar_1.6.4      glue_1.5.0        withr_2.4.2      
+[21] DBI_1.1.1         lifecycle_1.0.1   stringr_1.4.0     munsell_0.5.0    
+[25] ggsignif_0.6.3    gtable_0.3.0      evaluate_0.14     labeling_0.4.2   
+[29] knitr_1.36        fastmap_1.1.0     fansi_0.5.0       highr_0.9        
+[33] broom_0.7.10      xtable_1.8-4      scales_1.1.1      backports_1.3.0  
+[37] jsonlite_1.7.2    abind_1.4-5       farver_2.1.0      km.ci_0.5-2      
+[41] gridExtra_2.3     digest_0.6.28     stringi_1.7.5     rstatix_0.7.0    
+[45] dplyr_1.0.7       KMsurv_0.1-5      grid_4.0.3        tools_4.0.3      
+[49] magrittr_2.0.1    sass_0.4.0        tibble_3.1.6      crayon_1.4.2     
+[53] tidyr_1.1.4       car_3.0-12        pkgconfig_2.0.3   ellipsis_0.3.2   
+[57] Matrix_1.3-4      data.table_1.14.2 assertthat_0.2.1  rmarkdown_2.11   
+[61] R6_2.5.1          compiler_4.0.3   

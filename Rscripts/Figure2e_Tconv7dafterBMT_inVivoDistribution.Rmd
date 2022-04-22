@@ -44,8 +44,8 @@ p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
 p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=6.5, stackratio = 1, binwidth=.02) 
 p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
 p <- p + scale_y_log10(breaks = c(10000,100000,1000000,10000000,100000000),labels = trans_format("log10", math_format(10^.x)),expand = c(0, 0)) 
-p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90), text = element_text(size = 24))
-p <- p + scale_fill_manual(values = c("gray","darkorange","steelblue3","firebrick4"))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), text = element_text(size = 24))
+p <- p + scale_fill_manual(values = c("gray","darkorange","steelblue3","firebrick3"))
 p <- p + annotation_logticks(sides="l", short = unit(.25,"mm"), mid = unit(.5,"mm"),   long = unit(1,"mm"))  
 p <- p + labs(title="re-isolated Tconv (GvHD)",x="organ", y = "cells per organ")
 p <- p + facet_wrap(~organ, nrow=1)
@@ -78,9 +78,9 @@ Tconv.datamLN <- Tconv.data[ which(Tconv.data$organ=='mLN' & Tconv.data$type=='T
 
 ```{r}
 leveneTest(count~category, data=Tconv.dataLiver, center=mean)  # n.s.
-shapiro.test(Tconv.dataLiver$count[1:4]) 						 # n.s.
-shapiro.test(Tconv.dataLiver$count[5:8])						 # n.s.
-shapiro.test(Tconv.dataLiver$count[9:12])                      # n.s.
+shapiro.test(Tconv.dataLiver$count[1:7]) 						 # n.s.
+shapiro.test(Tconv.dataLiver$count[8:13])						 # n.s.
+shapiro.test(Tconv.dataLiver$count[14:17])                      # n.s.
 ```
 
 ```{r}
@@ -93,16 +93,16 @@ TukeyHSD(Tconv.liver.res.aov)
 ```
 
 noTreg_Tx-allo_Tx p < 0.001 ***
-noTreg_Tx-poly_Tx p < 0.01 ** 
+noTreg_Tx-poly_Tx p < 0.001 *** 
 
 
 ### Tconv.data colon
 
 ```{r}
 leveneTest(count~category, data=Tconv.dataColon, center=mean)  # n.s.
-shapiro.test(Tconv.dataColon$count[1:4]) 						 # n.s.
-shapiro.test(Tconv.dataColon$count[5:8])						 # n.s.
-shapiro.test(Tconv.dataColon$count[9:12])                      # n.s.
+shapiro.test(Tconv.dataColon$count[1:7]) 						 # n.s.
+shapiro.test(Tconv.dataColon$count[8:13])						 # n.s.
+shapiro.test(Tconv.dataColon$count[14:17])                      # n.s.
 ```
 
 ```{r}
@@ -114,17 +114,17 @@ summary (Tconv.colon.res.aov)
 TukeyHSD(Tconv.colon.res.aov)
 ```
 
-noTreg_Tx-allo_Tx p < 0.05 *
-noTreg_Tx-poly_Tx p < 0.05 *
+noTreg_Tx-allo_Tx p < 0.01 **
+noTreg_Tx-poly_Tx p < 0.001 ***
 
 
 ### Tconv.data spleen
 
 ```{r}
 leveneTest(count~category, data=Tconv.dataSpleen, center=mean)  # n.s.
-shapiro.test(Tconv.dataSpleen$count[1:4]) 						 # n.s.
-shapiro.test(Tconv.dataSpleen$count[5:8])						 # n.s.
-shapiro.test(Tconv.dataSpleen$count[9:12])                      # n.s.
+shapiro.test(Tconv.dataSpleen$count[1:7]) 						 # n.s.
+shapiro.test(Tconv.dataSpleen$count[8:13])						 # n.s.
+shapiro.test(Tconv.dataSpleen$count[14:17])                      # n.s.
 ```
 
 ```{r}

@@ -400,18 +400,19 @@ dev.off()
 ```{r}
 #only setting and allo/poly or Sell+/-
 metad.pcbd<-metad.pcbd %>% 
+appl.treat.pcbd<-metad.pcbd %>% 
   mutate(
     appl.treat=case_when(
     org == "d" ~ paste0(org,"_",treat),
     org != "d" ~paste0(appl,"_",treat)
   ))
-appl.treat.pcbd <- factor(appl.treat.pcbd$appl.treat, 
+appl.treat.pcbd <- factor(metad.pcbd$appl.treat, 
                           levels = c("d_a","d_p","pro_a","pro_p","prc_a","prc_p","wt_neg","wt_pos"))
-
 appl.treat.pcbd
 #only organ 
 org.pcbd<-factor(as.character(metad.pcbd$org))
 org.pcbd
+
 ```
 
 ## Transposed Individual Observations and Annotation
@@ -975,7 +976,11 @@ bar.p.mod.avp.Trbv16<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Trbv1
         legend.position = "none",
         aspect.ratio = 1)+
   labs(x="Treg group", 
+<<<<<<< HEAD
        y = "RPKM") +
+=======
+       y = bquote(log[2]*"RPKM")) +
+>>>>>>> main
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Trbv16
 ```
@@ -1044,6 +1049,7 @@ bar.p.mod.avp.Nrn1<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Nrn1"),
         legend.position = "none",
         aspect.ratio = 1)+
   labs(x="Treg group", 
+
        y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Nrn1
