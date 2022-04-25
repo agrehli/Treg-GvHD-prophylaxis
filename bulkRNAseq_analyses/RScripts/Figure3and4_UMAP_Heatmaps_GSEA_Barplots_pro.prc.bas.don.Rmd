@@ -400,7 +400,6 @@ dev.off()
 ```{r}
 #only setting and allo/poly or Sell+/-
 metad.pcbd<-metad.pcbd %>% 
-appl.treat.pcbd<-metad.pcbd %>% 
   mutate(
     appl.treat=case_when(
     org == "d" ~ paste0(org,"_",treat),
@@ -976,11 +975,7 @@ bar.p.mod.avp.Trbv16<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Trbv1
         legend.position = "none",
         aspect.ratio = 1)+
   labs(x="Treg group", 
-<<<<<<< HEAD
        y = "RPKM") +
-=======
-       y = bquote(log[2]*"RPKM")) +
->>>>>>> main
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Trbv16
 ```
