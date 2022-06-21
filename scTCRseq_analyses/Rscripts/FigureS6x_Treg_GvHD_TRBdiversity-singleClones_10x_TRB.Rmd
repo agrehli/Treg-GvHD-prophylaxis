@@ -24,14 +24,17 @@ This Rscript is called in the Commands_scTCR_GvHD.sh script
 R packages
 
 ```{r, warning=FALSE, message=FALSE}
-library(immunarch)
+library("immunarch")
+library("ggalluvial")
+library("ggpubr")
+library("RColorBrewer")
 ```
 
 data loading
 
 ```{r, warning=FALSE, message=FALSE}
 file_path = "./cellRangerData"
-immdata <- repLoad(file_path)
+immdata <- repLoad(file_path, .mode = "paired")
 ```
 
 extracting clone counts
@@ -87,12 +90,16 @@ imm_ov2 <- repOverlap(immdata$data, .method = "morisita", .verbose = F)
 ```
 
 ```{r, fig.width=4, fig.height=4}
-vis(imm_ov2, "heatmap2", .color = colorRampPalette(c("navy", "white", "red3"))(50))
+vis(imm_ov2, "heatmap2", .title = "Morisita's Overlap Index")
+```
 
+```{r}
 pdf(file="./figures/scTCRxTregDCLS_overlap_morista_heatmap.pdf", height=4, width=4)
-vis(imm_ov2, "heatmap2", .color = colorRampPalette(c("navy", "white", "red3"))(50))
+vis(imm_ov2, "heatmap2", .title = "Morisita's Overlap Index")
 dev.off()
 ```
+
+
 
 
 
