@@ -75,14 +75,11 @@ Treg.datamLN <- Treg.data[ which(Treg.data$organ=='mLN' & (Treg.data$type=='GvHD
 ### liver Treg.data
 
 ```{r}
-leveneTest(count~category, data=Treg.dataLiver, center=mean)  # variance is significantly different 
-shapiro.test(Treg.dataLiver$count[1:6]) 						 # significantly different
+leveneTest(count~category, data=Treg.dataLiver, center=mean)  # sign.
+shapiro.test(Treg.dataLiver$count[1:6]) 						 # sign.
 shapiro.test(Treg.dataLiver$count[7:12])						 # n.s.
 shapiro.test(Treg.dataLiver$count[13:19])                      # n.s.
 shapiro.test(Treg.dataLiver$count[20:25])                      # n.s.
-
-Treg.liver.res.aov <- aov(count~category, data=Treg.dataLiver)
-summary (Treg.liver.res.aov)
 ```
 
 ANOVA assumptions not met. Use Kruskal-Wallis instead

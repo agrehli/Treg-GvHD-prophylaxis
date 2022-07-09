@@ -103,8 +103,8 @@ done
 
 cat >"${CRDATA}/metadata.txt" <<EOF
 Sample${TAB}Names${TAB}Type${TAB}Rep
-donor_1${TAB}adonor_1${TAB}adonor${TAB}1
-donor_2${TAB}adonor_2${TAB}adonor${TAB}2
+adonor_1${TAB}adonor_1${TAB}adonor${TAB}1
+adonor_2${TAB}adonor_2${TAB}adonor${TAB}2
 colon_1${TAB}colon_1${TAB}colon${TAB}1
 colon_2${TAB}colon_2${TAB}colon${TAB}2
 colon_3${TAB}colon_3${TAB}colon${TAB}3
@@ -116,7 +116,20 @@ spleen_2${TAB}spleen_2${TAB}spleen${TAB}2
 spleen_3${TAB}spleen_3${TAB}spleen${TAB}3
 EOF
 
-cp ${CRDATA}/metadata.txt ${CRDATATRB}/metadata.txt
+cat >"${CRDATATRB}/metadata.txt" <<EOF
+Sample${TAB}Names${TAB}Type${TAB}Rep
+adonor_1${TAB}adonor_1${TAB}adonor${TAB}1
+adonor_2${TAB}adonor_2${TAB}adonor${TAB}2
+colon_1${TAB}colon_1${TAB}colon${TAB}1
+colon_2${TAB}colon_2${TAB}colon${TAB}2
+colon_3${TAB}colon_3${TAB}colon${TAB}3
+liver_1${TAB}liver_1${TAB}liver${TAB}1
+liver_2${TAB}liver_2${TAB}liver${TAB}2
+liver_3${TAB}liver_3${TAB}liver${TAB}3
+spleen_1${TAB}spleen_1${TAB}spleen${TAB}1
+spleen_2${TAB}spleen_2${TAB}spleen${TAB}2
+spleen_3${TAB}spleen_3${TAB}spleen${TAB}3
+EOF
 
 
 # extract data tables after import into immunarch

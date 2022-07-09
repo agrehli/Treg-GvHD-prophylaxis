@@ -115,7 +115,7 @@ TukeyHSD(Tconv.colon.res.aov)
 ```
 
 noTreg_Tx-allo_Tx p < 0.01 **
-noTreg_Tx-poly_Tx p < 0.001 ***
+noTreg_Tx-poly_Tx p < 0.01 **
 
 
 ### Tconv.data spleen

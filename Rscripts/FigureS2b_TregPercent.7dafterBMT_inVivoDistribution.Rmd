@@ -1,5 +1,5 @@
 ---
-title: "Figure2Supp_TregPercent.7dafterBMT_inVivoDistribution"
+title: "FigureS2b_TregPercent.7dafterBMT_inVivoDistribution"
 author: Michael Rehli
 output: 
   html_document:
@@ -14,7 +14,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "Figure2Supp_TregPercent.7dafterBMT_inVivoDistribution.packages.bib")
+knitr::write_bib(.packages(), "FigureS2b_TregPercent.7dafterBMT_inVivoDistribution.packages.bib")
 ```
 
 ## Bar charts showing the cell WBCpercs for re-isolated Treg 
@@ -172,5 +172,5 @@ poly_GvHD-allo_GvHD  p < 0.01 **
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2Supp_TregPercent.7dafterBMT_inVivoDistribution_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureS2b_TregPercent.7dafterBMT_inVivoDistribution_SessionInfo.txt")
 ```

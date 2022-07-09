@@ -1,5 +1,5 @@
 ---
-title: "FigureSupp_TconvPercent.7dafterBMT_inVivoDistribution"
+title: "FigureS2c_TconvPercent.7dafterBMT_inVivoDistribution"
 author: Michael Rehli
 output: 
   html_document:
@@ -15,7 +15,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "Figure2Supp_TconvPercent.7dafterBMT_inVivoDistribution.packages.bib")
+knitr::write_bib(.packages(), "FigureS2c_TconvPercent.7dafterBMT_inVivoDistribution.packages.bib")
 ```
 
 ## Bar charts showing the cell WBCpercs for re-isolated Treg 
@@ -26,6 +26,7 @@ R packages
 library(ggplot2)
 library(scales)
 library(car)
+library(PMCMRplus)
 ```
 
 data formating 
@@ -36,7 +37,7 @@ Tconv.data$organ <- factor(Tconv.data$organ,levels = c("BM","spleen","liver","mL
 Tconv.data$category <- factor(Tconv.data$category,levels = c("organ_resident","allo_Tx","poly_Tx","noTreg_Tx"))
 ```
 
-generating the plot for Figure 2e
+generating the plot for Supplementary Figure 2c
 
 ```{r, fig.width=8.5, fig.height=5.5}
 p <- ggplot(Tconv.data, aes(x=category, y=WBCperc, fill=category)) + coord_cartesian(ylim = c(0,100))
@@ -81,17 +82,18 @@ shapiro.test(Tconv.dataLiver$WBCperc[8:13])						 # sign.
 shapiro.test(Tconv.dataLiver$WBCperc[14:17])                      # n.s.
 ```
 
+
+ANOVA assumptions not met. Use Kruskal-Wallis instead
+
 ```{r}
-Tconv.liver.res.aov <- aov(WBCperc~category, data=Tconv.dataLiver)
-summary (Tconv.liver.res.aov)
+kruskal.test(WBCperc~category, data=Tconv.dataLiver)
 ```
 
 ```{r}
-TukeyHSD(Tconv.liver.res.aov)
+kwAllPairsDunnTest(WBCperc~category, data=Tconv.dataLiver, p.adjust.method = "bonferroni")
 ```
 
-poly_Tx-allo_Tx   p < 0.05 *
-noTreg_Tx-allo_Tx p < 0.001 ***
+noTreg_Tx-allo_Tx p < 0.002 **
 
 
 ### Tconv.data colon
@@ -125,18 +127,17 @@ shapiro.test(Tconv.dataSpleen$WBCperc[8:13])						 # n.s.
 shapiro.test(Tconv.dataSpleen$WBCperc[14:17])                      # n.s.
 ```
 
+ANOVA assumptions not met. Use Kruskal-Wallis instead
+
 ```{r}
-Tconv.spleen.res.aov <- aov(WBCperc~category, data=Tconv.dataSpleen)
-summary (Tconv.spleen.res.aov)
+kruskal.test(WBCperc~category, data=Tconv.dataSpleen)
 ```
 
 ```{r}
-TukeyHSD(Tconv.spleen.res.aov)
+kwAllPairsDunnTest(WBCperc~category, data=Tconv.dataSpleen, p.adjust.method = "bonferroni")
 ```
 
-poly_Tx-allo_Tx    p < 0.05 *
-noTreg_Tx-allo_Tx  p < 0.001 ***
-noTreg_Tx-poly_Tx  P < 0.01 **
+noTreg_Tx-allo_Tx p < 0.0012 **
 
 
 
@@ -189,7 +190,7 @@ noTreg_Tx-poly_Tx p < 0.001 ***
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2Supp_TconvPercent.7dafterBMT_inVivoDistribution_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureS2c_TconvPercent.7dafterBMT_inVivoDistribution_SessionInfo.txt")
 ```
 
 

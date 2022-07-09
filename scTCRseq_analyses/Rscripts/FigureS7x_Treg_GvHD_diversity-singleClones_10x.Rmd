@@ -33,7 +33,7 @@ library("RColorBrewer")
 data loading
 
 ```{r, warning=FALSE, message=FALSE}
-file_path = "/misc/data/analysis/project_TregProphylaxis/scTCRrepertoire/colonCellRangerData"
+#file_path = "/misc/data/analysis/project_TregProphylaxis/scTCRrepertoire/colonCellRangerData"
 file_path = "./colonCellRangerData"
 immdata <- repLoad(file_path, .mode = "paired")
 ```
