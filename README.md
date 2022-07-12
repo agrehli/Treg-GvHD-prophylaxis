@@ -106,14 +106,14 @@ Contains data for Figures 1b,d & 2b-e & Supplemental Figures 2b,c.
 
 <h2 id="perl">7. perlScripts</h2>
 
-***related to bulk TCR repertoire aligning:***
+*<h5>related to bulk TCR repertoire aligning:</h5>*
 
 <h4>TCRmixcrV3.1.pl</h4>
 Perl script to map TCR repertoires derived from our RACE-PCR approach. Sequencing data (usually MiSeq 300bp PE) are initially assembled (paired) using the software PEAR. UMI should be standard in our protocol, but the pipeline can also be used for non-barcoded RNAs (when -UMI option is omitted). MIGs are called using MIGEC before mapping with MIXCR (version 3). We usually run two libraries for each sample (replicate) and work with the combined repertoire from both technical replicate runs. Individual runs are kept for quality controls.
 The pipeline is setup for our server and deploys folders for each experiment on the misc/data volume under processedData//mapping/RNA/RepSeq/MIXCRv3/. ***Dependencies:*** PEAR (v0.9.11), MIGEC (v1.2.9), MIXCR (v3.0.13), R version 4.0.3 (rbioc_3-12).
 
 
-***related to bulk TCR repertoire analyses:***
+*<h5>related to bulk TCR repertoire analyses:</h5>*
 
 Many analyses are done in R, but for two types of presentations (Circos plot of clonotype overlap, and barycentric distributions of clonotype weights), we have a set of  Perl scripts that perform preprocessing/reformating of the data (bulkTCRparseImmunArch.pl, bulkTCRcreateJoinedCountTable.pl) and one each for the plotting (bulkTCRCirculizeFreq4Samples.pl, bulkTCRtriangle.pl)
 
@@ -128,7 +128,7 @@ Perl script that generates a circos plot for clonotype overlaps in exactly four 
 Perl script that calculates weights of clonotype counts for three sample comparisons and  generates a bubble plot using barycentric coordinates by generating and calling a R script. This is a nice way to demonstrate the contribution of each of the three samples to the top clonotypes in the comparison. It accepts clonotypeTable files generated with the bulkTCRcreateJoinedCountTable.pl (best to restrict to some 100 top clones). ***Dependencies:*** R version 4.0.3 (rbioc_3-12), ggplot2 R package
 
 
-***related to sc TCR repertoire analyses***
+*<h5>related to sc TCR repertoire analyses</h5>*
 
 <h4>scTCRparseImmunArch.pl, scTCRcreateJoinedCountTable.pl, scTCRCirculizeFreq4Samples.pl, scTCRtriangle.pl</h4>
 Perl scripts equivalent to the corresponding bulkTCR script set - set up to work with cell ranger data.<h4>scTCRcreateTRBVCountTable.pl</h4>Script to extract only TRB information from scTCRseq data. 
