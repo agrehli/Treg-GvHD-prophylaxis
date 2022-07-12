@@ -113,7 +113,6 @@ Perl script to map TCR repertoires derived from our RACE-PCR approach. Sequencin
 The pipeline is setup for our server and deploys folders for each experiment on the misc/data volume under processedData//mapping/RNA/RepSeq/MIXCRv3/. ***Dependencies:*** PEAR (v0.9.11), MIGEC (v1.2.9), MIXCR (v3.0.13), R version 4.0.3 (rbioc_3-12).
 
 
-<p>
 ***related to bulk TCR repertoire analyses:***
 
 Many analyses are done in R, but for two types of presentations (Circos plot of clonotype overlap, and barycentric distributions of clonotype weights), we have a set of  Perl scripts that perform preprocessing/reformating of the data (bulkTCRparseImmunArch.pl, bulkTCRcreateJoinedCountTable.pl) and one each for the plotting (bulkTCRCirculizeFreq4Samples.pl, bulkTCRtriangle.pl)
@@ -128,7 +127,7 @@ Perl script that generates a circos plot for clonotype overlaps in exactly four 
 <h4>bulkTCRtriangle.pl</h4>
 Perl script that calculates weights of clonotype counts for three sample comparisons and  generates a bubble plot using barycentric coordinates by generating and calling a R script. This is a nice way to demonstrate the contribution of each of the three samples to the top clonotypes in the comparison. It accepts clonotypeTable files generated with the bulkTCRcreateJoinedCountTable.pl (best to restrict to some 100 top clones). ***Dependencies:*** R version 4.0.3 (rbioc_3-12), ggplot2 R package
 
-<br>
+
 ***related to sc TCR repertoire analyses***
 
 <h4>scTCRparseImmunArch.pl, scTCRcreateJoinedCountTable.pl, scTCRCirculizeFreq4Samples.pl, scTCRtriangle.pl</h4>
