@@ -89,7 +89,19 @@ Description provided by Nick....
 
 <h2 id="scTCR">4. scTCRseq_analyses</h2>
 
-Description provided by Michael....
+The code for processing and analysis of the TCR data is provided in a bash script, which either call perl or R scripts for analyses and plotting and xxxx (Nick to fill in here).
+The following figures are covered:  
+
+* **Figure 6 e-i**
+* **Supplementary Figure 6 c-f**
+* **Figure 7 e, f**
+
+<h4>Commands_scTCR_GvHD.sh</h4>
+Includes the code for the processing of TRA/TRB clonotype data of Treg reisolated from transplantations in the prophylaxis (GvHD) setting. It generates circos plots of clonotype overlaps (Figures 6e) and triangular presentations of clonotype weights in barycentric coordinates (Figure 6f). It generates the barplots showing examples clonotype counts across samples (Figure 6g), calculates diversities (Figure S6c), plots the Morisita's overlap indices (Figure S6d), and Trvb segment distributions (FigureS6e). 
+
+<h4>Rscripts folder</h4>
+Contains R markdown scripts (*.rmd) that are rendered as part of the **Commands_scTCR_GvHD.sh** script described above as well as corresponding Session Infos.
+
 
 <h2 id="R">5. Rscripts</h2>
 

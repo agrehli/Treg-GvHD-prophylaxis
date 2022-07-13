@@ -1,5 +1,5 @@
 ---
-title: "Figure6j_Treg_GvHD_TRBVanalysis_10x_TRB"
+title: "FigureS6e_Treg_GvHD_TRBVanalysis_10x_TRB"
 author: Michael Rehli
 output: 
   html_document:
@@ -13,7 +13,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::write_bib(.packages(), "Figure6j_Treg_GvHD_TRBVanalysis_10x_TRB.packages.bib")
+knitr::write_bib(.packages(), "FigureS6e_Treg_GvHD_TRBVanalysis_10x_TRB.packages.bib")
 ```
 
 This Rscript is called in the CommandsB07_bulkTCR_BMT.sh script
@@ -62,7 +62,7 @@ melted_gu$Class <- factor(melted_gu$Class, levels= c('d','c','l','s'))
 melted_gu$Colorlevels <- factor(melted_gu$Color, levels= c("red","sienna4","skyblue4","deeppink"))
 ```
 
-generating the bar chart for Figure 6j
+generating the bar chart for Figure S6e
 
 ```{r, fig.width=4, fig.height=3}
 p <- ggplot(melted_gu, aes(x= Class, y= value))
@@ -82,7 +82,7 @@ dev.off()
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "Figure6j_Treg_GvHD_TRBVanalysis_10x_TRB_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "FigureS6e_Treg_GvHD_TRBVanalysis_10x_TRB_SessionInfo.txt")
 ```
 
 

@@ -1,6 +1,6 @@
 R version 4.0.3 (2020-10-10)
 Platform: x86_64-pc-linux-gnu (64-bit)
-Running under: Debian GNU/Linux 9 (stretch)
+Running under: Debian GNU/Linux 10 (buster)
 
 Matrix products: default
 BLAS/LAPACK: /misc/software/package/RBioC/libmkl/R-4.0.3_stretch_intel-mkl-64bit-2020.1-102_build/compilers_and_libraries_2020.1.217/linux/mkl/lib/intel64_lin/libmkl_gf_lp64.so

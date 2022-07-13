@@ -346,20 +346,12 @@ echo $'vGene\tadonor_1\tadonor_2\tcolon_1\tcolon_2\tcolon_3\tliver_1\tliver_2\tl
 
 
 
-# analysis of selected TRBV chains "TRBV12-1","TRBV12-2","TRBV26" in R
+# diversity (inverse Simpson) (Figure S6c)
 
 cd ${WORKDIR_scTCR}
 R --no-restore --no-save
 library(rmarkdown)
-render("Figure6j_Treg_GvHD_TRBVanalysis_10x_TRB.Rmd", "html_document")
-q()
-
-# diversity (inverse Simpson) & 
-
-cd ${WORKDIR_scTCR}
-R --no-restore --no-save
-library(rmarkdown)
-render("FigureS6x_Treg_GvHD_TRBdiversity-singleClones_10x_TRB.Rmd", "html_document")
+render("FigureS6cS6d_Treg_GvHD_TRBdiversity-singleClones_10x_TRB.Rmd", "html_document")
 q()
 
 
@@ -384,13 +376,23 @@ echo "${NAME}${TAB}$(grep ${CLONE} ${ANALYSISDIR}/scTCRxTregDCLS.clonotypeTable.
 COUNT=$((COUNT+=1))                       
 done
 
-# frequency of selected clones across tissues
+# frequency of selected clones across tissues (Figure S6d)
 
 cd ${WORKDIR_scTCR}
 R --no-restore --no-save
 library(rmarkdown)
 render("Figure6g_Treg_GvHD_examplesCloneDistribution_10x_TRB.Rmd", "html_document")
 q()
+
+# analysis of selected TRVB segments in R (Figure S6e)
+
+cd ${WORKDIR_scTCR}
+R --no-restore --no-save
+library(rmarkdown)
+render("FigureS6e_Treg_GvHD_TRBVanalysis_10x_TRB.Rmd", "html_document")
+q()
+
+
 
 
 

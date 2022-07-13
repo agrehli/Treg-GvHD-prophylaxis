@@ -1,5 +1,5 @@
 ---
-title: "FigureS6x_Treg_GvHD_TRBdiversity-singleClones_10x_TRB"
+title: "FigureS6cS6d_Treg_GvHD_TRBdiversity-singleClones_10x_TRB"
 author: Michael Rehli
 output: 
   html_document:
@@ -13,12 +13,12 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::write_bib(.packages(), "FigureS6x_Treg_GvHD_TRBdiversity-singleClones_10x_TRB.packages.bib")
+knitr::write_bib(.packages(), "FigureS6cS6d_Treg_GvHD_TRBdiversity-singleClones_10x_TRB.packages.bib")
 ```
 
 This Rscript is called in the Commands_scTCR_GvHD.sh script
 
-# Data analysis for Figures 6x and 6y  (Labels need to be adjusted)
+# Data analysis for Figures S6c and S6d 
 
 
 R packages
@@ -44,7 +44,7 @@ exp_umi <- repExplore(immdata$data, .method = "clones")
 exp_umi
 ```
 
-## TCR Diversity
+## TCR Diversity (Figure S6c)
 
 calculating diversity (Simpson Index)
 
@@ -64,7 +64,7 @@ celltype <- factor(c(rep("d",2), rep("c",3), rep("l",3), rep("s",3)))
 colors <- c(rep("red",2), rep("sienna4",3), rep("skyblue4",3), rep("deeppink",3))
 ```
 
-generating the plot for Figure S6X (will remove the error bar in the donor samples, just two samples!)
+generating the plot for Figure S6c (will remove the error bar in the donor samples, just two samples!)
 
 ```{r, fig.width=2, fig.height=3}
 p <- ggplot(div_simp , aes(Type, Value, fill=Type)) 
@@ -82,7 +82,8 @@ p
 dev.off()
 ```
 
-## alternative visualization of repertoire overlap 
+## alternative visualization of repertoire overlap (Figure S6d)
+
 used heatmap of Morisita index
 
 ```{r}
@@ -105,7 +106,7 @@ dev.off()
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "FigureS6x_Treg_GvHD_TRBdiversity-singleClones_10x_TRB_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "FigureS6cS6d_Treg_GvHD_TRBdiversity-singleClones_10x_TRB_SessionInfo.txt")
 ```
 
 
