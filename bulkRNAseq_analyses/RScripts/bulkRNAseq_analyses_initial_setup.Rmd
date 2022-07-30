@@ -55,12 +55,13 @@ dir.create(path = "./FIGDIR")
 stid<-readRDS("./METADIR/stid.rds")
 # Reading in the metadata file and ordering it according to the samples_N
 metad<-read.csv("./METADIR/Smart-Seq_libraries_metad4R_ID-ordered.csv")
+metad<-read.csv("./METADIR/Smart-Seq_libraries_metad4R_ID-ordered.minimal.csv")
 metad<-metad[order(metad$sample_N),]
 rownames(metad)<-1:nrow(metad)
 # Some of the columns used later MUST NOT be factors and will therefore be defined as character columns
 metad$RNAseq_DD_ID<-as.character(metad$RNAseq_DD_ID)
 metad$sample_ID<-as.character(metad$sample_ID)
-metad$workflow<-as.character(metad$workflow)
+#metad$workflow<-as.character(metad$workflow)
 # Duplicate vector logically indicating which sample IDs appear more than one time --> re-seqs, more than 2 instances possible
 metad$metadupvec <- duplicated(metad$sample_ID)
 # Consistency check
