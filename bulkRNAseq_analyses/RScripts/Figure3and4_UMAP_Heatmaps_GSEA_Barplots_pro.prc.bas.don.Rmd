@@ -180,6 +180,21 @@ pcbd.log.cpm.scaled.cor <- scale(t(pcbd.log.cpm.cor))
 pcbd.log.cpm.scaled.cor <- data.matrix(t(pcbd.log.cpm.scaled.cor))
 ```
 
+* export PCR2-batch-corrected Log2RPKM values with internal IDs
+* Note: The supplementary file of the manuscript contains the manuscript-relevant nomenclature
+
+```{r}
+# add annotation from DGEList object
+bulkRNA.seq.Log2.RPKM.PCR2.batch.cor <- as.data.frame(pcbd.log.rpkm.cor) %>% 
+  rownames_to_column(var = "longID") %>%
+  inner_join(rownames_to_column(dgel.pcbd$genes, var ="longID"))
+# export as .csv
+write.csv(bulkRNA.seq.Log2.RPKM.PCR2.batch.cor,
+          file = "./RCTDIR/bulkRNAseq.Log2.RPKM.PCR2.batch.corrected.internalID.csv",
+          row.names = FALSE)
+```
+
+
 ***
 
 # Aesthetics Vectors
@@ -412,6 +427,8 @@ appl.treat.pcbd
 org.pcbd<-factor(as.character(metad.pcbd$org))
 org.pcbd
 
+df.test<-data.frame(appl.treat.pcbd,group.pcbd,org.pcbd)
+df.test
 ```
 
 ## Transposed Individual Observations and Annotation
@@ -1913,7 +1930,7 @@ bar.p.mod.supp.Gzmb<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -1979,7 +1996,7 @@ bar.p.mod.supp.Il10<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2045,7 +2062,7 @@ bar.p.mod.supp.Gzma<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2111,7 +2128,7 @@ bar.p.mod.supp.Fasl<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2176,7 +2193,7 @@ bar.p.mod.supp.Prf1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2241,7 +2258,7 @@ bar.p.mod.supp.Ctla4<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2306,7 +2323,7 @@ bar.p.mod.supp.Entpd1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2371,7 +2388,7 @@ bar.p.mod.supp.Tgfb1<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2436,7 +2453,7 @@ bar.p.mod.supp.Tgfb3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2501,7 +2518,7 @@ bar.p.mod.supp.Il2ra<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2566,7 +2583,7 @@ bar.p.mod.supp.Nt5e<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2631,7 +2648,7 @@ bar.p.mod.supp.Fgl2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2696,7 +2713,7 @@ bar.p.mod.supp.Ebi3<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol==
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2763,7 +2780,7 @@ bar.p.mod.supp.Cd274<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symbol=
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2828,7 +2845,7 @@ bar.p.mod.supp.Pdcd1lg2<-ggplot(data = bar.df.mod.supp[bar.df.mod.supp$gene_symb
                width=0.8, 
                position = "dodge")+
   scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
+  
   scale_shape_manual(values = pcbd.shp.4)+
   theme_bw() + 
     theme(panel.grid.major = element_blank(), 
@@ -2870,6 +2887,302 @@ bar.p.mod.supp.grid
 ```{r}
 pdf(file="./FIGDIR/SupplementaryFigure4d_pcbd.barplots.supp.sig.expression.pdf", height=6, width=8)
 bar.p.mod.supp.grid
+dev.off()
+```
+
+# Additional barplots for pTreg signature genes
+
+* pTreg-typical genes described by van der Veeken et al. 2022.
+
+```{r}
+pTreg.sig <- c("Rorc","Maf","Ahr","Gpr15")
+```
+
+## Rorc
+
+```{r,fig.height=2.0, fig.width=1.5}
+bar.p.mod.Rorc <- ggplot(data = filter(bar.df.mod, gene_symbol ==
+                                              pTreg.sig[1]), 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM+2),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,2048),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format(trans = function(x) log2(x)-6,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.Rorc
+```
+
+## Maf
+
+```{r,fig.height=2.0, fig.width=1.5}
+bar.p.mod.Maf <- ggplot(data = filter(bar.df.mod, gene_symbol ==
+                                              pTreg.sig[2]), 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-2),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,1024),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format(trans = function(x) log2(x)-2,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.Maf
+```
+
+## Ahr
+
+```{r,fig.height=2.0, fig.width=1.5}
+bar.p.mod.Ahr <- ggplot(data = filter(bar.df.mod, gene_symbol ==
+                                              pTreg.sig[3]), 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,64),
+                     breaks = c(1,4,16,64),
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.supp.Ahr
+```
+
+## Gpr15
+
+```{r,fig.height=2.0, fig.width=1.5}
+bar.p.mod.Gpr15 <- ggplot(data = filter(bar.df.mod, gene_symbol ==
+                                              pTreg.sig[4]), 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM-2),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,512),
+                     breaks = c(1,4,16,64,256),
+                     labels = trans_format(trans = function(x) log2(x)-2,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0,
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pcbd.col,0.75))+
+  
+  scale_shape_manual(values = pcbd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, ncol = 1)
+bar.p.mod.Gpr15
+```
+
+## Combined plot
+
+```{r, fig.height=2, fig.width=6.0}
+bar.p.pTreg.grid <- plot_grid(bar.p.mod.Rorc,
+                              bar.p.mod.Maf,
+                              bar.p.mod.Ahr,
+                              bar.p.mod.Gpr15,
+                              ncol=4, align="v")
+bar.p.pTreg.grid
+```
+
+* The pTreg marker gene bar plot arrangement is also exported into the figure directory.
+
+```{r}
+pdf(file="./FIGDIR/SupplementaryFigureXx_pcbd.pTreg.vanderVeeken.combined.barplot.RPKM.pdf", 
+    height=2, width=6)
+bar.p.pTreg.grid
 dev.off()
 ```
 
