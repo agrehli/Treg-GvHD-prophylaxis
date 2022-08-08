@@ -52,6 +52,15 @@ imm_gu_red <- imm_gu[c(2,3,16), ]
 imm_gu_red$Names
 ```
 
+
+export data table 
+
+```{r}
+write.table (as.data.frame(imm_gu), file = "./figures/noBMT_geneUsage.data.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+
+
 defining groups and colors
 
 ```{r}

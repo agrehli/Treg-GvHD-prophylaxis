@@ -68,6 +68,12 @@ div_simp$Class <- factor(div_simp$Class, levels= c('d','c','l','s','cc','cl','cs
 div_simp$Colorlevels <- factor(div_simp$Color, levels= c("red","sienna4","skyblue4","deeppink","peru","skyblue3","hotpink2"))
 ```
 
+exporting data table
+
+```{r}
+write.table (as.data.frame(div_simp), file = "./figures/allTRB_barplot_invSimp.data.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
 generating the plot for Figure S5m
 
 ```{r, fig.width=4, fig.height=3}
@@ -90,6 +96,12 @@ dev.off()
 ```{r}
 imm_gu <- geneUsage(immdataAllTRB$data[c(1:7,9:22,24:80)] , "musmus.trbv", .type = "segment", .ambig = "exc", .norm = T)
 imm_gu[is.na(imm_gu)] <- 0
+```
+
+export data table 
+
+```{r}
+write.table (as.data.frame(imm_gu), file = "./figures/allTRB_geneUsage.data.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 ```
 
 overview across distribution
