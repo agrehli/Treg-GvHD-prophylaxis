@@ -1,5 +1,5 @@
 ---
-title: "Figure2e_Tconv7dafterBMT_inVivoDistribution"
+title: "Figure2c_Tconv7dafterBMT_inVivoDistribution"
 author: Michael Rehli
 output: 
   html_document:
@@ -15,7 +15,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "Figure2e_Tconv7dafterBMT_inVivoDistribution.packages.bib")
+knitr::write_bib(.packages(), "Figure2c_Tconv7dafterBMT_inVivoDistribution.packages.bib")
 ```
 
 ## Bar charts showing the cell counts for re-isolated Treg 
@@ -36,13 +36,13 @@ Tconv.data$organ <- factor(Tconv.data$organ,levels = c("BM","Spleen","Liver","mL
 Tconv.data$category <- factor(Tconv.data$category,levels = c("organ_resident","allo_Tx","poly_Tx","noTreg_Tx"))
 ```
 
-generating the plot for Figure 2e
+generating the plot for Figure 2c
 
 ```{r, fig.width=8.5, fig.height=5.5}
 p <- ggplot(Tconv.data, aes(x=category, y=count, fill=category)) + coord_cartesian(ylim = c(10000,100000000))
 p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
 p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=6.5, stackratio = 1, binwidth=.02) 
-p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + stat_summary(fun.data=mean_se, geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
 p <- p + scale_y_log10(breaks = c(10000,100000,1000000,10000000,100000000),labels = trans_format("log10", math_format(10^.x)),expand = c(0, 0)) 
 p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), text = element_text(size = 24))
 p <- p + scale_fill_manual(values = c("gray","darkorange","steelblue3","firebrick3"))
@@ -50,7 +50,7 @@ p <- p + annotation_logticks(sides="l", short = unit(.25,"mm"), mid = unit(.5,"m
 p <- p + labs(title="re-isolated Tconv (GvHD)",x="organ", y = "cells per organ")
 p <- p + facet_wrap(~organ, nrow=1)
 p
-pdf("./figures/TconvOrganDist.pdf", height=5.5, width=8.5)
+pdf("./figures/TconvOrganDistSE.pdf", height=5.5, width=8.5)
 p
 dev.off()
 
@@ -181,7 +181,7 @@ noTreg_Tx-allo_Tx  p < 0.05 *
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2e_Tconv7dafterBMT_inVivoDistribution_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2c_Tconv7dafterBMT_inVivoDistribution_SessionInfo.txt")
 ```
 
 
