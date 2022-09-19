@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::write_bib(.packages(), "Figure5g_residentTreg-TRBVgeneUsage.packages.bib")
 ```
 
-This Rscript is called in the CommandsB07_bulkTCR_TregExpansion.sh script 
+This Rscript is called in the CommandsB_bulkTCR_noBMT.sh script 
 
 ## Figure showing TRB TCR diversities of allo and poly Treg expansion cultures compared to d0 Treg isolated from spleen
 
@@ -27,6 +27,8 @@ library(ggplot2)
 library(reshape2)
 library(ggrepel)
 library("immunarch")
+library(car)
+library(PMCMRplus)
 ```
 
 data loading
@@ -78,7 +80,7 @@ gu_red$Color <- as.factor(colors2)
 gu_red$Names <- rownames(gu_red)
 melted_gu <- melt(gu_red, id.vars = c('Names', 'Color', 'Class'))
 melted_gu$Class <- factor(melted_gu$Class, levels= c('c-n','l-p','l-n','s-p','s-n'))
-melted_gu$Colorlevels <- factor(melted_gu$Color, levels= c("sienna3","skyblue4","cadetblue3","deeppink","mediumvioletred"))
+melted_gu$Colorlevels <- factor(melted_gu$Color, levels= c("sienna3","skyblue3","cadetblue3","deeppink","mediumvioletred"))
 gu_red
 ```
 
@@ -89,7 +91,7 @@ p <- ggplot(melted_gu, aes(x= Class, y= value))
 p <- p + stat_summary(fun = mean, geom = "bar", position=position_dodge(.9), aes(fill=Color))
 p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=2,  stackratio = 1, binwidth=.0015,  aes(fill=Color), show.legend=T) 
 p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
-p <- p + scale_fill_identity(guide = "legend", labels = levels(melted_gu$Class), breaks = levels(melted_gu$Colorlevels)) + scale_y_continuous(limits = c(0, .125), expand = c(0, 0))
+p <- p + scale_fill_identity(guide = "legend", labels = levels(melted_gu$Class), breaks = levels(melted_gu$Colorlevels)) + scale_y_continuous(limits = c(0, .155), expand = c(0, 0))
 p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1), text = element_text(size = 12))
 p <- p + facet_wrap(~variable, nrow=1)
 p
@@ -97,6 +99,56 @@ pdf(file="./figures/noBMT_barplot_TRBV.pdf", height=4, width=6)
 plot(p)
 dev.off()
 ```
+
+### Statistics
+
+Separating clonotype data
+```{r}
+gu_12.1 <- melted_gu[ which(melted_gu$variable=='TRBV12-1'), ]
+gu_12.2 <- melted_gu[ which(melted_gu$variable=='TRBV12-2'), ]
+gu_26 <- melted_gu[ which(melted_gu$variable=='TRBV26'), ]
+```
+
+#### TRBV12-1
+```{r}
+gu_12.1.res.aov <- aov(value~Class, data=gu_12.1)
+summary (gu_12.1.res.aov)
+```
+
+```{r}
+TukeyHSD(gu_12.1.res.aov)
+```
+s-p-c-n p<0.01 **
+s-p-l-p p<0.001 ***
+s-p-l-n p<0.01 **
+
+#### TRBV12-2
+```{r}
+gu_12.2.res.aov <- aov(value~Class, data=gu_12.2)
+summary (gu_12.2.res.aov)
+```
+
+```{r}
+TukeyHSD(gu_12.2.res.aov)
+```
+l-p-c-n p<0.001 ***
+l-n-c-n p<0.001 ***
+s-p-c-n p<0.001 ***
+s-n-c-n p<0.001 ***
+
+#### TRBV26
+```{r}
+gu_26.res.aov <- aov(value~Class, data=gu_26)
+summary (gu_26.res.aov)
+```
+
+```{r}
+TukeyHSD(gu_26.res.aov)
+```
+s-p-c-n p<0.05 *
+s-p-l-n p<0.01 **
+
+
 
 
 ```{r}

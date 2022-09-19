@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::write_bib(.packages(), "Figure5e5fS5m_Treg_BMT_analyses_TRB.packages.bib")
 ```
 
-This Rscript is called in the CommandsB07_bulkTCR_BMT.sh script
+This Rscript is called in the Commands_bulkTCR_BMT.sh script
 
 # Data analysis for Figures 5e, 5g and S5m
 
@@ -28,6 +28,9 @@ library(reshape2)
 library(ggplot2)
 library(immunarch)
 library(ggrepel)
+library(car)
+library(PMCMRplus)
+library(tidyverse)
 ```
 
 data loading
@@ -81,7 +84,7 @@ p <- ggplot(div_simp, aes(x= Class, y= Value))
 p <- p + stat_summary(fun = mean, geom = "bar", position=position_dodge(.9), aes(fill=Color))
 p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=2,  stackratio = 1, binwidth=10,  aes(fill=Color), show.legend=T) 
 p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
-p <- p + scale_fill_identity(guide = "legend", labels = levels(div_simp$Class), breaks = levels(div_simp$Colorlevels)) + scale_y_continuous(limits =c(0,700), expand = c(0, 0))
+p <- p + scale_fill_identity(guide = "legend", labels = levels(div_simp$Class), breaks = levels(div_simp$Colorlevels)) + scale_y_continuous(limits =c(0,950), expand = c(0, 0))
 p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1), text = element_text(size = 12))
 p <- p + facet_wrap(~Model, nrow=1)
 p
@@ -89,6 +92,56 @@ pdf(file="./figures/allTRB_barplot_invSimp.pdf", height=3, width=4)
 plot(p)
 dev.off()
 ```
+
+### Statistics for Fig S5m
+
+Separating allo and poly data as well as GvHD and no GvHD
+
+```{r}
+div_simp_alloGvHD <- div_simp[ which(div_simp$Model=='allo' & ( div_simp$Class=='d' | div_simp$Class=='c' | div_simp$Class=='l' | div_simp$Class=='s')), ]
+div_simp_polyGvHD <- div_simp[ which(div_simp$Model=='poly' & ( div_simp$Class=='d' | div_simp$Class=='c' | div_simp$Class=='l' | div_simp$Class=='s')), ]
+div_simp_allonoGvHD <- div_simp[ which(div_simp$Model=='allo' & ( div_simp$Class=='d' | div_simp$Class=='cc' | div_simp$Class=='cl' | div_simp$Class=='cs')), ]
+div_simp_polynoGvHD <- div_simp[ which(div_simp$Model=='poly' & ( div_simp$Class=='d' | div_simp$Class=='cc' | div_simp$Class=='cl' | div_simp$Class=='cs')), ]
+```
+
+```{r}
+alloGvHD.aov <- aov(Value~Class, data=div_simp_alloGvHD) 
+summary(alloGvHD.aov) # p-value = 1.05e-06 ***
+polyGvHD.aov <- aov(Value~Class, data=div_simp_polyGvHD)
+summary(polyGvHD.aov) # p-value = 2.78e-09 ***
+allonoGvHD.aov <- aov(Value~Class, data=div_simp_allonoGvHD)
+summary(allonoGvHD.aov) # p-value = 0.000703 ***
+polynoGvHD.aov <- aov(Value~Class, data=div_simp_polynoGvHD)
+summary(polynoGvHD.aov) # p-value = 0.0023 **
+```
+
+```{r}
+TukeyHSD(alloGvHD.aov)
+```
+d-c **
+d-l ***
+d-s ***
+
+```{r}
+TukeyHSD(polyGvHD.aov)
+```
+d-c ***
+d-l ***
+d-s ***
+
+```{r}
+TukeyHSD(allonoGvHD.aov)
+```
+d-l **
+
+```{r}
+TukeyHSD(polynoGvHD.aov)
+```
+d-l **
+
+
+
+
 
 ## Figures showing TRBV gene distribution across samples
 
@@ -154,6 +207,7 @@ plot(p, labels=TRUE)
 dev.off()
 ```
 
+
 ### Figure 5f showing TRBV frequencies for colon enriched segments
 
 
@@ -184,7 +238,7 @@ p <- ggplot(melted_gu, aes(x= Class, y= value))
 p <- p + stat_summary(fun = mean, geom = "bar", position=position_dodge(.9), aes(fill=Color))
 p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=3,  stackratio = 1, binwidth=.0025,  aes(fill=Color), show.legend=T) 
 p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
-p <- p + scale_fill_identity(guide = "legend", labels = levels(melted_gu$Class), breaks = levels(melted_gu$Colorlevels)) + scale_y_continuous(limits = c(0, .3), expand = c(0, 0))
+p <- p + scale_fill_identity(guide = "legend", labels = levels(melted_gu$Class), breaks = levels(melted_gu$Colorlevels)) + scale_y_continuous(limits = c(0, .355), expand = c(0, 0))
 p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1), text = element_text(size = 12))
 p <- p + facet_wrap(~variable + Model, nrow=1)
 p
@@ -192,6 +246,145 @@ pdf(file="./figures/allTRB_barplot_TRBV.pdf", height=4, width=10)
 plot(p)
 dev.off()
 ```
+
+### Statistics for Fig 5f
+
+Separating clonotype data and removing donors for testing
+
+```{r}
+melted_gu <- melted_gu %>% unite(Class_Model, c("Class", "Model")) %>% mutate(value=as.numeric(value))
+melted_gu$Class_Model <- factor(melted_gu$Class_Model)
+gu_12.1 <- filter(melted_gu, variable=='TRBV12-1' & !Class_Model %in% c("d_allo","d_poly") )
+gu_12.2 <- filter(melted_gu, variable=='TRBV12-2' & !Class_Model %in% c("d_allo","d_poly") )
+gu_26 <- filter(melted_gu, variable=='TRBV26' & !Class_Model %in% c("d_allo","d_poly") )
+```
+
+#### TRBV12-1
+```{r}
+gu_12.1_alloGvHD <- gu_12.1[ which(gu_12.1$Class_Model=='c_allo' | gu_12.1$Class_Model=='l_allo' | gu_12.1$Class_Model=='s_allo'), ]
+gu_12.1_polyGvHD <- gu_12.1[ which(gu_12.1$Class_Model=='c_poly' | gu_12.1$Class_Model=='l_poly' | gu_12.1$Class_Model=='s_poly'), ]
+gu_12.1_allonoGvHD <- gu_12.1[ which(gu_12.1$Class_Model=='cc_allo' | gu_12.1$Class_Model=='cl_allo' | gu_12.1$Class_Model=='cs_allo'), ]
+gu_12.1_polynoGvHD <- gu_12.1[ which(gu_12.1$Class_Model=='cc_poly' | gu_12.1$Class_Model=='cl_poly' | gu_12.1$Class_Model=='cs_poly'), ]
+```
+
+```{r}
+gu_12.1_alloGvHD.aov <- aov(value~Class_Model, data=gu_12.1_alloGvHD)
+summary (gu_12.1_alloGvHD.aov)
+TukeyHSD(gu_12.1_alloGvHD.aov)
+```
+s-c p<0.05 *
+l-c p<0.001 ***
+
+```{r}
+gu_12.1_polyGvHD.aov <- aov(value~Class_Model, data=gu_12.1_polyGvHD)
+summary (gu_12.1_polyGvHD.aov)
+TukeyHSD(gu_12.1_polyGvHD.aov)
+```
+s-c p<0.001 ***
+l-c p<0.001 ***
+
+```{r}
+gu_12.1_allonoGvHD.aov <- aov(value~Class_Model, data=gu_12.1_allonoGvHD)
+summary (gu_12.1_allonoGvHD.aov)
+TukeyHSD(gu_12.1_allonoGvHD.aov)
+```
+cs-cc p<0.001 ***
+cl-cc p<0.001 ***
+cs-cc p<0.05 *
+
+```{r}
+gu_12.1_polynoGvHD.aov <- aov(value~Class_Model, data=gu_12.1_polynoGvHD)
+summary (gu_12.1_polynoGvHD.aov)
+TukeyHSD(gu_12.1_polynoGvHD.aov)
+```
+cs-cc p<0.05 *
+cl-cc p<0.001 ***
+
+#### TRBV12-2
+```{r}
+gu_12.2_alloGvHD <- gu_12.2[ which(gu_12.2$Class_Model=='c_allo' | gu_12.2$Class_Model=='l_allo' | gu_12.2$Class_Model=='s_allo'), ]
+gu_12.2_polyGvHD <- gu_12.2[ which(gu_12.2$Class_Model=='c_poly' | gu_12.2$Class_Model=='l_poly' | gu_12.2$Class_Model=='s_poly'), ]
+gu_12.2_allonoGvHD <- gu_12.2[ which(gu_12.2$Class_Model=='cc_allo' | gu_12.2$Class_Model=='cl_allo' | gu_12.2$Class_Model=='cs_allo'), ]
+gu_12.2_polynoGvHD <- gu_12.2[ which(gu_12.2$Class_Model=='cc_poly' | gu_12.2$Class_Model=='cl_poly' | gu_12.2$Class_Model=='cs_poly'), ]
+```
+
+```{r}
+gu_12.2_alloGvHD.aov <- aov(value~Class_Model, data=gu_12.2_alloGvHD)
+summary (gu_12.2_alloGvHD.aov)
+TukeyHSD(gu_12.2_alloGvHD.aov)
+```
+s-c p<0.001 ***
+l-c p<0.001 ***
+
+```{r}
+gu_12.2_polyGvHD.aov <- aov(value~Class_Model, data=gu_12.2_polyGvHD)
+summary (gu_12.2_polyGvHD.aov)
+TukeyHSD(gu_12.2_polyGvHD.aov)
+```
+s-c p<0.01 **
+l-c p<0.001 ***
+s-l p<0.05 *
+
+```{r}
+gu_12.2_allonoGvHD.aov <- aov(value~Class_Model, data=gu_12.2_allonoGvHD)
+summary (gu_12.2_allonoGvHD.aov)
+TukeyHSD(gu_12.2_allonoGvHD.aov)
+```
+cs-cc p<0.001 ***
+cl-cc p<0.001 ***
+
+```{r}
+gu_12.2_polynoGvHD.aov <- aov(value~Class_Model, data=gu_12.2_polynoGvHD)
+summary (gu_12.2_polynoGvHD.aov)
+TukeyHSD(gu_12.2_polynoGvHD.aov)
+```
+cs-cc p<0.001 ***
+cl-cc p<0.001 ***
+
+#### TRBV26
+```{r}
+gu_26_alloGvHD <- gu_26[ which(gu_26$Class_Model=='c_allo' | gu_26$Class_Model=='l_allo' | gu_26$Class_Model=='s_allo'), ]
+gu_26_polyGvHD <- gu_26[ which(gu_26$Class_Model=='c_poly' | gu_26$Class_Model=='l_poly' | gu_26$Class_Model=='s_poly'), ]
+gu_26_allonoGvHD <- gu_26[ which(gu_26$Class_Model=='cc_allo' | gu_26$Class_Model=='cl_allo' | gu_26$Class_Model=='cs_allo'), ]
+gu_26_polynoGvHD <- gu_26[ which(gu_26$Class_Model=='cc_poly' | gu_26$Class_Model=='cl_poly' | gu_26$Class_Model=='cs_poly'), ]
+```
+
+```{r}
+gu_26_alloGvHD.aov <- aov(value~Class_Model, data=gu_26_alloGvHD)
+summary (gu_26_alloGvHD.aov)
+TukeyHSD(gu_26_alloGvHD.aov)
+```
+s-c p<0.001 ***
+l-c p<0.001 ***
+
+```{r}
+gu_26_polyGvHD.aov <- aov(value~Class_Model, data=gu_26_polyGvHD)
+summary (gu_26_polyGvHD.aov)
+TukeyHSD(gu_26_polyGvHD.aov)
+```
+s-c p<0.001 ***
+l-c p<0.001 ***
+s-l p<0.001 ***
+
+```{r}
+gu_26_allonoGvHD.aov <- aov(value~Class_Model, data=gu_26_allonoGvHD)
+summary (gu_26_allonoGvHD.aov)
+TukeyHSD(gu_26_allonoGvHD.aov)
+```
+cs-cc p<0.001 ***
+cl-cc p<0.001 ***
+
+```{r}
+gu_26_polynoGvHD.aov <- aov(value~Class_Model, data=gu_26_polynoGvHD)
+summary (gu_26_polynoGvHD.aov)
+TukeyHSD(gu_26_polynoGvHD.aov)
+```
+cs-cc p<0.001 ***
+cl-cc p<0.001 ***
+
+
+
+
 
 
 ```{r}

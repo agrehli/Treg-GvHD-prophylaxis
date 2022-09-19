@@ -25,7 +25,7 @@ TMPDIR="/loctmp"
 PATH_PERL=${DIR_SOFT}/package/perl/perl-5.26.1/bin
 PATH_SAMTOOLS=${DIR_PKG}/samtools/samtools-1.6/bin
 PATH_HOMER=${DIR_PKG}/homer/v4.11/bin
-PATH_R=${DIR_SOFT}/package/RBioC/stretch_R-4.0.3_Bioc-3.12_intel-mkl-64bit-2020.1-102/lib/R/bin
+PATH_R=${DIR_SOFT}/package/RBioC/buster_R-4.0.3_Bioc-3.12_intel-mkl-64bit-2020.1-102/lib/R/bin
 export PATH=${PATH_PERL}:${PATH_SAMTOOLS}:${PATH_HOMER}:${PATH_R}:${PATH}
 export PATH
 
