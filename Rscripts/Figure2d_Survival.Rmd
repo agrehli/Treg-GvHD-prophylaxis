@@ -1,5 +1,5 @@
 ---
-title: "Figure2b_Survival"
+title: "Figure2d_Survival"
 author: Michael Rehli
 output: 
   html_document:
@@ -14,7 +14,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "Figure2b_Survival.packages.bib")
+knitr::write_bib(.packages(), "Figure2d_Survival.packages.bib")
 ```
 
 # Survival in BMT experiments
@@ -55,7 +55,7 @@ p
 ```
 
 ```{r}
-pdf("./figures/Figure2b_Survival.pdf", height=4.5, width=6)
+pdf("./figures/Figure2d_Survival.pdf", height=4.5, width=6)
 p
 dev.off()
 
@@ -66,7 +66,7 @@ dev.off()
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2b_Survival_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2d_Survival_SessionInfo.txt")
 ```
 
 

@@ -43,10 +43,10 @@ generating the plot for Supplementary Figure 2c
 p <- ggplot(Tconv.data, aes(x=category, y=WBCperc, fill=category)) + coord_cartesian(ylim = c(0,100))
 p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
 p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=4, stackratio = 1, binwidth=1) 
-p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + stat_summary(fun.data=mean_se, geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
 p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), text = element_text(size = 24))
 p <- p + scale_fill_manual(values = c("gray","darkorange","steelblue3","firebrick3"))
-p <- p + labs(title="re-isolated Tconv (GvHD)",x="organ", y = "% of WBC")
+p <- p + labs(title="re-isolated Tconv (GvHD)",x="organ", y = "% of leukocytes")
 p <- p + facet_wrap(~organ, nrow=1)
 p
 pdf("./figures/TconvOrganDistPerc.pdf", height=5.5, width=8.5)

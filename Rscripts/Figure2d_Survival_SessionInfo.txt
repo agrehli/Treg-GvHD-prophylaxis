@@ -20,7 +20,7 @@ loaded via a namespace (and not attached):
  [5] purrr_0.3.4       splines_4.0.3     lattice_0.20-45   carData_3.0-4    
  [9] colorspace_2.0-2  vctrs_0.3.8       generics_0.1.1    htmltools_0.5.2  
 [13] yaml_2.2.1        survMisc_0.5.5    utf8_1.2.2        rlang_0.4.12     
-[17] jquerylib_0.1.4   pillar_1.6.4      glue_1.5.0        withr_2.4.2      
+[17] jquerylib_0.1.4   pillar_1.6.4      glue_1.6.2        withr_2.4.2      
 [21] DBI_1.1.1         lifecycle_1.0.1   stringr_1.4.0     munsell_0.5.0    
 [25] ggsignif_0.6.3    gtable_0.3.0      evaluate_0.14     labeling_0.4.2   
 [29] knitr_1.36        fastmap_1.1.0     fansi_0.5.0       highr_0.9        

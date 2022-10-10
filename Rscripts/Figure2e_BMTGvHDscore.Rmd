@@ -1,5 +1,5 @@
 ---
-title: "Figure2c_BMTGvHDscore"
+title: "Figure2e_BMTGvHDscore"
 author: Michael Rehli
 output: 
   html_document:
@@ -14,7 +14,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "Figure2c_BMTGvHDscore.packages.bib")
+knitr::write_bib(.packages(), "Figure2e_BMTGvHDscore.packages.bib")
 ```
 
 # GvHD scores in BMT experiments
@@ -36,11 +36,12 @@ score.df$type <- c(rep("BMonly",285), rep("noTreg",285), rep("alloTreg",304), re
 score.df$type <- factor(score.df$type,levels = c("BMonly","noTreg","alloTreg","polyTreg"))
 score.df
 ```
-generating the plot for Figure 2b
+
+generating the plot for Figure 2e
 
 ```{r, fig.width=7.5, fig.height=4.5, warning=FALSE}
 p <- ggplot(score.df, aes(x=time, y=scores, group=type, color=type)) 
-p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 4, position=position_dodge(.9))
+p <- p + stat_summary(fun.data=mean_se, geom="errorbar", color="black", size=0.5, width = 4, position=position_dodge(.9))
 p <- p + stat_summary(fun = mean, geom = "point", size=2.5, position=position_dodge(.9))
 p <- p + stat_summary(fun = mean, geom = "line", size=.5, position=position_dodge(.9))
 p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), axis.text.y = element_text(color="black"), text = element_text(size = 24))
@@ -51,7 +52,7 @@ p
 
 
 ```{r, fig.width=7.5, fig.height=4.5, warning=FALSE}
-pdf("./figures/Figure2c_BMTGvHDscore.pdf", height=4.5, width=7.5)
+pdf("./figures/Figure2e_BMTGvHDscore.pdf", height=4.5, width=7.5)
 p
 dev.off()
 ```
@@ -90,7 +91,7 @@ print(c(i, myTukey[i]))
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2c_BMTGvHDscore_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure2e_BMTGvHDscore_SessionInfo.txt")
 ```
 
 
