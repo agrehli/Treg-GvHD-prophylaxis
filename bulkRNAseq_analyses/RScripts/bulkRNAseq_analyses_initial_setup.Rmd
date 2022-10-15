@@ -55,7 +55,6 @@ dir.create(path = "./FIGDIR")
 stid<-readRDS("./METADIR/stid.rds")
 # Reading in the metadata file and ordering it according to the samples_N
 metad<-read.csv("./METADIR/Smart-Seq_libraries_metad4R_ID-ordered.csv")
-metad<-read.csv("./METADIR/Smart-Seq_libraries_metad4R_ID-ordered.minimal.csv")
 metad<-metad[order(metad$sample_N),]
 rownames(metad)<-1:nrow(metad)
 # Some of the columns used later MUST NOT be factors and will therefore be defined as character columns
