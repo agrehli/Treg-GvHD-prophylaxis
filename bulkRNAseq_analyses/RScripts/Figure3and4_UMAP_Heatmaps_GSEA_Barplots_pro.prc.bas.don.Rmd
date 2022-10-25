@@ -535,8 +535,17 @@ avp.idx<-which(bar.df.mod$gene_symbol %in% all.goi.list$avpGenes)
 bar.df.mod.avp<-bar.df.mod[avp.idx,]
 ```
 
-### Barplots (Supplementary Figure 3 c)
-* Hereafter, bar plots shown in supplementary figure 3 c are plotted and exported individually.
+
+
+### Barplots (Supplementary Figure 3 e)
+* Hereafter, bar plots shown in supplementary figure 3 e are plotted and exported individually.
+
+#### Exporting data table 
+
+```{r}
+write.table (as.data.frame(bar.df.mod.avp), file = "./ANALDIR/dataFigureS3e.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
 
 #### Penk
 * Log~2~RPKM values are used to represent Penk gene expression levels as a bar plot.
@@ -1340,6 +1349,14 @@ row.ann.df<-data.frame(cluster=pcbd.hm.df.jt.cus$`Louvain Cluster`)
 rownames(row.ann.df)<-rownames(pcbd.hm.df.jt.cus)
 ```
 
+* exporting the clustered data table
+
+```{r}
+write.table (as.data.frame(pcbd.hm.df.jt.cus) %>% tibble::rownames_to_column("GeneID"), file = "./ANALDIR/dataFigure3e.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+```
+
+
 * The actual heat map is plotted. 
 * Be aware that clusters 1-3 in the manuscript equal clusters 1-3 herein, while clusters 4-9 in the manuscript equal clusters 5-10 herein, respectively.
 
@@ -1721,6 +1738,8 @@ TF.sig.hm$GeneSymbol<-factor(TF.sig.hm$GeneSymbol,levels=c("Arnt","Runx3","Klf6"
           "Irf7","Irf9","Stat2","Irf2") )
 TF.sig.hm<-TF.sig.hm[order(TF.sig.hm$GeneSymbol),]
 TF.sig.hm.matrix<-data.matrix(TF.sig.hm[1:19])
+#exportimg the data frame
+write.table (as.data.frame(TF.sig.hm) %>% tibble::rownames_to_column("ShortID"), file = "./ANALDIR/dataFigure3g.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 #color scale
 clustercol <- colorRampPalette(c("blue","white","red"))(29)
 col_breaks = c(seq(-1.5,-0.5,length=10), seq(-0.49,0.49,length=10), seq(0.5,1.5,length=10)) 
@@ -1800,12 +1819,14 @@ supp.sig<-c("Gzmb","Il10","Gzma","Fasl","Prf1","Ctla4","Entpd1","Tgfb1","Tgfb3",
 ```
 
 ## Heatmap (Figure 4 d)
-* Heatmap presenting hierarchically clustered and scaled expression data of genes associated with suppressie Treg functions.
+* Heatmap presenting hierarchically clustered and scaled expression data of genes associated with suppressiv Treg functions.
 ```{r, fig.height=3.6, fig.width=3.8}
 # index generation
 ind.supp.sig<-pcbd.log.cpmbygroup.scaled.cor$GeneSymbol %in% supp.sig
 # subsetting
 supp.sig.hm.matrix<-data.matrix(pcbd.log.cpmbygroup.scaled.cor[ind.supp.sig,1:19])
+# export data frame
+write.table (as.data.frame(supp.sig.hm.matrix) %>% tibble::rownames_to_column("ShortID"), file = "./ANALDIR/dataFigure4d.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 # heatmap colors
 clustercol <- colorRampPalette(c("blue","white","red"))(29)
 col_breaks = c(seq(-1.5,-0.5,length=10), seq(-0.49,0.49,length=10), seq(0.5,1.5,length=10)) 
@@ -1886,6 +1907,9 @@ dev.off()
 ```{r}
 supp.idx<-which(bar.df.mod$gene_symbol %in% supp.sig)
 bar.df.mod.supp<-bar.df.mod[supp.idx,]
+# exporting the data frame
+write.table (as.data.frame(bar.df.mod.supp), file = "./ANALDIR/dataFigureS4d.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
 ```
 
 ### Gzmb
@@ -2890,13 +2914,23 @@ bar.p.mod.supp.grid
 dev.off()
 ```
 
-# Additional barplots for pTreg signature genes
+# Additional barplots for pTreg signature genes (Supplementary Figure 3l)
 
 * pTreg-typical genes described by van der Veeken et al. 2022.
 
 ```{r}
 pTreg.sig <- c("Rorc","Maf","Ahr","Gpr15")
 ```
+
+* extract data frame
+
+```{r}
+pTreg.idx<-which(bar.df.mod$gene_symbol %in% pTreg.sig)
+bar.df.mod.pTreg<-bar.df.mod[pTreg.idx,]
+# exporting the data frame
+write.table (as.data.frame(bar.df.mod.pTreg), file = "./ANALDIR/dataFigureS3l.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
 
 ## Rorc
 
@@ -3180,7 +3214,7 @@ bar.p.pTreg.grid
 * The pTreg marker gene bar plot arrangement is also exported into the figure directory.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigureXx_pcbd.pTreg.vanderVeeken.combined.barplot.RPKM.pdf", 
+pdf(file="./FIGDIR/SupplementaryFigure3l_pcbd.pTreg.vanderVeeken.combined.barplot.RPKM.pdf", 
     height=2, width=6)
 bar.p.pTreg.grid
 dev.off()
