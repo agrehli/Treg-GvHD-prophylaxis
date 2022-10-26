@@ -23,6 +23,7 @@ library(edgeR)
 library(AnnotationDbi)
 library(org.Mm.eg.db) #for mouse
 library(gplots)
+library(dplyr)
 ```
 
 ```{r setup, include=FALSE}
@@ -181,6 +182,11 @@ write.table(x = aubert.treg.intersect,
 iv.log.rpkmByGroup.filtered<-subset(iv.log.rpkmByGroup, allo > 1 | poly > 1)
 ind.aubert<-iv.log.rpkmByGroup.filtered$GeneSymbol%in%aubert.treg.intersect
 aubert.hm.matrix<-data.matrix(iv.log.rpkmByGroup.filtered[ind.aubert,1:3])
+
+# Export data frame
+write.table (as.data.frame(aubert.hm.matrix) %>% tibble::rownames_to_column("ShortID"), file = "./ANALDIR/dataFigure1f.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+
 # The actual heatmap.2 plot command
 # Orientation for plot elements: (1=heatmap, 2=row dendogram, 3=col dendogram, 4= key )
 heatmap.2(x = aubert.hm.matrix,

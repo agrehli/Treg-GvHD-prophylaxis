@@ -16,7 +16,7 @@ output:
     code_folding: hide
 ---
 
-***
+--------------------------------------------------------------------------------
 
 ```{r, include=FALSE}
 # Load required libraries
@@ -51,17 +51,25 @@ counts.m<-readRDS("./RCTDIR/counts.m.rds")
 metad.m<-readRDS("./METADIR/metad.m.rds")
 stid<-readRDS("./METADIR/stid.rds")
 ```
-* First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
-* This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
 
-***
+-   First, required data objects (counts, metadata, short transcript ID) and R
+    packages are loaded.
+-   This is the starting point for most analyses conducted on bulk RNA-seq data
+    for the associated manuscript.
+
+--------------------------------------------------------------------------------
 
 # Data Preparation
-* For the analysis, the data and metadata have to be prepared and properly annotated.
+
+-   For the analysis, the data and metadata have to be prepared and properly
+    annotated.
 
 ## Annotation Data Frame
-* An annotation data frame with 4 columns is constructed.
-* The additional EntrezID column is required for possible downstream pathway analyses or annotation operations.
+
+-   An annotation data frame with 4 columns is constructed.
+-   The additional EntrezID column is required for possible downstream pathway
+    analyses or annotation operations.
+
 ```{r}
 genes.df<-as.data.frame(strsplit2(stid,"[$]"))
 colnames(genes.df)<-c("EnsemblID","GeneSymbol","Length","GeneType")
@@ -81,15 +89,21 @@ which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
 ```
 
 ## Subsetting Index
-* In this analysis, we focus on CD62L^-^ tissue-resident Treg from colon, spleen and liver.
-* A subsetting index is generated accordingly.
+
+-   In this analysis, we focus on CD62L^-^ tissue-resident Treg from colon,
+    spleen and liver.
+-   A subsetting index is generated accordingly.
+
 ```{r}
 bclsn.ind<-grepl("wt",metad.m$appl)&grepl("neg", metad.m$treat)&(grepl("S", metad.m$org)|grepl("C", metad.m$org)|grepl("L", metad.m$org))
 print(paste(sum(bclsn.ind),"samples enter the analysis!"))
 ```
 
 ## Counts
-* Here, the comprehensive counts data frame is reduced using the subsetting index.
+
+-   Here, the comprehensive counts data frame is reduced using the subsetting
+    index.
+
 ```{r}
 #Subsetting the respective counts object (counts.m)
 counts.bclsn<-counts.m[,bclsn.ind]
@@ -98,11 +112,17 @@ colnames(counts.bclsn)
 ```
 
 ## Metadata
-* The metadata has to be reduced accordingly. 
-* The original order of samples is introduced for downstream re-ordering of the read count table.
-* An additional group variable assigning colon-re-isolated samples to one group and spleen- or liver-resident Treg to the other is introduced, as well.
-* This enables the comparison of lymphoid vs. non-lymphoid tissue-resident Treg (CD62L^-^) in the steady-stat, underlying this analysis.
-* Additionally, a group variable for coloring to distinguish spleen and liver is introduced.
+
+-   The metadata has to be reduced accordingly.
+-   The original order of samples is introduced for downstream re-ordering of
+    the read count table.
+-   An additional group variable assigning colon-re-isolated samples to one
+    group and spleen- or liver-resident Treg to the other is introduced, as
+    well.
+-   This enables the comparison of lymphoid vs. non-lymphoid tissue-resident
+    Treg (CD62L^-^) in the steady-stat, underlying this analysis.
+-   Additionally, a group variable for coloring to distinguish spleen and liver
+    is introduced.
 
 ```{r}
 # subsetting and ordering
@@ -126,7 +146,9 @@ organ.bclsn
 ```
 
 ## Re-ordering Counts Data Frame Columns
-* Here, read counts are re-ordered according to the metadata object.
+
+-   Here, read counts are re-ordered according to the metadata object.
+
 ```{r}
 counts.bclsn.ord<-counts.bclsn[,counts.bclsn.ind]
 head(counts.bclsn.ord, n=4L)
@@ -135,7 +157,10 @@ rm(counts.bclsn.ord)
 ```
 
 ## Consistency Check
-* In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
+
+-   In order to avoid wrongful labelling, sample_IDs are used to confirm that
+    the counts and metadata objects are consistent.
+
 ```{r}
 if (sum(colnames(counts.bclsn)==metad.bclsn$sample_ID)==sum(bclsn.ind)) {
   print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with!")
@@ -145,8 +170,11 @@ if (sum(colnames(counts.bclsn)==metad.bclsn$sample_ID)==sum(bclsn.ind)) {
 ```
 
 ## DGE List Objects
-* A DGEList object is generated, the main class of the edgeR package. 
-* For full functionality, the counts.bclsn, organ.bclsn and genes.df variables are used to do so.
+
+-   A DGEList object is generated, the main class of the edgeR package.
+-   For full functionality, the counts.bclsn, organ.bclsn and genes.df variables
+    are used to do so.
+
 ```{r}
 dgel.bclsn<-DGEList(counts = counts.bclsn, group = organ.bclsn, genes = genes.df)
 head(dgel.bclsn$samples, n=13L)
@@ -154,8 +182,12 @@ head(dgel.bclsn$genes, n=4L)
 ```
 
 ## Exclusion of Rare Transcripts
-* The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
-* Only genes fulfilling that criterion are kept and also normalization factors are calculated.
+
+-   The "filterByExpr()" function is used to determine which genes have
+    sufficiently large counts to be retained in a statistical analysis.
+-   Only genes fulfilling that criterion are kept and also normalization factors
+    are calculated.
+
 ```{r}
 keep.bclsn <- filterByExpr(dgel.bclsn)
 dgel.bclsn <- dgel.bclsn[keep.bclsn, , keep.lib.sizes=FALSE]
@@ -164,8 +196,10 @@ print(paste(table(keep.bclsn)[1],"genes are discarded while",table(keep.bclsn)[2
 ```
 
 ## Log~2~(cpm) & Zscore Calculation
-* In this step, Log~2~(cpm), scaled data (Zscores) are calculated.
-* A batch-correction for the prep-batch is also performed.
+
+-   In this step, Log~2~(cpm), scaled data (Zscores) are calculated.
+-   A batch-correction for the prep-batch is also performed.
+
 ```{r}
 # log2-transformed cpms with a prior count of 2
 bclsn.log.cpm <- cpm(dgel.bclsn, prior.count = 2, log = TRUE) 
@@ -184,14 +218,17 @@ bclsn.log.cpm.scaled.cor<-data.matrix(t(bclsn.log.cpm.scaled.transposed))
 rm(bclsn.log.cpm.scaled.transposed, bclsn.design.plots)
 ```
 
-***
+--------------------------------------------------------------------------------
 
 # Differential Gene Expression (DGE) analysis
 
 ## Designs for DGE
-* Data exploration revealed that PCR cycles are most suitable for batch correction if we compare colon with liver/spleen.
-* Additionally we can correct for prep-batch.
-* Hence, the variables should be included as blocking factors.
+
+-   Data exploration revealed that PCR cycles are most suitable for batch
+    correction if we compare colon with liver/spleen.
+-   Additionally we can correct for prep-batch.
+-   Hence, the variables should be included as blocking factors.
+
 ```{r}
 # blocking factors
 pcr2<-factor(metad.bclsn$PCR2.Cy)
@@ -202,8 +239,9 @@ colnames(bclsn.cvnc.design.dge)[1:2]<- c("colon","liver_spleen")
 as_tibble(bclsn.cvnc.design.dge)
 ```
 
-* For individual pairwise DGE comparisons, an alternative design is required.
-* Batch-correction for prep-batch can be carried out as in logCPM computation above and is consequently introduced as blocking factor.
+-   For individual pairwise DGE comparisons, an alternative design is required.
+-   Batch-correction for prep-batch can be carried out as in logCPM computation
+    above and is consequently introduced as blocking factor.
 
 ```{r}
 # blocking factor
@@ -213,15 +251,19 @@ bclsn.organ.design.dge <- model.matrix(~0+organ.bclsn+pb)
 colnames(bclsn.organ.design.dge)[1:3] <- c("colon", "liver", "spleen")
 as_tibble(bclsn.organ.design.dge)
 ```
+
 ## Dispersion Estimation
-* Hereafter, dispersion is estimated and the biological coefficient of variation is plotted.
+
+-   Hereafter, dispersion is estimated and the biological coefficient of
+    variation is plotted.
+
 ```{r}
 #colon vs non-colon
 dgel.bclsn<-estimateDisp(dgel.bclsn,design=bclsn.cvnc.design.dge,robust=TRUE)
 dgel.bclsn$common.dispersion # 0.1111957
 ```
 
-* Alternative design:
+-   Alternative design:
 
 ```{r}
 dgel.bclsn.organ<-dgel.bclsn
@@ -230,7 +272,10 @@ dgel.bclsn.organ$common.dispersion # 0.1111957
 ```
 
 ## GLM Fitting
-* Fitting genewise glms (generalized linear model) for the constructed designs.
+
+-   Fitting genewise glms (generalized linear model) for the constructed
+    designs.
+
 ```{r}
 bclsn.cvnc.fit<-glmQLFit(y = dgel.bclsn, design = bclsn.cvnc.design.dge)
 bclsn.organ.fit<-glmQLFit(y = dgel.bclsn.organ, design = bclsn.organ.design.dge)
@@ -239,9 +284,14 @@ bclsn.organ.fit<-glmQLFit(y = dgel.bclsn.organ, design = bclsn.organ.design.dge)
 ## DGE for Contrasts of Interest (COI)
 
 ### Colon vs. non-Colon
-* The interest in this analysis lies in the differences between Treg re-isolated from colon versus liver & spleen. 
-* Thus, our contrast of interest is "colon - liver_spleen" for the DGE analysis. 
-* We can have a quick look at how many genes are DE with a FC > 1.5 and FDR < 0.05.
+
+-   The interest in this analysis lies in the differences between Treg
+    re-isolated from colon versus liver & spleen.
+-   Thus, our contrast of interest is "colon - liver_spleen" for the DGE
+    analysis.
+-   We can have a quick look at how many genes are DE with a FC \> 1.5 and FDR
+    \< 0.05.
+
 ```{r}
 # Contrast of Interest
 bclsn.cvnc.con<-makeContrasts(colon - liver_spleen, levels=bclsn.cvnc.design.dge)
@@ -253,10 +303,13 @@ summary(bclsn.cvnc.tr.qdt)
 ```
 
 #### Exporting DGE Statistics
-* The data frame contained in the glmTreat function results is stored for direct access.
+
+-   The data frame contained in the glmTreat function results is stored for
+    direct access.
+
 ```{r}
 write.table(x = bclsn.cvnc.tr.qstat$table,
-            file = "./ANALDIR/SupplementaryFigure3e_TregDGE_cvnc_bas.neg_FC1.5.txt",
+            file = "./ANALDIR/SupplementaryFigure3g_TregDGE_cvnc_bas.neg_FC1.5.txt",
             quote=FALSE, 
             sep = "\t",
             col.names = TRUE,
@@ -264,7 +317,10 @@ write.table(x = bclsn.cvnc.tr.qstat$table,
 ```
 
 ### Colon vs. Liver & Colon vs. Spleen & Liver vs. Spleen
-* Alternative Design: We do all comparisons to combine differential gene lists.
+
+-   Alternative Design: We do all comparisons to combine differential gene
+    lists.
+
 ```{r}
 # Contrasts of Interest
 ## Colon vs. Liver
@@ -290,16 +346,24 @@ bclsn.lvs.tr.qdt<-decideTestsDGE(bclsn.lvs.tr)
 summary(bclsn.lvs.tr.qdt)
 ```
 
-***
+--------------------------------------------------------------------------------
 
 # DEG Visualization as Scatterplot
-* Hereafter, DEGs are visualized *via* a scatter plot.
-* The colon vs. non-colon resident CD62L^-^ Treg comparison will be the basis for this.
-* At the same time the comparison can be understood as non-lymphoid tissue (NLT) vs. lymphoid tissue (LT), in line with the nomenclature of the Miragaia et al. 2019 paper.
+
+-   Hereafter, DEGs are visualized *via* a scatter plot.
+-   The colon vs. non-colon resident CD62L^-^ Treg comparison will be the basis
+    for this.
+-   At the same time the comparison can be understood as non-lymphoid tissue
+    (NLT) vs. lymphoid tissue (LT), in line with the nomenclature of the
+    Miragaia et al. 2019 paper.
 
 ## Data Preparation
-* In order not to exclude GOI, the data is no further filtered than already facilitated above when accounting for rare transcripts.
-* Necessary data transformations for the scatter plot are carried out as well: columns with individual logCPMs (calculated from logCPM and logFC).
+
+-   In order not to exclude GOI, the data is no further filtered than already
+    facilitated above when accounting for rare transcripts.
+-   Necessary data transformations for the scatter plot are carried out as well:
+    columns with individual logCPMs (calculated from logCPM and logFC).
+
 ```{r}
 # Extraction of data frame from glmTreat result
 bclsn.cvnc.tr.qstat.scat <- bclsn.cvnc.tr.qstat$table %>% #is a data frame
@@ -317,17 +381,23 @@ nrow(bclsn.cvnc.tr.qstat.scat.DN)
 
 ```
 
+```{r}
+bclsn.cvnc.tr.qstat.scat.UP%>% head
+```
+
 ## Exporting UP and DN regulated Genes
-* Significantly up and down regulated genes are exported in the following.
+
+-   Significantly up and down regulated genes are exported in the following.
+
 ```{r}
 #extract filtered gene lists
 write.table(rownames(bclsn.cvnc.tr.qstat.scat.UP),
-            file = "./ANALDIR/SupplementaryFigure3e_TregDGE_cvnc_bas.neg.sig.UP.txt",
+            file = "./ANALDIR/SupplementaryFigure3g_TregDGE_cvnc_bas.neg.sig.UP.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 write.table(rownames(bclsn.cvnc.tr.qstat.scat.DN),
-            file = "./ANALDIR/SupplementaryFigure3e_TregDGE_cvnc_bas.neg.sig.DN.txt",
+            file = "./ANALDIR/SupplementaryFigure3g_TregDGE_cvnc_bas.neg.sig.DN.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
@@ -336,9 +406,13 @@ write.table(rownames(bclsn.cvnc.tr.qstat.scat.DN),
 ## Scatter Plot
 
 ### Definition of Genes of Interest (GOI)
-* Hereafter, GOI are taken from Miragaia et al. 2019 (Figure 2 B) presenting Treg subpopulations of the steady-state.
-* The question addressed here is whether our data is in line with their findings. 
-* [Here you can have a look at the figure](https://pubmed.ncbi.nlm.nih.gov/30737144/#&gid=article-figures&pid=figure-2-uid-2)
+
+-   Hereafter, GOI are taken from Miragaia et al. 2019 (Figure 2 B) presenting
+    Treg subpopulations of the steady-state.
+-   The question addressed here is whether our data is in line with their
+    findings.
+-   [Here you can have a look at the
+    figure](https://pubmed.ncbi.nlm.nih.gov/30737144/#&gid=article-figures&pid=figure-2-uid-2)
 
 ```{r}
 # non-lymphoid tissue
@@ -348,7 +422,9 @@ tm_fig2_panel_LT<-rev(c("Stat1","Ccr7","S1pr1","Sell","Bcl2","Tcf7"))
 ```
 
 ### Color-coded geom_text_repel data frames
-* First, we prepare some labels to be able to label data points for all categories with a single call to geom_text_repel.
+
+-   First, we prepare some labels to be able to label data points for all
+    categories with a single call to geom_text_repel.
 
 ```{r}
 bclsn.cvnc.qstat.scat.ann <- bclsn.cvnc.tr.qstat.scat %>%
@@ -365,8 +441,10 @@ head(bclsn.cvnc.qstat.scat.ann)
 bclsn.cvnc.qstat.scat.ann.label <- filter(bclsn.cvnc.qstat.scat.ann, !is.na(ann.col))
 ```
 
-### Scatter plot with GOI highlighted (Supplementary Figure 3 e)
-* Hereafter, the scatter plot is generated and plotted.
+### Scatter plot with GOI highlighted (Supplementary Figure 3 g)
+
+-   Hereafter, the scatter plot is generated and plotted.
+
 ```{r, fig.height=2.6}
 bclsn.scat.cvnc.nlt.lt <- ggplot(bclsn.cvnc.tr.qstat.scat) + 
   aes(x=logCPMnonColon, y=logCPMcolon) +
@@ -421,10 +499,10 @@ bclsn.scat.cvnc.nlt.lt <- ggplot(bclsn.cvnc.tr.qstat.scat) +
 bclsn.scat.cvnc.nlt.lt
 ```
 
-* The scatter plot is exported into the figure directory.
+-   The scatter plot is exported into the figure directory.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3e_TregDGEScatter_cvnc.bn_tmGenes.pdf",
+pdf(file="./FIGDIR/SupplementaryFigure3g_TregDGEScatter_cvnc.bn_tmGenes.pdf",
     height=2.6, width = 3.8)
 bclsn.scat.cvnc.nlt.lt
 dev.off()
@@ -433,7 +511,10 @@ dev.off()
 # GSEA with camera
 
 ## Pathway enrichment analysis Hallmark gene sets
-* Using camera, we look whether pathways from hallmark gene sets are enriched in our regulated genes
+
+-   Using camera, we look whether pathways from hallmark gene sets are enriched
+    in our regulated genes
+
 ```{r}
 library(dplyr)
 #hallmark
@@ -449,9 +530,19 @@ H.ind.cvnc.bn <- H.ind.cvnc.bn[rownames(gst.hall.cvnc.bn.ord)]
 filter(gst.hall.cvnc.bn.ord,FDR < 0.05)
 ```
 
-## GSEA Barcode Plots (Supplementary Figure 3 f)
-* Barcode plot visualizations of selected top ranking terms are shown below.
-* HALLMARK_TNFA_SIGNALING_VIA_NFKB
+filter(gst.hall.cvnc.bn.ord,FDR \< 0.05)
+
+-   exporting data
+
+```{r, data export}
+write.table (as.data.frame(filter(gst.hall.cvnc.bn.ord,FDR < 0.05)) %>% tibble::rownames_to_column("Hallmark"), file = "./ANALDIR/dataFigureS3h.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+## GSEA Barcode Plots (Supplementary Figure 3 h)
+
+-   Barcode plot visualizations of selected top ranking terms are shown below.
+-   HALLMARK_TNFA_SIGNALING_VIA_NFKB
+
 ```{r, fig.height=3.2, fig.width=6}
 bclsn.cvnc.bc.tnfa %<a-%{
   par(mar=c(4.1,2.1,0.1,0.1))
@@ -477,15 +568,15 @@ bclsn.cvnc.bc.tnfa %<a-%{
 bclsn.cvnc.bc.tnfa
 ```
 
-* Barcode plot exported.
+-   Barcode plot exported.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3f_Barcodeplot_cvnc.bas.neg_Hallmark_TNFA.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure3h_Barcodeplot_cvnc.bas.neg_Hallmark_TNFA.pdf", height=3.2, width=6)
 bclsn.cvnc.bc.tnfa
 dev.off()
 ```
 
-* HALLMARK_IL6_JAK_STAT3_SIGNALING
+-   HALLMARK_IL6_JAK_STAT3_SIGNALING
 
 ```{r, fig.height=3.2, fig.width=6}
 bclsn.cvnc.bc.il6js %<a-%{
@@ -512,15 +603,15 @@ bclsn.cvnc.bc.il6js %<a-%{
 bclsn.cvnc.bc.il6js
 ```
 
-* Barcode plot exported.
+-   Barcode plot exported.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3f_Barcodeplot_cvnc.bas.neg_Hallmark_IL6JS.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure3h_Barcodeplot_cvnc.bas.neg_Hallmark_IL6JS.pdf", height=3.2, width=6)
 bclsn.cvnc.bc.il6js
 dev.off()
 ```
 
-* HALLMARK_IL2_STAT5_SIGNALING
+-   HALLMARK_IL2_STAT5_SIGNALING
 
 ```{r, fig.height=3.2, fig.width=6}
 bclsn.cvnc.bc.il2s5%<a-%{
@@ -547,15 +638,15 @@ bclsn.cvnc.bc.il2s5%<a-%{
 bclsn.cvnc.bc.il2s5
 ```
 
-* Barcode plot exported.
+-   Barcode plot exported.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3f_Barcodeplot_cvnc.bas.neg_Hallmark_IL2STAT5.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure3h_Barcodeplot_cvnc.bas.neg_Hallmark_IL2STAT5.pdf", height=3.2, width=6)
 bclsn.cvnc.bc.il2s5
 dev.off()
 ```
 
-* HALLMARK_INFLAMMATORY_RESPONSE
+-   HALLMARK_INFLAMMATORY_RESPONSE
 
 ```{r, fig.height=3.2, fig.width=6}
 bclsn.cvnc.bc.infr %<a-%{
@@ -582,15 +673,16 @@ bclsn.cvnc.bc.infr %<a-%{
 bclsn.cvnc.bc.infr
 ```
 
-* Barcode plot exported.
+-   Barcode plot exported.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3f_Barcodeplot_cvnc.bas.neg_Hallmark_IR.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure3h_Barcodeplot_cvnc.bas.neg_Hallmark_IR.pdf", height=3.2, width=6)
 bclsn.cvnc.bc.infr
 dev.off()
 ```
 
-* Hereafter, the top 4 enriched pathways will be plotted as barcodeplots, FDR ranked.
+-   Hereafter, the top 4 enriched pathways will be plotted as barcodeplots, FDR
+    ranked.
 
 ```{r,fig.height=3.2, fig.width=6}
 # for loop for top 4 plotting
@@ -621,10 +713,10 @@ for (i in c(1,2,3,4)) {
 }
 ```
 
-* the arrangement is exported
+-   the arrangement is exported
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3f_Barcodeplot_cvnc.bas.neg_Hallmark_top4ranked.pdf", height = 3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure3h_Barcodeplot_cvnc.bas.neg_Hallmark_top4ranked.pdf", height = 3.2, width=6)
 # for loop for top 4 plotting
 for (i in c(1,2,3,4)) {
   #message(i)
@@ -654,14 +746,18 @@ for (i in c(1,2,3,4)) {
 dev.off()
 ```
 
-***
+--------------------------------------------------------------------------------
 
 # DEG Visualization as Zscore Heat Map
-* Hereafter, the heat map shown in Supplementary Figure 3 g will be generated.
+
+-   Hereafter, the heat map shown in Supplementary Figure 3 i will be generated.
 
 ## Required Data Frames
-* The scaled and prep-batch-corrected data is the data for plotting.
-* DGE test statistics are extracted and defined as variables to be extended by logRPKM based on logCPM and gene length.
+
+-   The scaled and prep-batch-corrected data is the data for plotting.
+-   DGE test statistics are extracted and defined as variables to be extended by
+    logRPKM based on logCPM and gene length.
+
 ```{r}
 ## scaled data for plotting
 bclsn.log.cpm.scaled.df <- as.data.frame(bclsn.log.cpm.scaled.cor)
@@ -678,9 +774,11 @@ bclsn.cvs.treat.heat$logRPKM <- bclsn.cvs.treat.heat$logCPM - log2(bclsn.cvs.tre
 ```
 
 ## Merging of Data Frames
-* Data frames are merged based on a jointly introduced column GeneID.
-* Columns relevant for downstream filtering are renamed for clarity.
-* Obsolete variables are removed, thereafter.
+
+-   Data frames are merged based on a jointly introduced column GeneID.
+-   Columns relevant for downstream filtering are renamed for clarity.
+-   Obsolete variables are removed, thereafter.
+
 ```{r}
 # extend scaled data with GeneID column
 bclsn.log.cpm.scaled.df.ext <- bclsn.log.cpm.scaled.df %>% mutate(GeneID = rownames(bclsn.log.cpm.scaled.df))
@@ -717,12 +815,13 @@ rm(bclsn.log.cpm.scaled.df.ext,
    bclsn.lvs.tr.qstat.ext)
 ```
 
-
-
 ## Filter Joint Data Frame for DEGOI
-* Hereafter, data is filtered.
-* The filtering strategy combines interesting DEGs for the colon vs. non-colon as well as individual pair wise comparisons.
-* Also the number of DEGOI for the heat map is printed.
+
+-   Hereafter, data is filtered.
+-   The filtering strategy combines interesting DEGs for the colon vs. non-colon
+    as well as individual pair wise comparisons.
+-   Also the number of DEGOI for the heat map is printed.
+
 ```{r}
 # Filtering for DEGOI
 bclsn.jt.filtered<-subset(bclsn.jt,
@@ -745,8 +844,11 @@ nrow(bclsn.jt.filtered)
 ```
 
 ## Hierarchical Clustering
-* The filtered data is hierarchically clustered row as well as column wise.
-* Also, colors for the cluster sidebar are defined with the 2 colon-specific clusters combined.
+
+-   The filtered data is hierarchically clustered row as well as column wise.
+-   Also, colors for the cluster sidebar are defined with the 2 colon-specific
+    clusters combined.
+
 ```{r}
 # Hierarchical clustering of Zscores based on only the actual Zscores of the samples as matrix
 bclsn.hc.filtered <- hclust(dist(t(data.matrix(bclsn.jt.filtered[,metad.bclsn$sample_ID])), method = "manhattan"), method="ward.D")
@@ -762,9 +864,15 @@ nrow(bclsn.jt.filtered.clusterID.ordered)
 ```
 
 ## Cluster and Background Gene Lists
-* Gene symbols for clusters 1,2,3 and 4 (4 and 5 merged) are extracted in the order of appearance in above heat map from top to bottom.
-* Respective background genes resulting from a filtering only by logCPM and logRPKM are defined, as well.
-* Additionally, GeneIDs from colon down and up genes are extracted for gene set rotation analyses of respective comparison results in another sample subset.
+
+-   Gene symbols for clusters 1,2,3 and 4 (4 and 5 merged) are extracted in the
+    order of appearance in above heat map from top to bottom.
+-   Respective background genes resulting from a filtering only by logCPM and
+    logRPKM are defined, as well.
+-   Additionally, GeneIDs from colon down and up genes are extracted for gene
+    set rotation analyses of respective comparison results in another sample
+    subset.
+
 ```{r}
 # down in colon, up in spleen and liver
 cluster1.genes<-bclsn.jt.filtered.clusterID.ordered$GeneSymbol.x[bclsn.jt.filtered.clusterID.ordered$clusterID %in% unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[1]]
@@ -788,8 +896,17 @@ cluster1.geneIDs<-bclsn.jt.filtered.clusterID.ordered$GeneID[bclsn.jt.filtered.c
 cluster4.geneIDs<-bclsn.jt.filtered.clusterID.ordered$GeneID[bclsn.jt.filtered.clusterID.ordered$clusterID %in% c(unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[4],unique(bclsn.jt.filtered.clusterID.ordered$clusterID)[5])]
 ```
 
-## Basic Heat Map (Supplementary Figure 3 g)
-* Following filtering for DEGOI and hierarchical clustering of genes and samples, data is presented as heat map.
+-   export data frame
+
+```{r, counts}
+write.table (as.data.frame(bclsn.jt.filtered.clusterID.ordered) %>% tibble::rownames_to_column("ShortID"), file = "./ANALDIR/dataFigureS3i.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+## Basic Heat Map (Supplementary Figure 3 i)
+
+-   Following filtering for DEGOI and hierarchical clustering of genes and
+    samples, data is presented as heat map.
+
 ```{r, fig.height=7.5, fig.width=5.5}
 # The following defines the Zscore color code
 clustercol <- colorRampPalette(c("blue","white","red"))(29)
@@ -843,66 +960,72 @@ text(x=-3.3,
 bclsn.cvnc.hm.pryr.ann
 ```
 
-* which is also exported into the figure directory.
+-   which is also exported into the figure directory.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3g_bclsn.Heatmap_indivZscores_qstat.bclsn.treat.lfc.0.6.pdf", height=8.5, width=6.5)
+pdf(file="./FIGDIR/SupplementaryFigure3i_bclsn.Heatmap_indivZscores_qstat.bclsn.treat.lfc.0.6.pdf", height=8.5, width=6.5)
 bclsn.cvnc.hm.pryr.ann
 dev.off()
 ```
 
-
 ## Export of gene lists for Metascape
-* Cluster and background gene lists are exported for a custom metascape analysis.
-* For clusters 1 and 4 (colon up and colon down), GeneIDs are exported additionally for GSEA barcode plots in another analysis.
+
+-   Cluster and background gene lists are exported for a custom metascape
+    analysis.
+-   For clusters 1 and 4 (colon up and colon down), GeneIDs are exported
+    additionally for GSEA barcode plots in another analysis.
+
 ```{r}
 # clusters from hea tmap
 write.table(cluster1.genes,
-            file = "./ANALDIR/SupplementaryFigure3g_cluster1.colon.down.txt",
+            file = "./ANALDIR/SupplementaryFigure3i_cluster1.colon.down.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
 write.table(cluster2.genes,
-            file = "./ANALDIR/SupplementaryFigure3g_cluster2.liver.up.txt",
+            file = "./ANALDIR/SupplementaryFigure3i_cluster2.liver.up.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
 write.table(cluster3.genes,
-            file = "./ANALDIR/SupplementaryFigure3g_cluster3.spleen.up.txt",
+            file = "./ANALDIR/SupplementaryFigure3i_cluster3.spleen.up.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
 write.table(cluster4.genes,
-            file = "./ANALDIR/SupplementaryFigure3g_cluster4.colon.up.txt",
+            file = "./ANALDIR/SupplementaryFigure3i_cluster4.colon.up.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
 write.table(bclsn.bg.genes,
-            file = "./ANALDIR/SupplementaryFigure3g_filtered.background.genes.txt",
+            file = "./ANALDIR/SupplementaryFigure3i_filtered.background.genes.txt",
             col.names = "GeneSymbol",
             quote=FALSE, 
             row.names = FALSE)
 #additional export for GSEA
 write.table(cluster1.geneIDs,
-            file = "./ANALDIR/SupplementaryFigure3g_cluster1.colon.down.GeneIDs.txt",
+            file = "./ANALDIR/SupplementaryFigure3i_cluster1.colon.down.GeneIDs.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 write.table(cluster4.geneIDs,
-            file = "./ANALDIR/SupplementaryFigure3g_cluster4.colon.up.GeneIDs.txt",
+            file = "./ANALDIR/SupplementaryFigure3i_cluster4.colon.up.GeneIDs.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 ```
 
-* A manual metascape analysis is run with the clusters gene lists customized background gene list.
-* Visualization of the results will be done in R, hereafter.
+-   A manual metascape analysis is run with the clusters gene lists customized
+    background gene list.
+-   Visualization of the results will be done in R, hereafter.
 
 ## Metascape Results Bar Plots
-* Hereafter, the results of the custom metascape analysis will be visualized.
-* Heat map cluster 1: down in colon genes
+
+-   Hereafter, the results of the custom metascape analysis will be visualized.
+-   Heat map cluster 1: down in colon genes
+
 ```{r, fig.width=3.6}
-bclsn.metascape.down <- read_excel("./METASCAPE/SupplementaryFigure3g_cluster1.colon.down_metascape_result.xlsx", sheet=2)
+bclsn.metascape.down <- read_excel("./METASCAPE/SupplementaryFigure3i_cluster1.colon.down_metascape_result.xlsx", sheet=2)
 bclsn.metascape.down.main <- subset(bclsn.metascape.down, grepl("Summary", bclsn.metascape.down$GroupID))
 colnames(bclsn.metascape.down.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 bclsn.metascape.down.main$Description <- factor(bclsn.metascape.down.main$Description, level=bclsn.metascape.down.main$Description)
@@ -929,14 +1052,14 @@ bclsn.metascape.colon.down.bar <- ggplot(bclsn.metascape.down.sig) +
 bclsn.metascape.colon.down.bar
 ```
 
-* Heat map cluster 2: up-in-liver genes
-* No terms significantly enriched.
-* Heat map cluster 3: up-in-liver genes
-* No terms significantly enriched.
-* Heat map Cluster 4: up-in-colon genes
+-   Heat map cluster 2: up-in-liver genes
+-   No terms significantly enriched.
+-   Heat map cluster 3: up-in-liver genes
+-   No terms significantly enriched.
+-   Heat map Cluster 4: up-in-colon genes
 
 ```{r, fig.width=3.6}
-bclsn.metascape.up <- read_excel("./METASCAPE/SupplementaryFigure3g_cluster4.colon.up_metascape_result.xlsx", sheet=2)
+bclsn.metascape.up <- read_excel("./METASCAPE/SupplementaryFigure3i_cluster4.colon.up_metascape_result.xlsx", sheet=2)
 bclsn.metascape.up.main <- subset(bclsn.metascape.up, grepl("Summary", bclsn.metascape.up$GroupID))
 colnames(bclsn.metascape.up.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 bclsn.metascape.up.main$Description <- factor(bclsn.metascape.up.main$Description, level=bclsn.metascape.up.main$Description)
@@ -964,9 +1087,13 @@ bclsn.metascape.colon.up.bar <- ggplot(bclsn.metascape.up.sig[1:10,]) +
 bclsn.metascape.colon.up.bar
 ```
 
-### Pathway analysis (Metascape) (Supplementary Figure 3 h)
-* Hereafter, significantly enriched pathways as determined by the custom metascape analysis are presented as bar plots.
-* Only for heat map clusters (Supplementary Figure 3 g) 1 and 4, pathways were found enriched significantly.
+### Pathway analysis (Metascape) (Supplementary Figure 3 j)
+
+-   Hereafter, significantly enriched pathways as determined by the custom
+    metascape analysis are presented as bar plots.
+-   Only for heat map clusters (Supplementary Figure 3 i) 1 and 4, pathways were
+    found enriched significantly.
+
 ```{r,fig.height=4.6, fig.width=3.6}
 bclsn.metascape.plot.grid <- plot_grid(bclsn.metascape.colon.down.bar,
                                        bclsn.metascape.colon.up.bar,
@@ -977,19 +1104,22 @@ bclsn.metascape.plot.grid <- plot_grid(bclsn.metascape.colon.down.bar,
 bclsn.metascape.plot.grid
 ```
 
-* The figure is also exported.
+-   The figure is also exported.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3h_bclsn.Metascape.Barplot.pdf", height=5.6, width = 4.6)
+pdf(file="./FIGDIR/SupplementaryFigure3j_bclsn.Metascape.Barplot.pdf", height=5.6, width = 4.6)
 bclsn.metascape.plot.grid
 dev.off()
 ```
 
-***
+--------------------------------------------------------------------------------
 
 # Additional Subsetting Index for all Baseline samples: CD62L^+^ & CD62L^-^
-* For the bar plot in Supplementary Figure 3 i, we also need to include CD62L^+^ samples.
-* A subsetting index is created for that purpose.
+
+-   For the bar plot in Supplementary Figure 3 k, we also need to include
+    CD62L^+^ samples.
+-   A subsetting index is created for that purpose.
+
 ```{r}
 bcls.ind<-grepl("wt",metad.m$appl)&(grepl("S", metad.m$org)|grepl("C", metad.m$org)|grepl("L", metad.m$org))
 bcls.ind
@@ -997,7 +1127,8 @@ bcls.ind
 
 ##Counts
 
-* Here, the comprehensive counts data frame is reduced using the subsetting index.
+-   Here, the comprehensive counts data frame is reduced using the subsetting
+    index.
 
 ```{r}
 #Subsetting the respective counts object (counts.m)
@@ -1005,10 +1136,14 @@ counts.bcls<-counts.m[,bcls.ind]
 ncol(counts.bcls)
 colnames(counts.bcls)
 ```
+
 ## Metadata
-* The metadata has to be reduced accordingly. 
-* The original order of samples is introduced for downstream re-ordering of the read count table.
-* An additional, custom group variable is introduced as well. 
+
+-   The metadata has to be reduced accordingly.
+-   The original order of samples is introduced for downstream re-ordering of
+    the read count table.
+-   An additional, custom group variable is introduced as well.
+
 ```{r, echo= FALSE}
 metad.bcls<-metad.m[bcls.ind,]
 metad.bcls$orig.ord<-1:nrow(metad.bcls)
@@ -1017,16 +1152,23 @@ counts.bcls.ind<-metad.bcls$orig.ord
 metad.bcls
 group.bcls<-factor(as.character(metad.bcls$grp), levels = c("wt_C_neg","wt_L_neg","wt_S_neg","wt_L_pos","wt_S_pos"))
 ```
+
 ## Re-ordering Counts Data Frame Columns
-* Here, read counts are re-ordered according to the metadata object.
+
+-   Here, read counts are re-ordered according to the metadata object.
+
 ```{r}
 counts.bcls.ord<-counts.bcls[,counts.bcls.ind]
 head(counts.bcls.ord)
 counts.bcls<-counts.bcls.ord
 rm(counts.bcls.ord)
 ```
+
 ## Consistency Check
-* In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
+
+-   In order to avoid wrongful labelling, sample_IDs are used to confirm that
+    the counts and metadata objects are consistent.
+
 ```{r}
 if (sum(colnames(counts.bcls)==metad.bcls$sample_ID)==sum(bcls.ind)) {
   print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with!")
@@ -1034,9 +1176,13 @@ if (sum(colnames(counts.bcls)==metad.bcls$sample_ID)==sum(bcls.ind)) {
   print("Something is inconsistent, check the code above for errors during subsetting!")
 }
 ```
+
 ## DGE List Objects
-* A DGEList object is generated, the main class of the edgeR package. 
-* For full functionality, the counts.bcls, group.bcls and genes.df variables are used to do so.
+
+-   A DGEList object is generated, the main class of the edgeR package.
+-   For full functionality, the counts.bcls, group.bcls and genes.df variables
+    are used to do so.
+
 ```{r,include=FALSE}
 dgel.bcls<-DGEList(counts = counts.bcls, group = group.bcls, genes = genes.df)
 dgel.bcls
@@ -1044,8 +1190,12 @@ dgel.bcls$samples
 ```
 
 ## Exclusion of Rare Transcripts
-* The "filterByExpr()" function is used to determine which genes have sufficiently large counts to be retained in a statistical analysis. 
-* Only genes fulfilling that criterion are kept and also normalization factors are calculated.
+
+-   The "filterByExpr()" function is used to determine which genes have
+    sufficiently large counts to be retained in a statistical analysis.
+-   Only genes fulfilling that criterion are kept and also normalization factors
+    are calculated.
+
 ```{r}
 keep.bcls <- filterByExpr(dgel.bcls)
 dgel.bcls <- dgel.bcls[keep.bcls, , keep.lib.sizes=FALSE]
@@ -1053,9 +1203,12 @@ dgel.bcls <- calcNormFactors(dgel.bcls)
 table(keep.bcls)
 dgel.bcls$samples
 ```
+
 ## Log~2~(rpkm) Calculation
-* In this step, Log~2~(rpkm) are calculated.
-* Also, for the data plotted, a prep-batch correction is carried out.
+
+-   In this step, Log~2~(rpkm) are calculated.
+-   Also, for the data plotted, a prep-batch correction is carried out.
+
 ```{r}
 # log2rpkm values with a prior count of 2
 bcls.log.rpkm <- rpkm(dgel.bcls, prior.count = 2,log = TRUE)
@@ -1065,17 +1218,23 @@ bcls.log.rpkm.cor <-removeBatchEffect(bcls.log.rpkm, batch = metad.bcls$pb,
                                       design = design.bcls)
 ```
 
-***
+--------------------------------------------------------------------------------
 
 # Barplots for Gene Expression Levels
-* log2-transformed RPKM bar plots for selected genes are produced by the following code.
-* Before bar plots can be generated, an appropriate data frame has to be created.
+
+-   log2-transformed RPKM bar plots for selected genes are produced by the
+    following code.
+-   Before bar plots can be generated, an appropriate data frame has to be
+    created.
 
 ## Aesthetics
-* Fitting color and shapes vectors have to be defined for aesthetic plotting.
+
+-   Fitting color and shapes vectors have to be defined for aesthetic plotting.
 
 ### Named Color Vector
-* A named color vector is defined, hereafter.
+
+-   A named color vector is defined, hereafter.
+
 ```{r}
 bcls.col<-c("peru","lightsteelblue","hotpink4","lightsteelblue1","hotpink")
 names(bcls.col)<-levels(group.bcls)
@@ -1083,7 +1242,9 @@ bcls.col
 ```
 
 ### Named Shapes Vector
-* A named shapes vector is defined, in the following.
+
+-   A named shapes vector is defined, in the following.
+
 ```{r}
 bcls.shp.3<-c(23,24,21,24,21)
 names(bcls.shp.3)<-levels(group.bcls)
@@ -1091,8 +1252,10 @@ bcls.shp.3
 ```
 
 ## Definition of GOI
-* Hereafter, we define genes of interest (GOI) for downstream bar plots.
-* GOI comprise organ specific genes, defined as one vector.
+
+-   Hereafter, we define genes of interest (GOI) for downstream bar plots.
+-   GOI comprise organ specific genes, defined as one vector.
+
 ```{r}
 organ.sig<-c("Cxcr5","Izumo1r","Naip5","Naip6","S1pr1","S1pr4","Cd55","Klf2","Klrg1","Il1rl1","Gpr15","Relb")
 organ.sig
@@ -1100,9 +1263,11 @@ organ.sig
 
 ## Data Preparation
 
-### Transposed Data Frame 
-* Hereafter, a transposed log~2~(rpkm) data frame is generated.
-* This is done for the defined GOI with gene symbols used as rownames.
+### Transposed Data Frame
+
+-   Hereafter, a transposed log~2~(rpkm) data frame is generated.
+-   This is done for the defined GOI with gene symbols used as rownames.
+
 ```{r}
 bcls.log.rpkm.4bar <- data.frame(bcls.log.rpkm.cor)
 bcls.log.rpkm.an <- as.data.frame(strsplit2(rownames(bcls.log.rpkm),"[$]"))
@@ -1119,9 +1284,12 @@ bcls.log.rpkm.4bar.organ.tp <- as.data.frame(bcls.log.rpkm.4bar.organ.tp[rowname
 ```
 
 ### Annotation and Gathering for Bar plot Data frame
-* SampleID, group information is added.
-* Individual observations are summarized per sample group and GOI.
-* Values are converted to numeric and the GeneSymbol column is declared a factor to enable desirable ordering.
+
+-   SampleID, group information is added.
+-   Individual observations are summarized per sample group and GOI.
+-   Values are converted to numeric and the GeneSymbol column is declared a
+    factor to enable desirable ordering.
+
 ```{r}
 bcls.log.rpkm.4bar.organ.tp$sampleID<-colnames(counts.bcls)
 bcls.log.rpkm.4bar.organ.tp$group<-group.bcls
@@ -1132,9 +1300,18 @@ bcls.log.rpkm.4bar.organ.dm$GeneSymbol <- factor(as.character(bcls.log.rpkm.4bar
 sapply(bcls.log.rpkm.4bar.organ.dm, class)
 ```
 
-## Bar plot arrangement (Supplementary Figure 3 i)
-* Bar plots are created and arranged into an array of plots.
-* Scale labeling is adjusted to match the manual data transformation for more aesthetic plotting.
+-   exporting data table
+
+```{r, rpkm_table}
+write.table (as.data.frame(bcls.log.rpkm.4bar.organ.dm), file = "./ANALDIR/dataFigureS3k.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+## Bar plot arrangement (Supplementary Figure 3 k)
+
+-   Bar plots are created and arranged into an array of plots.
+-   Scale labeling is adjusted to match the manual data transformation for more
+    aesthetic plotting.
+
 ```{r}
 bar.plot.organ<-ggplot(data = bcls.log.rpkm.4bar.organ.dm,
                        aes(x = group,
@@ -1197,29 +1374,30 @@ bar.plot.organ<-ggplot(data = bcls.log.rpkm.4bar.organ.dm,
   facet_wrap(~GeneSymbol, ncol = 4)
 ```
 
-* The plot array is shown, hereafter.  
+-   The plot array is shown, hereafter.
 
 ```{r, fig.width=2.5, fig.height=3.5}
 bar.plot.organ
 ```
 
-* The bar plot arrangement is exported, hereafter.
+-   The bar plot arrangement is exported, hereafter.
 
 ```{r}
-pdf(file = "./FIGDIR/SupplementaryFigure3i_bcls.organ.sig.barplots.expression.shifted+4.prepbatch-corrected.pdf",
+pdf(file = "./FIGDIR/SupplementaryFigure3k_bcls.organ.sig.barplots.expression.shifted+4.prepbatch-corrected.pdf",
    width = 2.5, height = 3.5)
 bar.plot.organ
 dev.off()
 ```
 
-***
+--------------------------------------------------------------------------------
 
 # SessionInfo
+
 ```{r, echo=FALSE, warning=FALSE}
 sessionInfo(package = NULL)
 writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure3_TregDGEScatter_GSEA_Heatmap_Metascape_cvnc.b.Cd62Lneg_SessionInfo.txt")
 ```
 
-***
+--------------------------------------------------------------------------------
 
 # Bibliography

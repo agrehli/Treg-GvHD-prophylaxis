@@ -375,9 +375,9 @@ dev.off()
 * Data from analogous baseline Treg analysis is read in, hereafter. 
 ```{r}
 bc.up <- read.delim(
-  file = "./ANALDIR/SupplementaryFigure3g_cluster4.colon.up.GeneIDs.txt")
+  file = "./ANALDIR/SupplementaryFigure3i_cluster4.colon.up.GeneIDs.txt")
 bc.dn <- read.delim(
-  file = "./ANALDIR/SupplementaryFigure3g_cluster1.colon.down.GeneIDs.txt")
+  file = "./ANALDIR/SupplementaryFigure3i_cluster1.colon.down.GeneIDs.txt")
 ```
 
 * First, indices have to be generated for the underlying generalized linear model of this analysis.
@@ -540,7 +540,7 @@ summary(avp.pc.tr.qdt)
 * The data frame contained in the glmTreat function results is stored for direct access.
 ```{r}
 write.table(x = avp.pc.tr.qstat$table,
-            file = "./ANALDIR/SupplementaryFigure3a_TregDGE_avp_pro.prc_FC1.5.txt",
+            file = "./ANALDIR/SupplementaryFigure3c_TregDGE_avp_pro.prc_FC1.5.txt",
             quote=FALSE, 
             sep = "\t",
             col.names = TRUE,
@@ -581,12 +581,12 @@ nrow(avp.pc.tr.qstat.scat.filt.DN)
 ```{r}
 #extract filtered gene lists
 write.table(rownames(avp.pc.tr.qstat.scat.filt.UP),
-            file = "./ANALDIR/SupplementaryFigure3a_TregDGE_avp_pro.prc.filt.sig.UP.txt",
+            file = "./ANALDIR/SupplementaryFigure3c_TregDGE_avp_pro.prc.filt.sig.UP.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
 write.table(rownames(avp.pc.tr.qstat.scat.filt.DN),
-            file = "./ANALDIR/SupplementaryFigure3a_TregDGE_avp_pro.prc.filt.sig.DN.txt",
+            file = "./ANALDIR/SupplementaryFigure3c_TregDGE_avp_pro.prc.filt.sig.DN.txt",
             col.names = "GeneID",
             quote=FALSE, 
             row.names = FALSE)
@@ -630,7 +630,7 @@ nrow(filter(metad.pc, treat == "a"))
 nrow(filter(metad.pc, treat == "p"))
 ```
 
-### Scatterplot with GOI highlighted (Supplementary Figures 3 a)
+### Scatterplot with GOI highlighted (Supplementary Figures 3 c)
 * Treg signature genes highlighted
 ```{r, fig.height=2.6}
 avp.pc.scat <- ggplot(avp.pc.tr.qstat.scat.filt) + 
@@ -688,7 +688,7 @@ avp.pc.scat
 * Herafter, the scatterplot is exported into the figure directory.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3a_TregDGEScatter_avp.pc_TregSignature.pdf", height=2.6, width=4.2)
+pdf(file="./FIGDIR/SupplementaryFigure3c_TregDGEScatter_avp.pc_TregSignature.pdf", height=2.6, width=4.2)
 avp.pc.scat
 dev.off()
 ```
@@ -712,7 +712,7 @@ gse.avp.pc <- fry(dgel.avp.pc, index=ind, design=avp.pc.design.dge,contrast=avp.
 gse.avp.pc
 ```
 
-## GSEA Barcode plot (Supplementary Figure 3 b)
+## GSEA Barcode plot (Supplementary Figure 3 d)
 * Barcode plot presenting logFC (allo vs. poly transplanted & re-isolated Treg) ranked Genes that are upregulated in allo *in vitro* expanded Treg.
 ```{r, fig.height=3.2, fig.width=6}
 avp.pc.bc.avp.ivt %<a-% {
@@ -742,7 +742,7 @@ avp.pc.bc.avp.ivt
 * Barcode plot is also exported.
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3b_avp.cp.Barcodeplot_GenesUpInIvtAllo.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure3d_avp.cp.Barcodeplot_GenesUpInIvtAllo.pdf", height=3.2, width=6)
 avp.pc.bc.avp.ivt
 dev.off()
 ```
@@ -752,7 +752,7 @@ dev.off()
 * The file "SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ivt.txt" has to be generated first.
 * The individual FDR values for the GSEA are visualized as horizontal bar plot.
 ```{r, fig.height=1.8, fig.width=2.6}
-res_pvalues_ivt<-read.table(file = "./ANALDIR/SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ivt.txt", header = TRUE)
+res_pvalues_ivt<-read.table(file = "./ANALDIR/SupplementaryFigure3d_avp_prc.pro_c.l.s_GSEA_ivt.txt", header = TRUE)
 res_pvalues_ivt$logFDR <- log10(res_pvalues_ivt$pivt)
 res_pvalues_ivt.bar <- ggplot(res_pvalues_ivt) + 
   aes(x=samples, y=-logFDR ) + coord_flip() + 
@@ -781,7 +781,7 @@ res_pvalues_ivt.bar
 * The summary bar plot is also exported into the figure directory.
 
 ```{r}
-pdf(file= "./FIGDIR/SupplementaryFigure3b_avp.org.appl.wise.pvalues.bar_GenesUpInIvtAllo.pdf", height=1.8, width=2.6)
+pdf(file= "./FIGDIR/SupplementaryFigure3d_avp.org.appl.wise.pvalues.bar_GenesUpInIvtAllo.pdf", height=1.8, width=2.6)
 res_pvalues_ivt.bar
 dev.off()
 ```
@@ -835,7 +835,7 @@ avp.pc.bc.ifnar
 * Barcode plot is exported, hereafter.
 
 ```{r}
-pdf(file= "./FIGDIR/SupplementaryFigure3d_avp.pc.Barcodeplot_HALL_IFN.pdf", height=3.2, width=6)
+pdf(file= "./FIGDIR/SupplementaryFigure3f_avp.pc.Barcodeplot_HALL_IFN.pdf", height=3.2, width=6)
 avp.pc.bc.ifnar
 dev.off()
 ```
@@ -845,7 +845,7 @@ dev.off()
 * The file "SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ifn.txt" has to be generated first.
 * The individual FDR values for the GSEA are visualized as horizontal bar plot.
 ```{r, fig.height=1.9, fig.width=2.6}
-res_pvalues_ifn<-read.table(file = "./ANALDIR/SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ifn.txt", header = TRUE)
+res_pvalues_ifn<-read.table(file = "./ANALDIR/SupplementaryFigure3f_avp_prc.pro_c.l.s_GSEA_ifn.txt", header = TRUE)
 res_pvalues_ifn$logFDR <- log10(res_pvalues_ifn$pifn)
 res_pvalues_ifn.bar <- ggplot(res_pvalues_ifn) + 
   aes(x=samples, y=-logFDR ) + coord_flip() + 
@@ -874,7 +874,7 @@ res_pvalues_ifn.bar
 * The summary adj. p value bar plot is exported, hereafter.
 
 ```{r}
-pdf(file= "./FIGDIR/SupplementaryFigure3d_avp.org.appl.wise.pvalues.bar_HALL_IFN.pdf", height=1.9, width=2.6)
+pdf(file= "./FIGDIR/SupplementaryFigure3f_avp.org.appl.wise.pvalues.bar_HALL_IFN.pdf", height=1.9, width=2.6)
 res_pvalues_ifn.bar
 dev.off()
 ```

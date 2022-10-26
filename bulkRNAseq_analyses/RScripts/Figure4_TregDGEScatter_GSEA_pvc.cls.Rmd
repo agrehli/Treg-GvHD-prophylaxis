@@ -989,7 +989,7 @@ spc.bc.IFNA.pryr
 dev.off()
 ```
 
-### HALLMARK_TNFA_SIGNALING_VIA_NFKB (Supplementary Figure 4 b)
+### HALLMARK_TNFA_SIGNALING_VIA_NFKB (Supplementary Figure 4 c)
 * Barcode plots representing the results for all three tissues.
 * Colon, Liver and Spleen:  
 ```{r, fig.height=3.2, fig.width=6}
@@ -1066,17 +1066,17 @@ spc.bc.TNFA.pryr
 ```
 * All three barplots are exported into the figure directory, hereafter.
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.colon_Hallmark_TNFA.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure4c_Barcodeplot_pvc.colon_Hallmark_TNFA.pdf", height=3.2, width=6)
 cpc.bc.TNFA.pryr
 dev.off()
-pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.liver_Hallmark_TNFA.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure4c_Barcodeplot_pvc.liver_Hallmark_TNFA.pdf", height=3.2, width=6)
 lpc.bc.TNFA.pryr
-pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.spleen_Hallmark_TNFA.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure4c_Barcodeplot_pvc.spleen_Hallmark_TNFA.pdf", height=3.2, width=6)
 spc.bc.TNFA.pryr
 dev.off()
 ```
 
-### KEGG_DNA_REPLICATION (Supplementary Figure 4 c)
+### KEGG_DNA_REPLICATION (Supplementary Figure 4 b)
 * Barcode plots representing the results for all three tissues.
 * Colon, Liver and Spleen:  
 ```{r, fig.height=3.2, fig.width=6}
@@ -1153,12 +1153,12 @@ spc.bc.KREP.pryr
 ```
 * All three barplots are exported into the figure directory, hereafter.
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.colon_Hallmark_KeggREP.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure4b_Barcodeplot_pvc.colon_Hallmark_KeggREP.pdf", height=3.2, width=6)
 cpc.bc.KREP.pryr
 dev.off()
-pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.liver_Hallmark_KeggREP.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure4b_Barcodeplot_pvc.liver_Hallmark_KeggREP.pdf", height=3.2, width=6)
 lpc.bc.KREP.pryr
-pdf(file="./FIGDIR/SupplementaryFigure4a_Barcodeplot_pvc.spleen_Hallmark_KeggREP.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure4b_Barcodeplot_pvc.spleen_Hallmark_KeggREP.pdf", height=3.2, width=6)
 spc.bc.KREP.pryr
 dev.off()
 ```

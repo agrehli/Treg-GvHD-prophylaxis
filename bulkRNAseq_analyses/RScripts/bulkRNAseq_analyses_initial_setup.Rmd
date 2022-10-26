@@ -159,6 +159,7 @@ if (sum(metad.m$sample_ID == colnames(counts.m)) == ncol(counts.m)) {
 ```{r}
 saveRDS(metad.m, file = "./METADIR/metad.m.reproduced.rds")
 saveRDS(counts.m, file = "./RCTDIR/counts.m.reproduced.rds")
+write.table (as.data.frame(counts.m) %>% tibble::rownames_to_column("ShortID"), file = "./ANALDIR/counts.m.reproduced.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 ```
 
 ***

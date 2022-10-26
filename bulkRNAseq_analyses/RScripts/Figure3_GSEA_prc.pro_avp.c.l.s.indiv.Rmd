@@ -433,7 +433,7 @@ res_pvalues_ivt
 ## Export of the Summary
 ```{r}
 write.table(res_pvalues_ivt,
-            file = "./ANALDIR/SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ivt.txt",
+            file = "./ANALDIR/SupplementaryFigure3d_avp_prc.pro_c.l.s_GSEA_ivt.txt",
             col.names = TRUE,
             quote = FALSE,
             row.names = FALSE)
@@ -497,7 +497,7 @@ res_pvalues_ifn
 ## Export of the Summary
 ```{r}
 write.table(res_pvalues_ifn,
-            file = "./ANALDIR/SupplementaryFigure3b_avp_prc.pro_c.l.s_GSEA_ifn.txt",
+            file = "./ANALDIR/SupplementaryFigure3f_avp_prc.pro_c.l.s_GSEA_ifn.txt",
             col.names = TRUE,
             quote = FALSE,
             row.names = FALSE)
