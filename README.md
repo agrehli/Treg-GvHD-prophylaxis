@@ -23,7 +23,7 @@ The following figures are covered:
 * **Figure 1 e, f**
 * **Supplementary Figure 1 b**
 * **Figure 3 a - c, e - g**
-* **Supplementary Figure 3 a - i**
+* **Supplementary Figure 3 c - l**
 * **Figure 4 a - d**
 * **Supplementary Figure 4 a - d**
 
