@@ -26,6 +26,7 @@ R packages
 ```{r, warning=FALSE, message=FALSE}
 library(ggplot2)
 library(reshape2)
+library(dplyr)
 ```
 
 data loading
@@ -61,6 +62,14 @@ melted_gu <- melt(gu_red, id.vars = c('Names', 'Color', 'Class'))
 melted_gu$Class <- factor(melted_gu$Class, levels= c('d','c','l','s'))
 melted_gu$Colorlevels <- factor(melted_gu$Color, levels= c("red","sienna4","skyblue4","deeppink"))
 ```
+
+exporting data table
+```{r}
+write.table (as.data.frame(melted_gu) %>% tibble::rownames_to_column("TRVB"), file = "./figures/allTRB_10x_barplot_TRBV_sourceData.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+```
+
+
 
 generating the bar chart for Figure S6e
 

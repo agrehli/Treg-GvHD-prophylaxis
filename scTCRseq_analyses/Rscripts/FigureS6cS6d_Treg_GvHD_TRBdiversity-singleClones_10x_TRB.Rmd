@@ -64,6 +64,12 @@ celltype <- factor(c(rep("d",2), rep("c",3), rep("l",3), rep("s",3)))
 colors <- c(rep("red",2), rep("sienna4",3), rep("skyblue4",3), rep("deeppink",3))
 ```
 
+exporting data table
+```{r}
+write.table (as.data.frame(div_simp), file = "./figures/scTCRxTregDCLS_diversity_invSimp_3.4K_sourceData.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+
 generating the plot for Figure S6c (will remove the error bar in the donor samples, just two samples!)
 
 ```{r, fig.width=2, fig.height=3}
@@ -89,6 +95,12 @@ used heatmap of Morisita index
 ```{r}
 imm_ov2 <- repOverlap(immdata$data, .method = "morisita", .verbose = F)
 ```
+
+exporting data table
+```{r}
+write.table (as.data.frame(imm_ov2), file = "./figures/scTCRxTregDCLS_overlap_morista_heatmap_sourceData.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
 
 ```{r, fig.width=4, fig.height=4}
 vis(imm_ov2, "heatmap2", .title = "Morisita's Overlap Index")

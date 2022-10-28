@@ -1,5 +1,5 @@
 ---
-title: "Figure6g_Treg_GvHD_examplesCloneDistribution_10x_TRB"
+title: "Figure6i_Treg_GvHD_examplesCloneDistribution_10x_TRB"
 author: Michael Rehli
 output: 
   html_document:
@@ -13,7 +13,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::write_bib(.packages(), "Figure6g_Treg_GvHD_examplesCloneDistribution_10x_TRB.packages.bib")
+knitr::write_bib(.packages(), "Figure6i_Treg_GvHD_examplesCloneDistribution_10x_TRB.packages.bib")
 ```
 
 This Rscript is called in the Commands_scTCR_GvHD.sh script
@@ -51,7 +51,7 @@ dm$TCR <- factor(dm$TCR, levels =c("TRAV10D/TRBV13-1", "TRAV16D-DV11/TRBV3", "TR
 ```
 
 
-#### generating the bar charts for the top panel of Figure 6g
+#### generating the bar charts for the top panel of Figure 6i
 (will have to remove error bars from donor plots) 
 
 ```{r, fig.width=4, fig.height=2.5}
@@ -79,7 +79,7 @@ dm$TCR <- factor(dm$TCR, levels =c("TRAV1/TRBV26", "TRAV10/TRBV12-2", "TRAV13D-1
 ```
 
 
-#### generating the bar charts for the bottom panel of Figure 6g
+#### generating the bar charts for the bottom panel of Figure 6i
 (will have to remove error bars from donor plots) 
 
 ```{r, fig.width=4, fig.height=2.5}
@@ -99,7 +99,7 @@ dev.off()
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "Figure6g_Treg_GvHD_examplesCloneDistribution_10x_TRB_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "Figure6i_Treg_GvHD_examplesCloneDistribution_10x_TRB_SessionInfo.txt")
 ```
 
 
