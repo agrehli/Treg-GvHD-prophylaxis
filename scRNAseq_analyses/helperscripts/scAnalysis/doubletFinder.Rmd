@@ -1,0 +1,288 @@
+---
+title: "Doublet Removal Report"
+author: "N.Strieder"
+output: html_document
+params:
+  input:
+    value: x
+  outdir:
+    value: x
+  nCount_RNAmin: 1000
+  nCount_RNAmax: 15000
+  nFeature_RNAmin: 200
+  nFeature_RNAmax: 2500
+  ribosome_pct: 5
+  nCells10X_Input:
+    value: x
+---
+
+## Setup
+
+```{r setup,eval=T,echo=F}
+#rbio_c-12
+#libs="/misc/data/user/userID/R/R4.0.3"
+#suppressPackageStartupMessages(library("optparse"))
+suppressPackageStartupMessages(library("plyr"))
+suppressPackageStartupMessages(library("Seurat"))
+suppressPackageStartupMessages(library("dplyr"))
+suppressPackageStartupMessages(library("future"))
+suppressPackageStartupMessages(library("DoubletFinder"))
+
+suppressPackageStartupMessages(library("knitr"))
+suppressPackageStartupMessages(library("ggplot2"))
+suppressPackageStartupMessages(library("PCAtools"))
+suppressPackageStartupMessages(library("BiocParallel"))
+
+
+#multicoreParam<-MulticoreParam(workers=6)
+#register(multicoreParam)
+SnowParams<-SnowParam(workers=20)
+register(SnowParams)
+## Parallel setup
+plan("multiprocess",workers=4)
+options(future.globals.maxSize= 1500*1024^2)
+set.seed(100)
+
+```
+## Parameter
+
+```{r parameter,eval=T,echo=F}
+paramsdf<-data.frame("names"=names(params),
+                    "values"=unname(unlist(params)))
+kable(paramsdf)
+```
+
+## Parameter Check
+
+```{r paramtercheck,eval=T,echo=F}
+
+print(params)
+
+# Check on file existance
+RUN <- FALSE
+input <- params$input
+if (file.exists(input)){
+    RUN <- TRUE       
+}else if(dir.exists(input)){
+    RUN <- TRUE    
+}else{
+    print(paste("the input ", input,"can not be found",sep=""))
+    RUN <- FALSE
+}
+outdir <- params$outdir
+if (dir.exists(outdir)&RUN){
+    RUN <- TRUE       
+}else{
+    print(paste("the dir ", outdir,"can not be found and is created",sep=""))
+    dir.create(outdir)
+    RUN <- TRUE
+}
+today=Sys.Date()
+```
+
+## Anaylsis
+
+```{r Anal,eval=T,echo=F}
+
+if(!RUN){
+    stop("sth is missing")
+}
+
+# Processing data
+
+# finding doublet rate from cellranger
+cellranglist<-read.delim(file.path(outdir,"cellranger_doublets.csv"),sep=",",header=TRUE)
+  minIDx<-which.min(sapply(cellranglist$cells_loaded,function(x) abs(sum(x,-params$nCells10X_Input))))
+  expDoub_pct<-cellranglist[minIDx,"DoubRate_pct"]
+
+
+
+## Seurat analysis
+#input="/misc/data/processedData/mapping/RNA/GRCm38/singleCell/5prime/mouseTcells/RNA_3_L_ra_run_1_2_3_4/outs/filtered_feature_bc_matrix" 
+#opt<-list("nFeature_RNAmin"=200,
+#          "nFeature_RNAmax"=2500,
+#          "nCount_RNAmin"=500,
+#          "nCount_RNAmax"=15000,
+#          "ribosome_pct=10")
+
+umidat<-Read10X(input)
+if(is.list(umidat)){
+umidat<-umidat[["Gene Expression"]]}
+
+
+cellnumInit<-dim(umidat)[2]
+SObj<-CreateSeuratObject(counts=umidat,min.cells=5,min.features=200)
+
+
+## add demutliplexing using cellhashing
+#   if(params$cellhash){
+#        SObj<-CreateAssayObject(umidat[["Antibody Feature"]])
+
+
+#free memory
+rm(umidat)
+# run garbage collection
+gc()
+
+rn<-rownames(SObj)
+if(length(grep("^mt-",rn))>0){
+    species="mm"
+    mtSel="^mt-"
+    riboSel="^Rp[sl]"
+}else if(length(grep("^MT-",rn))>0){
+    species="hs"
+    mtSel="^MT-"
+    riboSel="^RP[SL]"
+}else{
+    print("species unknown")
+    quit(save="ask")
+}
+
+
+
+SObj[["percent.mt"]] <- PercentageFeatureSet(SObj, pattern = mtSel)
+SObj[["percent.rb"]] <- PercentageFeatureSet(SObj, pattern = riboSel)
+```
+
+### Filtering
+
+```{r Filtering,eval=T,echo=T}
+#Filter Mitochondria to contain less then 5 % Mito,but less then 20% or regress 
+#percent.mt would be ok if no cells would be left otherwise.
+#Filter Cell to contain at least 5 % ribosomal
+keepM<-SObj[["percent.mt"]]<5
+keepR<-SObj[["percent.rb"]]>params$ribosome_pct ##This filter is very good. Maybe 10% is better
+keepnCR<-SObj[["nCount_RNA"]]<params$nCount_RNAmax
+keepnFR<-(SObj[["nFeature_RNA"]]>params$nFeature_RNAmin&SObj[["nFeature_RNA"]]<params$nFeature_RNAmax)
+keepall<-keepM&keepR&keepnCR&keepnFR
+keepnCRlow<-SObj[["nCount_RNA"]]>2400
+
+SObj@meta.data$keepall<-keepall
+SObj@meta.data$keepnCRlow<-keepnCRlow
+SObj@meta.data$keepM<-keepM
+SObj@meta.data$keepR<-keepR
+
+FeatureScatter(SObj, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", pt.size = 0.5)+geom_abline(slope=1)
+FeatureScatter(SObj, "nCount_RNA", "nFeature_RNA", group.by = "keepall", pt.size = 0.5)+geom_abline(slope=1)
+FeatureScatter(SObj, "nCount_RNA", "nFeature_RNA", group.by = "keepR", pt.size = 0.5)+geom_abline(slope=1)
+#FeatureScatter(SObj, "nCount_RNA",group.by="keepall")
+
+```
+## Violinplot before filtering
+
+```{r VlnPlotpre,eval=T,echo=F,fig.height=9}
+        feats <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.rb")#, "percent_hb")
+
+        VlnPlot(SObj, group.by = "orig.ident", features = feats, pt.size = 0.001, ncol = 2) + 
+        NoLegend()
+```
+
+```{r Subset,eval=T,echo=T}
+SObj <- subset(SObj, subset = nFeature_RNA > params$nFeature_RNAmin & 
+               nFeature_RNA < params$nFeature_RNAmax &
+               percent.mt < 5 &
+               percent.rb > params$ribosome_pct &
+               nCount_RNA > params$nCount_RNAmin &
+               nCount_RNA < params$nCount_RNAmax)
+
+
+FeatureScatter(SObj, "nCount_RNA", "nFeature_RNA", group.by = "orig.ident", pt.size = 0.5)+geom_abline(slope=1)+geom_point(alpha = 0.3, shape = 16)+geom_density_2d(size = 0.3)
+
+
+        feats <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.rb")#, "percent_hb")
+
+```
+
+## Violoinplot after filtering
+
+```{r VlnPlotpost,eval=T,echo=F,fig.height=9}
+        VlnPlot(SObj, group.by = "orig.ident", features = feats, pt.size = 0.001, ncol = 2) + 
+        NoLegend()
+
+```
+
+### Normalizing Scaling
+
+```{r Normalizing,eval=T,echo=F}
+
+    SObj <- NormalizeData(object = SObj, verbose = FALSE)
+    SObj <- FindVariableFeatures(object = SObj,
+                                 selection.method = "vst", nfeatures = 2000, verbose = FALSE)
+    SObj <- ScaleData(SObj)
+```    
+
+### PCA
+
+```{r PCA,eval=T,echo=F,fig.height=8}
+    SObj <- RunPCA(SObj, features = VariableFeatures(object = SObj))
+    pd<-ElbowPlot(SObj)
+    # The PCA from Seurat yields some strange stdev
+    #elbowSeu<-findElbowPoint(SObj@reductions$pca@stdev^2)
+    
+    # Calculate PCA and respective Variance with PCA or parallelPCA
+    p <- pca(SObj[["RNA"]]@data[VariableFeatures(object = SObj),])
+    elbow<-findElbowPoint(p$variance)
+    print(paste("ElbowPoint: ",elbow,sep=""))
+
+    horn<-parallelPCA(SObj[["RNA"]]@data[VariableFeatures(object = SObj),],
+                       BPPARAM=bpparam())
+    #horn$n
+    
+    print(paste("Horn’s parallel analysis: ",horn$n,sep=""))
+    
+    ebPoint<-mean(c(elbow,horn$n))
+    print(paste("PC cutoff value taken was the mean of elbowPoint and horn's value: ",
+          ebPoint,sep=""))
+
+    #which(cumsum(pd$dat$stdev) > 80)[1]    
+
+    SObj = RunUMAP(SObj, dims = 1:ebPoint, verbose = F)
+
+    ## plots
+        pd<-DimPlot(SObj,reduction = "umap",label=TRUE)
+        print(pd)
+
+        feats <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.rb")#, "percent_hb")
+
+        VlnPlot(SObj, group.by = "orig.ident", features = feats, pt.size = 0.1, ncol = 3) + 
+        NoLegend()
+
+```
+
+
+## DoubletFinder
+
+```{r DoubletFinder,echo=F,eval=T}
+nExp <- round(ncol(SObj) * expDoub_pct*0.01) #expect 4% doublets
+SObj <- doubletFinder_v3(SObj, pN = 0.25, pK = 0.09, nExp = nExp, PCs = 1:ebPoint)
+
+#nExp_poi <- round(0.15*length(cellnumInit))
+
+#homotypic.prop <- modelHomotypic(annotations)
+#     nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+
+#dubs <-doubletFinder(SObj,PCs=ebPoint,pN = 0.25, pK, nExp, reuse.pANN = FALSE)
+
+DF.name = colnames(SObj@meta.data)[grepl("DF.classification", colnames(SObj@meta.data))]
+
+cowplot::plot_grid(ncol = 2, DimPlot(SObj, group.by = "orig.ident") + NoAxes(), 
+                       DimPlot(SObj, group.by = DF.name) + NoAxes())
+VlnPlot(SObj, features = "nFeature_RNA", group.by = DF.name, pt.size = 0.1)
+
+# Run refinement
+#sweep.res <- paramSweep_v3(SObj,PCs=1:ebPoint,GT=FALSE)
+#sweep.stats <- summarizeSweep(sweep.res,GT = FALSE)
+#bcmvn <- find.pK(sweep.stats)
+#barplot(bcmvn$BCmetric, names.arg = bcmvn$pK, las=2)
+
+SObj = SObj[, SObj@meta.data[, DF.name] == "Singlet"]
+dim(SObj)
+
+outname<-file.path(outdir,paste(basename(outdir),"_SeuratObj_Norm_doubrem_",today,".rds",sep=""))
+saveRDS(SObj,file=outname)
+
+```
+
+```{r Sessioninfo,eval=T,echo=T}
+sessionInfo()
+```
