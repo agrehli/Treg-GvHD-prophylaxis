@@ -1,7 +1,9 @@
 ---
 title: "FigureS2b_TregPercent.7dafterBMT_inVivoDistribution"
-author: Michael Rehli
-output: 
+author: "Michael Rehli"
+output:
+  pdf_document:
+    toc: yes
   html_document:
     df_print: paged
     fig_caption: yes

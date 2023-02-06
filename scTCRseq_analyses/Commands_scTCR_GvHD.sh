@@ -381,7 +381,7 @@ done
 cd ${WORKDIR_scTCR}
 R --no-restore --no-save
 library(rmarkdown)
-render("Figure6g_Treg_GvHD_examplesCloneDistribution_10x_TRB.Rmd", "html_document")
+render("Figure6i_Treg_GvHD_examplesCloneDistribution_10x_TRB.Rmd", "html_document")
 q()
 
 # analysis of selected TRVB segments in R (Figure S6e)
