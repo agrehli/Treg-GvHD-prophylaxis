@@ -1,0 +1,1105 @@
+---
+title: "Treg cells in mouse GvHD"
+author: "Nicholas Strieder"
+date: "`r format(Sys.Date())`"
+output:
+    html_document:
+    highligh: haddock
+    keep_md: yes
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_depth: 3
+    toc_float:
+        collapsed: no
+        smooth_scroll: no
+    pdf_document:
+        toc: yes
+        toc_depth: '3'
+    html_notebook:
+        highligh: haddock
+        number_sections: yes
+        theme: paper
+        toc: yes
+        toc_depth: 3
+        toc_float:
+            collapsed: no
+            smooth_scroll: no
+bibliography: reference/DeSeq_Nstrieder_kbibtex.bib
+---
+
+## Primary Analysis of Data Set
+
+```{r libraries,eval=T,echo=F,message=F,warnings=F}
+
+# rbio3_12
+## add douplet finder data
+
+## Setup of package pathes
+
+  libs="PathtoRlibraries/R/R4.0.3"
+   #library("BiocParallel")
+   library("Seurat",lib.loc=libs)
+   library("knitr")
+   library("future")
+    #BiocManager::install(pkgn, lib =libs,suppressUpdates=TRUE)
+    loadlibs<-c("cowplot","ggplot2","patchwork","dplyr")#,"SCnorm")
+    libpath<-.libPaths()
+    .libPaths<-.libPaths(c(libs,libpath))
+
+    for(i in loadlibs){
+       #print(i)
+        tryCatch({library(i,character.only=T,lib.loc=libs)
+             },warning=function(w){
+                  #print(w)
+             },error=function(e){
+                  #print(e)
+                  library(i,character.only=T)
+             })
+    }
+
+    set.seed(20)
+    today<-format(Sys.Date(), "%d_%m_%Y")
+    knitr::opts_chunk$set(fig.width = 12)
+```
+
+
+## parallel computing
+
+```{r Parallelsetup,eval=T,echo=F}
+## Parallel seurat
+
+plan("multisession",workers=6)
+options(future.globals.maxSize= 1500*1024^2)
+#plan()
+```
+
+## Loading Data 
+
+To load 10x data there a several options.
+
+```{r pathsetup,eval=T,echo=F }
+# tardir
+tardir="/misc/data/processedData/mapping/RNA/GRCm38/singleCell/5prime/mouseTcells"
+projID="p036"
+analpath="/misc/data/user/userID/projects/pr036_dd_10x/RNA/analysis_seurat_nodoub"
+datapath=file.path(analpath,"data")
+tablepath=file.path(analpath,"table")
+vispath=file.path(analpath,"vis")
+
+```
+
+
+```{r importrawData, eval=T,echo=F}
+dday="15_02_2021"
+
+# read10xCounts Processed as Seurat objects
+# 
+# processing via:
+# "/misc/data/user/userID/projects/pr036_dd_10x/preparation/SampleOverview.csv"
+# output:"/misc/data/user/userID/projects/pr036_dd_10x/RNA/doubletFindout_rb10"
+# script:"/misc/data/user/userID/helperscripts/scAnalysis/doubletFinder.Rmd"
+tardirn<-"/misc/data/user/userID/projects/pr036_dd_10x/RNA/doubletFindout_rb10"
+fls<-list.files(tardirn,pattern=".rds",recursive=TRUE)
+
+infls<-file.path(tardirn,fls)
+names(infls)<-sub("_ra.*","",fls)
+#library(tidyverse)
+#sampleinfo<-read.csv("../../info/sampleinfo.csv")
+#infls<-infls[order(as.numeric(names(infls)),decreasing=FALSE)]
+#if(!all(names(infls)==as.character(sampleinfo$number))){
+#    print("Something is wrong with the sampleIDs")}
+
+sampleinfo<-data.frame(SampleID=names(infls),
+                       Samplename=gsub("_","",names(infls)),
+                       Repl=paste("R_",sub("_[L,C,S]|_[d][12]{2}","",names(infls)),sep=""),
+                       group=sub("[0-9]_|[0-9]{3}_","",names(infls)))
+infls<-infls[sampleinfo$SampleID]
+names(infls)<-sampleinfo$Samplename
+
+outfile1<-file.path(datapath,paste("SCE_dgCMat_",projID,"_annot_",dday,".rds",sep=""))
+
+RERUN<-TRUE
+if(file.exists(outfile1)){
+    RERUN<-FALSE
+print(paste("RERUNstate=",RERUN,sep=" "))
+}
+
+if(RERUN){
+datl<-list()
+for(i in 1:length(infls)){
+   datl[[names(infls)[i]]]<-readRDS(file=infls[i])
+   print(dim(datl[[i]]))
+}
+
+SObj<-merge(x=datl[[1]],y=datl[2:length(datl)],add.cell.ids=names(datl),project="p036_doubrem")
+	SObj
+SObj@meta.data$orig.ident<-sub("_.*","",colnames(SObj))
+}else{
+	SObj<-readRDS(outfile1)
+    SObj@meta.data$orig.ident<-factor(SObj@meta.data$orig.ident)
+}
+```
+
+## batch info
+
+```{r batch,eval=T,echo=F}
+##batch info
+
+
+    clD<-merge(as.data.frame(SObj@meta.data),
+               as.data.frame(sampleinfo),
+               by.x="orig.ident",
+               by.y="Samplename",
+               all.x=TRUE,sort=FALSE)
+
+    sampleinfo$cells_seq<-table(clD$orig.ident)[sampleinfo$Samplename]
+
+    kable(sampleinfo,caption="Samples used in this project")
+
+if(RERUN){    
+    for(i in colnames(clD)[(length(colnames(SObj@meta.data))+1):length(clD[1,])]){
+         SObj@meta.data[i]<-clD[,i]}
+
+## Save Data: sce with annotation is saved as rds
+   saveRDS(SObj,file.path(datapath,paste("SCE_dgCMat_",projID,"_annot_",today,".rds",sep="")))
+}
+```
+
+
+## Pre-processing and QC
+
+```{r PreprocessingandQC,eval=T,echo=F}
+
+SObj[["percent.mt"]] <- PercentageFeatureSet(SObj, pattern = "^mt-")
+head(SObj@meta.data,5)
+
+# Visualize QC metrics
+#pdf(file=file.path(vispath,paste("ViolinPlot_nFeat_",today,".pdf",sep="")))
+VlnPlot(SObj, features = c("nFeature_RNA"),group.by="orig.ident",pt.size=0)
+#dev.off()
+
+#pdf(file=file.path(vispath,paste("ViolinPlot_nCount_",today,".pdf",sep="")))
+VlnPlot(SObj, features = c( "nCount_RNA"),group.by="orig.ident",pt.size=0)
+#dev.off()
+
+#pdf(file=file.path(vispath,paste("ViolinPlot_pct_mt_",today,".pdf",sep="")))
+VlnPlot(SObj, features = c("percent.mt"),group.by="orig.ident",pt.size=0)
+#dev.off()
+
+VlnPlot(SObj, features = c("percent.rb"),group.by="orig.ident",pt.size=0)
+
+plotl1<-lapply(levels(SObj@meta.data$orig.ident),function(x) FeatureScatter(SObj, feature1 = "nCount_RNA", feature2 = "percent.mt",cells=grep(x,SObj@meta.data$orig.ident)))
+
+pd<-wrap_plots(plotl1,ncol=2,height=20)
+pd
+
+
+#ggsave(plot=pd,filename=file.path(vispath,paste("FeatScatter_nCount_ptc_mt_",today,".pdf",sep="")),device="pdf",width=16,height=16)
+
+print("Scatter nCounts vs n Features")
+
+plotl2 <- lapply(levels(SObj@meta.data$orig.ident),function(x) FeatureScatter(SObj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA",cells=grep(x,SObj@meta.data$orig.ident)))
+
+pd<-wrap_plots(plotl2,ncol=2,heights=60)
+pd
+#ggsave(plot=pd,filename=file.path(vispath,paste("FeatScatter_nCount_nfeat_",today,".pdf",sep="")),device="pdf",width=16,height=16)
+
+```
+
+
+## Filtering
+
+```{r Filtering,eval=T,echo=F}
+hist(SObj@meta.data$nCount_RNA,breaks=500,xlim=c(0,5000))
+abline(v=2400,col="blue")
+if(RERUN){
+SObj <- subset(SObj, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 &
+            percent.mt < 5 & 
+            nCount_RNA>200 &
+            nCount_RNA<15000)
+}
+
+```
+
+## Normalizing and var Features
+
+```{r NormVarFeat,eval=T,echo=F}
+outfileUMAP<-file.path(datapath,paste("SeuratObj_",projID,"_UMAP_",dday,".rds",sep=""))
+RERUN=TRUE
+if(file.exists(outfileUMAP)){
+    RERUN=FALSE}
+if(RERUN){
+options(future.globals.maxSize= 1500*1024^2)
+    SObj <- NormalizeData(object = SObj, verbose = FALSE)
+    SObj <- FindVariableFeatures(object = SObj,
+                                 selection.method = "vst", 
+				 nfeatures = 2000,
+				 verbose = FALSE)
+}else{
+SObj<-readRDS(outfileUMAP)
+}
+SObj@meta.data$orig.ident<-factor(SObj@meta.data$orig.ident)
+print(head(VariableFeatures(SObj), 20))
+```
+
+
+
+
+## Split object in batchs
+
+Intergate function of Seurat leads to lost processes on the cluster, forking problem.
+```{r Split,eval=F,echo=F}
+# Use for different techniques, batches, treated vs untreated...
+
+SObj.list <- SplitObject(object = SObj, split.by = "group")
+
+for (i in 1:length(x = SObj.list)) {
+    SObj.list[[i]] <- NormalizeData(object = SObj.list[[i]], verbose = FALSE)
+    SObj.list[[i]] <- FindVariableFeatures(object = SObj.list[[i]], 
+                                                       selection.method = "vst", nfeatures = 2000, verbose = FALSE)
+}
+
+for (i in 1:length(SObj.list)) {
+        print(head(VariableFeatures(SObj.list[[i]]), 10))
+}
+
+saveRDS(SObj.list,file.path(datapath,paste("SeuratObj_Normal_split",projID,"_",today,".rds",sep="")))
+
+```
+
+## Scaling of the data
+
+```{r Scaling,eval=T,echo=F,warning=F,message=F}
+# use only for different plates for well based assays
+all.genes <- rownames(SObj)
+if(RERUN){
+
+SObj <- ScaleData(SObj,features=all.genes)
+}
+
+
+
+```
+
+
+## PCA
+
+```{r PCA,eval=T,echo=F}
+if(RERUN){
+SObj <- RunPCA(SObj, features = VariableFeatures(object = SObj))
+## maybe try also dim4 and dim 7
+#run on 02.03.2021
+SObj <- JackStraw(SObj, num.replicate = 100) # took about 5 Minutes
+head(JS(object = SObj[['pca']], slot = 'empirical'))
+#JS(object =SObj[['pca']], slot = 'full')
+SObj <- ScoreJackStraw(SObj, dims = 1:20,score.thresh=1e-05)
+#JackStrawPlot(SObj,dims=1:20)
+#ElbowPlot(SObj)
+SObj <- FindNeighbors(SObj, dims = 1:11)
+SObj <- FindClusters(SObj, resolution = 0.5)
+SObj <- RunUMAP(SObj, dims = 1:11)
+outfileUMAP<-file.path(datapath,paste("SeuratObj_",projID,"_UMAP_",today,".rds",sep=""))
+saveRDS(SObj,outfileUMAP)
+}
+# Examine and visualize PCA results a few different ways
+print(SObj[["pca"]], dims = 1:5, nfeatures = 5)
+
+```
+
+
+```{r PCA2,eval=T,echo=T}
+
+VizDimLoadings(SObj, dims = 1:2, reduction = "pca")
+
+```
+
+```{r PCA3,eval=T,echo=T}
+
+DimPlot(SObj, reduction = "pca",label=TRUE,group.by="orig.ident")
+DimPlot(SObj,reduction="pca",split.by="group",group.by="orig.ident",label=TRUE)+
+    geom_hline(yintercept=0)+geom_vline(xintercept=0)
+
+DimPlot(SObj, reduction = "pca",label=TRUE,group.by="orig.ident",dims=c(2,3))
+
+DimPlot(SObj,reduction="pca",dims=c(2,3),split.by="group",group.by="orig.ident",label=TRUE)
+```
+
+Heatmaps to decide which PCs to include, find batch effects
+
+```{r PCAheatmaps,eval=T,echo=T}
+
+DimHeatmap(SObj, dims = 1, cells = 500, balanced = TRUE)
+DimHeatmap(SObj, dims = 1:17, cells = 500, balanced = TRUE)
+
+ElbowPlot(SObj)
+pd<-JackStrawPlot(SObj,dims=1:20)+facet_wrap(~PC)
+print(pd)
+```
+
+
+
+
+
+## Cluster cells
+```{r Cluster,eval=T,echo=F}
+
+head(Idents(SObj), 5)
+
+```
+
+## UMAP
+```{r UMAP,eval=T,echo=F}
+
+DimPlot(SObj, reduction = "umap",label=TRUE)
+for(i in unique(SObj@meta.data$group)){
+pd<-DimPlot(SObj, cells=grep(i,SObj@meta.data$group),
+        reduction = "umap",label=TRUE)+ggtitle(paste("UMAP Group: ",i,sep=""))
+print(pd)
+}
+
+for(i in unique(SObj@meta.data$orig.ident)){
+    pd<-DimPlot(SObj, cells=grep(i,SObj@meta.data$orig.ident),
+                        reduction = "umap",label=TRUE)+ggtitle(paste("UMAP Sample: ",i,sep=""))
+print(pd)
+}
+
+
+```
+
+## Search for batch effects in clusters
+
+There are some cluster with higher ribosomal gene percentage in clusters 3,6,11 and 12. 
+Cluster 3(12) is a rather spleen specific cluster, while 6 (11) are input cells.
+The number of counts per cell is especially high in 5,8 (liver/spleen) and 
+
+```{r BatchinCluster,eval=T,echo=F}
+
+batchitem<-c("nFeature_RNA","percent.mt",
+             "percent.rb","nCount_RNA")
+for(i in batchitem){
+pd<-VlnPlot(SObj, features = c(i),group.by="seurat_clusters",pt.size=0.01)
+print(pd)
+Sys.sleep(3)
+
+
+## Subset e.g cluster 8, on tissue or sample
+## Color umap by Sample e.g spleen only
+## Color umap by batchitems
+g1pl<-
+DimPlot(SeuObj, reduction="umap", label=T,  cells.highlight= g1pl, cols.highlight = c("darkblue"), cols= "grey")
+FeaturePlot(SObj,feature="percent.rb")
+FeaturePlot(SObj,feature="nFeature_RNA")
+
+```
+## Vis Treg Genes
+
+```{r TregFeat,eval=T,echo=F}
+
+VlnPlot(SObj, features = c("Foxp3"))
+VlnPlot(SObj, features = c("Foxp3", "Tnfrsf1b"), slot = "counts", log = TRUE)
+
+feats=c("Foxp3", "Tnfrsf1b", "Ccr8", "Ikzf4",
+                                 "Batf","Klrg1","Nfil3","Areg",
+                                                          "Il1rl1")
+for(i in feats){
+pd<-FeaturePlot(SObj,
+            features = c(i))
+print(pd)}
+```
+
+## Find Diff features
+
+```{r DiffFeat,eval=T,echo=F,fig.width=10,fig.height=10}
+
+
+outmarkerpath=file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outmarkerpath)){
+for(i in levels(SObj@meta.data$seurat_clusters)){
+    cluster.mark <- FindMarkers(SObj, ident.1 = as.numeric(i), min.pct = 0.25,verbose=T)
+    datout<-cluster.mark %>% top_n(n=20,wt=abs(avg_log2FC))
+    outfilename=file.path(tablepath,paste("Marker_genes_logNorm_perCluster-",i,"_",today,".csv",sep=""))
+write.csv(as.data.frame(datout),file=outfilename)
+print(kable(head(cluster.mark,n=5)))
+}
+
+SObj.markers <- FindAllMarkers(SObj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25,verbose=TRUE)
+outmarker<-SObj.markers
+saveRDS(outmarker,file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",today,".rds",sep="")))
+}else{
+SObj.markers<-readRDS(file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",today,".rds",sep="")))
+}
+
+top10 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+if(all(top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+selfeat<-top10$gene[top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{
+    selfeat=top10$gene}
+set.seed=19
+cellspl<-sample(1:length(SObj@meta.data[,1]),2500,replace=F)
+pd<-DoHeatmap(SObj, features = selfeat,cells=cellspl) 
+print("gene list ordered by avg_log2FC")
+print(pd)
+
+top10 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 10)
+if(all(top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+    selfeat<-top10$gene[top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{
+        selfeat=top10$gene}
+
+pd<-DoHeatmap(SObj, features = selfeat,cells=cellspl)
+print("gene list ranked by seurat")
+print(pd)
+```
+
+## Classifying features:
+
+   
+```{r ClassFeat,eval=T,echo=F,fig.width=10,fig.height=10}
+
+outmarkerpathclass=file.path(datapath,paste("Markerall_CLASS_pos_perCluster_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outmarkerpath)){
+Class_markers<-FindAllMarkers(SObj,logfc.threshold=0.5,test.use = "roc",only.pos = TRUE,min.pct=0.25,max.cells.per.ident=1000)
+ 
+    datout<-Class_markers %>% group_by(cluster) %>% top_n(n=1,wt=power)
+#    outfilename=file.path(tablepath,paste("Marker_genes_logNorm_Harmony_S_D_Cluster-",i,"_",today,".csv",sep=""))
+#for(i in levels(SObj@meta.data$seurat_clusters)){
+#write.csv(as.data.frame(datout),file=outfilename)
+#print(kable(head(cluster.mark,n=5)))
+#}
+
+saveRDS(Class_markers,file.path(datapath,paste("Markerall_CLASS_pos_perCluster_logNorm_",projID,"_",today,".rds",sep=""))
+}else{
+SObj.markers<-readRDS(outmarkerpathclass)
+}
+datout<-Class_markers %>% group_by(cluster) %>% top_n(n=1,wt=power)
+pd<-VlnPlot(SObj,features=datout$gene,pt.size=0)
+pd+plot_layout(nrows=3)
+
+Class_markers<-FindAllMarkers(SObj,logfc.threshold=0.5,test.use = "roc",only.pos = TRUE,min.pct=0.25,max.cells.per.ident=1000)
+
+```
+
+
+
+## Specific Comparisons:
+
+```{r DiffFeatsel,eval=T,echo=F,fig.width=10,fig.height=10}
+
+# compare cluster 2,0,10 
+indx<-as.numeric(as.character(unique(SObj@meta.data$seurat_clusters)))
+compsets<-list("colon"=c(0,2,10),
+               "spleen"=c(7,4,3,9),
+               "liver"=c(1,5))
+
+newidents<-SObj@meta.data$seurat_clusters
+levels(newidents)<-c("colon","liver","colon",
+                     "spleen","spleen","liver",
+                     "Input","spleen","liverspleen",
+                     "spleen","colon","Input","spleen")
+
+SObj@meta.data$tissueidents<-newidents
+
+
+outselmarkerspath<-file.path(datapath,paste("Marker_sel_pos_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outselmarkerpath)){
+                 SObj_sel.markers <- lapply(compsets,function(x) FindMarkers(SObj,
+                                                 ident.1=x,
+                                                 ident.2=setdiff(indx,x),
+                                                 only.pos = TRUE,
+                                                 min.pct = 0.25,
+                                                 logfc.threshold = 0.25))
+for (i in 1:length(SObj_sel.markers)){
+    outfilename=file.path(datapath,paste("Marker_pos_",names(SObj_sel.markers)[i],"_logNorm_",projID,"_",dday,".rds",sep="")
+write.csv(SObj_sel.markers[[i]],file=outfilename)
+outselmarkerspath<-file.path(datapath,paste("Marker_sel_pos_logNorm_",projID,"_",today,".rds",sep=""))
+saveRDS(SObj_sel.markers,outselmarkerspath)
+}else{
+    SObj_sel.markers<-readRDS(outselmarkerspath)
+}    
+top30 <- unlist(lapply(SObj_sel.markers,function(x) rownames(head(x,n=30))))
+
+
+if(all(top30 %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+    selfeat<-top30[which(top20 %in% rownames(GetAssayData(SObj, slot = 'scale.data')))]
+}else{
+        selfeat=top30}
+
+pd<-DoHeatmap(SObj,group.by="tissueidents",features = selfeat,cells=cellspl)
+print("gene list ranked by seurat")
+print(pd)
+#ggsave(pd,file=file.path(vispath,paste("Marker_sel_pos_logNorm_",projID,"_Heatm_",today,".pdf",sep="")),device="pdf")
+
+##compare with bulk:
+
+## This does not work I need to summarize
+bulkdatdir<-file.path(dirname(dirname(analpath)),"scripts","info","bulkAnlaysis")
+fls<-list.files(bulkdatdir,pattern=".txt")
+flsu<-lapply(fls,function(x) read.delim(file.path(bulkdatdir,x),header=TRUE,sep="\t",stringsAsFactors=F))
+names(flsu)<-sub(".txt","",sub("qstat.pro.anova.","",fls))
+
+comparDiff<-function(scDE,bulkDE,fdr=0.1,lgCPM=5){
+    # There is no postHoc Test for Anovalike Tests in edgeR and DESeq
+    # We need to do all pairwise tests and then run p-adjust for all resutls!!
+    bulkDE<-bulkDE[which(bulkDE$FDR<fdr&bulkDE$logCPM>lgCPM),]
+    bulkDEup<-bulkDE[which(bulkDE[,6]>0&
+                                              bulkDE[,7]>0),]    
+                        
+    #select only positively regulated genes # the statistics seem quite funny
+    print(length(scDE[,1]))
+    print(length(bulkDEup$GeneSymbol))
+    print(table(rownames(scDE)%in%bulkDEup$GeneSymbol))
+    a<-(unname(table(rownames(scDE)%in%bulkDEup$GeneSymbol))[2]/length(scDE[,1]))
+    print(a)}
+
+selsc<-c(1,3,2)
+#for(j in 1:3)
+    for(i in 1:3){
+        print(paste(names(SObj_sel.markers)[selsc[i]],names(flsu)[i],sep="_vs_"))
+    comparDiff(SObj_sel.markers[[selsc[i]]],flsu[[i]])}
+
+
+
+analpath="/misc/data/user/userID/projects/pr036_dd_10x/RNA/analysis_seurat_nodoub"
+
+
+#cluster1.markers <- FindMarkers(SObj, ident.1 = 0, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)
+
+outmarkerpath=file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outmarkerpath)){
+for(i in levels(SObj@meta.data$seurat_clusters)){
+    cluster.mark <- FindMarkers(SObj, ident.1 = as.numeric(i), min.pct = 0.25,verbose=T)
+    datout<-cluster.mark %>% top_n(n=20,wt=abs(avg_log2FC))
+    outfilename=file.path(tablepath,paste("Marker_genes_logNorm_Harmony_S_D_Cluster-",i,"_",today,".csv",sep=""))
+write.csv(as.data.frame(datout),file=outfilename)
+print(kable(head(cluster.mark,n=5)))
+}
+
+SObj.markers <- FindAllMarkers(SObj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25,verbose=TRUE)
+outmarker<-SObj.markers
+saveRDS(outmarker,file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",today,".rds",sep="")))
+}else{
+SObj.markers<-readRDS(file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",today,".rds",sep="")))
+}
+
+top10 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+if(all(top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+selfeat<-top10$gene[top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{
+    selfeat=top10$gene}
+set.seed=19
+cellspl<-sample(1:length(SObj@meta.data[,1]),2500,replace=F)
+pd<-DoHeatmap(SObj, features = selfeat,cells=cellspl) 
+print("gene list ordered by avg_log2FC")
+print(pd)
+
+top10 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 10)
+if(all(top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+    selfeat<-top10$gene[top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{
+        selfeat=top10$gene}
+
+pd<-DoHeatmap(SObj, features = selfeat,cells=cellspl)
+print("gene list ranked by seurat")
+print(pd)
+```
+
+
+
+
+
+## TCR visualisation
+
+```{r TCR,echo=F,eval=T}
+#top clones
+# analysis based on https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-015-0613-1
+#
+TCRfls<-c("/misc/data/analysis/project_B07/scTCRrepertoire/analysis/TRAV4D-4_TRBV15.barcodes.txt",
+"/misc/data/analysis/project_B07/scTCRrepertoire/analysis/TRAV10D_TRBV13-1.barcodes.txt",
+"/misc/data/analysis/project_B07/scTCRrepertoire/analysis/TRAV16D-DV11_TRBV3.barcodes.txt")
+names(TCRfls)<-sub(".barcodes.txt","",basename(TCRfls))
+TCRclones<-lapply(TCRfls,
+                  function(x) read.delim(x,sep="\t",header=TRUE))
+cleanfunTCRcl<-function(x){
+    ind<-x[x$sample!="donor_2",]
+    out<-ind[!duplicated(ind$sample),]
+    rownames(out)<-out[,1]
+    if(length(which(duplicated(ind$sample)==TRUE))>0){
+    dup<-ind[duplicated(ind$sample),]
+    for(i in 1:length(dup[,1])){
+        out[dup[i,1],"barcodes"]<-paste(c(out[dup[i,1],"barcodes"],dup[i,2]),collapse=";")}}
+    return(out)}
+# clean up list, there seems to be barcodes from comparision of TCR seqs on nucleotide as well as aminoacid sequence.
+# here actually only the barcodes based on nucleotides and potential sequencing errors should be used.
+
+TCRclonesc<-lapply(TCRclones,function(x) cleanfunTCRcl(x))
+
+TCRclones_matchlist<-data.frame(sample=TCRclonesc[[1]]$sample,
+                                origid=c("235d12","2C","3C","4C","2L","3L","4L","2S","3S","4S"))
+
+TCRclonesc<-lapply(TCRclonesc,function(x) merge(x,TCRclones_matchlist,by.x="sample",by.y="sample",all.x=TRUE))
+combinef<-function(x){
+    indf<-x
+    outlist<-list()
+    for(i in 1:length(indf[,1])){
+        bc<-strsplit(indf[i,"barcodes"],";")[[1]]
+        bcout<-paste(indf[i,"origid"],bc,sep="_")
+        outlist[[indf$sample[i]]]<-bcout
+    }
+    return(outlist)}
+TCRclonesl<-lapply(TCRclonesc,function(x) combinef(x))
+# highlight in UMAP plot
+
+TCRplotfun<-function(TCRcells,SeuObj,clonename=NULL,plotname="UMAP",fileout=NULL){
+    g1 <- unname(unlist(TCRcells))
+    g1cor<-g1[g1%in%rownames(SeuObj@meta.data)]
+    print(paste("TCRs included: ",length(g1cor),"\n",
+                "TCRs leftout: ",length(g1)-length(g1cor),sep=""))
+    # Plot
+    g1pl<-list(g1cor)
+    names(g1pl)<-clonename
+    pout<-DimPlot(SeuObj, reduction="umap", label=T,  cells.highlight= g1pl, cols.highlight = c("darkblue"), cols= "grey")+ggtitle(plotname)+
+        scale_fill_discrete(name="Experimental\nCondition",
+        breaks=c("Unselected", "Group_1", "trt2"),
+        labels=c("Control", "Treatment 1", "Treatment 2"))
+if(!is.null(fileout)){
+    ggsave(pout,filename=file.path(vispath,paste(fileout,"_",today,".pdf",sep="")),device="pdf")
+}else{
+    print(pout)}
+return(pout)
+}
+for(j in 1:length(TCRclonesl)){
+#pd<-TCRplotfun(TCRclonesl[[j]],SObj,clonename=names(TCRclonesl)[j],fileout=paste("TCR_clone_",names(TCRclonesl)[j],sep=""))
+pd<-TCRplotfun(TCRclonesl[[j]],SObj,clonename=names(TCRclonesl)[j])
+}
+```
+
+```{r PubPlot,eval=F,echo=F}
+
+spl<-function(pl,outname,fig.width=9,fig.height=9){
+    ggsave(pl,
+           filename=file.path(vispath,paste(outname,"_",today,".pdf",sep="")),
+           device="pdf",
+           width=fig.width,
+           height=fig.height)
+}            
+
+#Base UMAP plot
+pd<-DimPlot(SObj, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+spl(pd,"UMAP_plot_base")
+
+# Colors per tissue
+colcolon<- colorRampPalette(c("beige","sienna"))(10)[c(10,8,5)]
+colspleen<- colorRampPalette(c("deeppink","lavenderblush"))(10)[c(1,4,5)]
+colliver<-colorRampPalette(c("lightskyblue","steelblue"))(10)[c(10,8,5)]
+colinput<-colorRampPalette(c("red"))(10)[c(1)]
+#plot(rep(1,10),col=
+#,pch=19,cex=3)
+
+# tissues
+tissueNames<-c(paste(rep(c("Colon","Liver","Spleen"),3),rep(c(1:3),each=3),sep="_"),"input")
+
+# IDs
+
+## data.frame for labels-cols
+
+df<-data.frame("IDs"=c(paste(rep(2:4,3),rep(c("C","L","S"),each=3),sep="_"),"235_d12"),
+               "colsvec"=c(colcolon,colliver,colspleen,colinput),
+               "tissues"=c(paste(rep(c("colon","liver","spleen"),each=3),rep(c(1:3),3),sep="_"),"donor_1"),
+               "group"=c(rep(c("colon","liver","spleen"),each=3),"donor"))
+df<-df[order(df$tissues),]
+df<-df[c(4,1:3,5:10),]
+rownames(df)<-df$tissue
+
+# UMAP plot with highlighting tissues
+## highlight tissues with replicates/batches in UMAP
+
+tissuecells<-split(rownames(SObj@meta.data),SObj@meta.data$SampleID)
+tissuecells<-tissuecells[df$IDs]
+names(tissuecells)<-df$tissues
+
+
+for(j in unique(df$group)){
+pout<-DimPlot(SObj, label=T, group.by="seurat_clusters", cells.highlight= tissuecells[grep(j,df$group)], cols.highlight = rev(df$colsvec[grep(j,df$group)]),label.size=5,sizes.highlight=0.2)+ggtitle(paste("UMAP",j,sep=" "))
+print(pout)
+spl(pout,paste("UMAP_base",j,sep=""))}
+
+## Tcells
+
+## Plot Tcells with color per batch, for each TCR clone
+
+TCRplotfun<-function(TCRcells,SeuObj,colinfo=NULL,clonename=NULL,plotname="UMAP",sizeHIL=3){
+    g1 <- TCRcells
+    g1cor<-lapply(g1,function(x) x[x%in%rownames(SeuObj@meta.data)])
+    g1cor<-g1cor[which(sapply(g1cor,function(x) length(x))>0)]
+    print(paste("Tissues included: ",length(g1cor),"\n",
+                "Tissues leftout: ",length(g1)-length(g1cor),sep=""))
+    # Plot
+    pout<-DimPlot(SeuObj,
+                  reduction="umap",
+                  label=T,
+                  cells.highlight= g1cor,
+                  cols.highlight = rev(colinfo[names(g1cor),"colsvec"]),
+                  sizes.highlight = sizeHIL
+                  )+
+        ggtitle(paste(plotname,clonename,sep=":"))#+
+        #scale_color_manual(values=c("grey",colinfo$colsvec))
+return(pout)
+}
+
+for(j in 1:length(TCRclonesl)){
+pd<-TCRplotfun(TCRclonesl[[j]],SObj,clonename=names(TCRclonesl)[j],plotname="UMAP",
+    colinfo=df)
+#print(pd)
+spl(pd,paste(paste("UMAP_TCR_clone_",names(TCRclonesl)[j],sep="")))
+}
+
+## todo, plot again, improve order of legend, i.e. plot normal UMAP + metafeatures, adapt visulisation.
+
+### Find diff genes for liver spleen and colon in scData
+
+
+featsel<-c("Areg","Tnfrsf9","Rora","Gzmb","Ramp3","Tcf7","Ccl5","Nkg7","Itga4","Myc","Bcl2")
+for(i in 1:length(TCRclonesl)){
+for(k in 1:length(featsel)){
+#VlnPlot(SObj, features = featsel[k],group.by="orig.ident",pt.size=0,cols=df$colsvec)
+
+dataObj<-SObj
+dataObj@meta.data[,"TCRc"]<-FALSE
+dataObj@meta.data[unlist(unname(TCRclonesl[[i]])),"TCRc"]<-TRUE
+pd<-VlnPlot(dataObj, features = featsel[k],split.by="TCRc",group.by="group",pt.size=0.5,cols=df$colsvec,combine=FALSE)
+
+dfpl<-pd[[1]]$data
+dfpl$ID<-rownames(pd[[1]]$data)
+dfpl$ident<-as.factor(dfpl$ident)
+dfpl<-dfpl[dfpl[,1]>0,]
+levels(dfpl$ident)<-c("colon","donor","liver","spleen")
+dfpl$ident<-factor(dfpl$ident,levels=c("donor","colon","liver","spleen"))
+levels(dfpl$split)<-c("all TCRs","selected TCRs")
+
+#dfpl<-as_tibble(dfpl)
+#dfpl<-dfpl %>% mutate(ID,TR=ifelse(split==TRUE,paste(as.character(ident),"TCR",sep="_"),as.character(ident)))
+#dfpl$TR<-as.factor(dfpl$TR)
+#levels(dfpl$TR)<-c("colon","colon_TCR","donor","donor_TCR","liver","liver_TCR","spleen","spleen_TCR")
+#dfpl$TR<-factor(dfpl$TR,levels=c("donor","donor_TCR","colon","colon_TCR","liver","liver_TCR","spleen","spleen_TCR"))
+txtsize=18
+pout<-ggplot(as.data.frame(dfpl),aes(x=ident,y=get(featsel[k])))+
+    geom_violin(adjust=.5,scale = "width",aes(fill=ident),
+                trim=T,draw_quantiles=c(0.25,0.5,0.75))+
+    #geom_jitter(height=0,width=0.1)+
+    ylim(0,max(dfpl[,1]))+
+    scale_fill_manual(values=c(df$colsvec[c(1,2,5,8)]))+
+    labs(x="cell origin",
+         y=featsel[k],
+         fill="cell origin")+
+         theme_bw()+
+         theme(axis.title.x = element_blank())+
+         theme(axis.title.y = element_text(size=txtsize,angle=0,face="italic",vjust=+0.3))+
+         theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+         theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+         theme(strip.text.x=element_text(size=txtsize-2))+
+         theme(strip.background = element_blank())+
+         theme(legend.text=element_text(size=txtsize-2))+
+         scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+         theme(legend.title=element_text(size=txtsize))+
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               panel.background = element_blank(), axis.line = element_line(colour = "black"),
+               panel.border = element_blank())+
+         facet_wrap(~split)
+pout
+spl(pout,paste("Violin_all_and_TCR_clone_",featsel[k],"_",names(TCRclonesl)[i],sep=""),fig.height=1.5,fig.width=8)
+
+pout<-ggplot(as.data.frame(dfpl),aes(x=ident,y=get(featsel[k])))+
+    geom_boxplot(aes(fill=ident),notch=F)+
+    geom_jitter(height=0,width=0.1)+
+    scale_fill_manual(values=c(df$colsvec[c(1,2,5,8)]))+
+    labs(x="cell origin",
+         y=paste("log-normalized expression values (",featsel[k],")",sep=""),
+         fill="cell origin")+
+         theme_bw()+
+         theme(axis.title.x = element_blank())+
+         theme(axis.title.y = element_text(size=txtsize))+
+         theme(axis.text.x = element_text(size=txtsize-1))+
+         theme(axis.text.y = element_text(size=txtsize-1))+
+         theme(strip.text.x=element_text(size=txtsize-1))+
+         theme(legend.text=element_text(size=txtsize-1))+
+         theme(legend.title=element_text(size=txtsize))+
+         facet_wrap(~split)
+pout
+spl(pout,paste("Box_all_and_TCR_clone_",featsel[k],"_",names(TCRclonesl)[i],sep=""))
+}}
+## Multi feature Violin plot for all clusters
+
+# stagged violin plot
+
+featsel<-c("Areg","Tnfrsf9","Rora","Gzmb","Ramp3","Tcf7","Ccl5","Nkg7","Itga4","Myc","Bcl2")
+
+
+##source: Ming Tang
+##https://divingintogeneticsandgenomics.rbind.io/post/stacked-violin-plot-for-visualizing-single-cell-data-in-seurat/
+## remove the x-axis text and tick
+## plot.margin to adjust the white space between each plot.
+## ... pass any arguments to VlnPlot in Seurat
+modify_vlnplot<- function(obj, 
+                          feature, 
+                          pt.size = 0, 
+                          plot.margin = unit(c(-0.75, 0, -0.75, 0), "cm"),
+                          ...) {
+  p<- VlnPlot(obj, features = feature, pt.size = pt.size, ... )  + 
+    xlab("") + ylab(feature) + ggtitle("") + 
+    theme(legend.position = "none", 
+          axis.text.x = element_blank(), 
+          axis.ticks.x = element_blank(), 
+          axis.title.y = element_text(size = rel(1), angle = 0), 
+          axis.text.y = element_text(size = rel(1)), 
+          plot.margin = plot.margin ) 
+  return(p)
+}
+
+## extract the max value of the y axis
+extract_max<- function(p){
+  ymax<- max(ggplot_build(p)$layout$panel_scales_y[[1]]$range$range)
+  return(ceiling(ymax))
+}
+
+## main function
+StackedVlnPlot<- function(obj, features,
+                          pt.size = 0, 
+                          plot.margin = unit(c(-0.75, 0, -0.75, 0), "cm"),
+                          ...) {
+  
+  plot_list<- purrr::map(features, function(x) modify_vlnplot(obj = obj,feature = x, ...))
+  
+  # Add back x-axis title to bottom plot. patchwork is going to support this?
+  plot_list[[length(plot_list)]]<- plot_list[[length(plot_list)]] +
+    theme(axis.text.x=element_text(), axis.ticks.x = element_line())
+  
+  # change the y-axis tick to only max value 
+  ymaxs<- purrr::map_dbl(plot_list, extract_max)
+  plot_list<- purrr::map2(plot_list, ymaxs, function(x,y) x + 
+                            scale_y_continuous(breaks = c(y)) + 
+                            expand_limits(y = y))
+
+  p<- patchwork::wrap_plots(plotlist = plot_list, ncol = 1)
+  return(p)
+}
+
+pd<-StackedVlnPlot(obj = SObj, features = featsel)
+#    theme(axis.title.x = element_text( size=10))
+#print(pd)
+spl(pd,"Exp_Violin_selfeat",fig.width=9,fig.height=15)
+
+
+```
+
+
+## Special Genes in Colon:
+
+```{r TCRSubtypes in Colon,eval=T,echo=F}
+
+TCRdatpath="/misc/data/analysis/project_B07/scTCRrepertoire/cellRangerData"
+fls<-list.files(TCRdatpath,".csv")
+fls<-fls[-2]
+names(fls)<-sub(".csv","",fls)
+
+namesfls<-data.frame(substr(fls,nchar(fls)-4,nchar(fls)-4),
+                 toupper(substr(fls,1,1)))
+namesfls[,1]<-as.character(as.numeric(namesfls[,1])+1)
+names(fls)<-paste(namesfls[,1],namesfls[,2],sep="")
+names(fls)[1]<-"235d12"
+#names(fls)[1]<-"donor_1"
+
+TCRdatnames<-sub(".csv","",fls)
+TCRdatnames[1]<-"donor_1"
+
+
+TCRdat<-lapply(fls,function(x) read.csv(file.path(TCRdatpath,x)))
+
+
+TregTRBVs<-c("TRBV12-1","TRBV12-2","TRBV26")
+clonesTrgTRBV<-lapply(TregTRBVs,function(x) sapply(1:length(TCRdat),
+                                                  function(d) paste(names(TCRdat)[d],
+                                                                    TCRdat[[d]][which(TCRdat[[d]]$v_gene==x),
+                                                                                "barcode"],sep="_")))
+names(clonesTrgTRBV)<-TregTRBVs
+namingfun<-function(x,NAME){
+    names(x)<-NAME
+    return(x)}
+clonesTrgTRBV<-lapply(clonesTrgTRBV,function(x) namingfun(x,TCRdatnames))
+
+
+for(j in 1:length(clonesTrgTRBV)){
+pd<-TCRplotfun(clonesTrgTRBV[[j]],SObj,clonename=names(clonesTrgTRBV)[j],plotname="UMAP",sizeHIL=0.5,
+    colinfo=df)
+#print(pd)
+spl(pd,paste("UMAP_TCR_clone_",names(clonesTrgTRBV)[j],sep=""))
+}
+
+
+    dfplt<-as_tibble(SObj@meta.data[,c(1:9,30:35)])
+    dfplt$ID<-rownames(SObj@meta.data)
+    dfplt$TCRc<-"none"
+    for(i in 1:length(clonesTrgTRBV)){
+        dfplt$TCRc[which(dfplt$ID%in%unlist(unname(clonesTrgTRBV[[i]])))]=names(clonesTrgTRBV)[i]}
+    dfplt$TCRc<-as.factor(dfplt$TCRc)
+    dfpltu<-dfplt %>% group_by(seurat_clusters,TCRc,group,orig.ident) %>%
+       dplyr::summarize(n=dplyr::n())
+    
+    datu<-dfpltu%>%filter(seurat_clusters %in% c(0,2,10))%>%filter(group %in% "C")                   
+    datu<-datu%>%group_by(seurat_clusters)%>%dplyr::mutate(totalCluster=sum(n))
+    datu<-datu%>%dplyr::mutate(clusterFrac=round(n/totalCluster,4))
+    pd<-ggplot(datu,aes(x=seurat_clusters,y=clusterFrac,fill=TCRc))+geom_bar(stat="identity")
+    ggsave(pd,file=file.path(vispath,paste("TRBV_colon_",today,".pdf")),device="pdf")
+    WriteXLS(as.data.frame(datu),
+             ExcelFileName=file.path(tablepath,
+                                     paste("TRBV_colon_",today,".xlsx")))
+
+
+
+### Find diff genes for liver spleen and colon in scData
+
+
+#VlnPlot(SObj, features = featsel[k],group.by="orig.ident",pt.size=0,cols=df$colsvec)
+parallelVlnPlot<-function(dataObj,TCRclonesl,i,feat){
+    #dataObj<-SObj
+    dataObj@meta.data[,"TCRc"]<-FALSE
+    dataObj@meta.data[unlist(unname(TCRclonesl[[i]])),"TCRc"]<-TRUE
+    pd<-VlnPlot(dataObj, features = feat,split.by="TCRc",group.by="group",pt.size=0.5,cols=df$colsvec,combine=FALSE)
+    #pd<-VlnPlot(dataObj, features = feat,split.by="TCRc",group.by="group",pt.size=0,cols=df$colsvec,combine=FALSE)
+    print(feat)
+    print(table(dataObj@meta.data[,"TCRc"]))
+    dfpl<-pd[[1]]$data
+    dfpl$ID<-rownames(pd[[1]]$data)
+    dfpl$ident<-as.factor(dfpl$ident)
+    dfpl<-dfpl[dfpl[,1]>0,]
+    levels(dfpl$ident)<-c("colon","donor","liver","spleen")
+    dfpl$ident<-factor(dfpl$ident,levels=c("donor","colon","liver","spleen"))
+    levels(dfpl$split)<-c("non-selected TCRs","selected TCRs")
+
+    #levels(dfpl$TR)<-c("colon","colon_TCR","donor","donor_TCR","liver","liver_TCR","spleen","spleen_TCR")
+    #dfpl$TR<-factor(dfpl$TR,levels=c("donor","donor_TCR","colon","colon_TCR","liver","liver_TCR","spleen","spleen_TCR"))
+        txtsize=18
+    pout<-ggplot(as.data.frame(dfpl),aes(x=ident,y=get(feat)))+
+        geom_violin(adjust=.5,scale = "width",aes(fill=ident),
+                    trim=T,draw_quantiles=c(0.25,0.5,0.75))+
+        #geom_jitter(height=0,width=0.1)+
+        ylim(0,max(dfpl[,1]))+
+        scale_fill_manual(values=c(df$colsvec[c(1,2,5,8)]))+
+        labs(x="cell origin",
+             y=feat,
+             fill="cell origin")+
+             theme_bw()+
+             theme(axis.title.x = element_blank())+
+             theme(axis.title.y = element_text(size=txtsize,angle=0,face="italic",vjust=+0.3))+
+             theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+             theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+             theme(strip.text.x=element_text(size=txtsize-2))+
+             theme(strip.background = element_blank())+
+             theme(legend.text=element_text(size=txtsize-2))+
+             scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+             theme(legend.title=element_text(size=txtsize))+
+             theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                   panel.background = element_blank(), axis.line = element_line(colour = "black"),
+                   panel.border = element_blank())+
+             facet_wrap(~split)
+    return(pout)
+}
+
+featsel<-c("Foxp3","Il2ra","Ctla4","Fasl","Gzma","Gzmb","Il10","Tgfb1","Prf1")
+for(i in 1:length(clonesTrgTRBV)){
+for(k in 1:length(featsel)){
+    pout<-parallelVlnPlot(dataObj=SObj,TCRclonesl=clonesTrgTRBV,i=i,feat=featsel[k])
+    #print(pout)
+    spl(pout,paste("Violin_all_and_TCR_clone_",featsel[k],"_",names(clonesTrgTRBV)[i],sep=""),fig.height=1.5,fig.width=8)
+}
+}
+# 
+
+
+
+
+```
+
+```{ r CellSignature,eval=F,echo=F}
+# source: Tirosh_2016
+# Cell type spec signatures
+# genes which: 1. avg. rel expression >3 (~8 fold higher than in other cells)
+# 2. expressed in > 50% of cells
+# 3. p<0.001, when compaing cells classified into that cell to those in other cell types. P values wer dertermined  for each pairwise comparison of cell types by comparing the observed fold-change to that seen between 10,000 pairs of control sets.  The  control  sets  were  generated  such  that  each  pair  is  mutually  exclusive,  has  the  same number of cells as classified to the two cell types, and each set is composed of equal number of cells  from  the  two  cell  types.
+# Gene sets from fig 5B
+
+
+AvgExpObj<-AverageExpression(SObj,
+                        return.seurat=F,
+                        group.by="ident")
+head(AvgExpObj$RNA)
+head(FindMarkers(SObj,ident.1=c(0,2),only.pos=TRUE,min.pct=0.5,logfc.threshold=3,max.cells.per.ident = 200))
+              #p_val avg_log2FC pct.1 pct.2    p_val_adj
+              #Vps37b 4.234357e-61   3.154526 0.962 0.233 6.738132e-57
+              #Areg   8.284626e-17   3.276115 0.534 0.134 1.318333e-12
+# 
+HiSelMark<-list()
+
+indx<-c(0:12)
+for (i in indx){
+    print(i)
+    dat<-FindMarkers(SObj,ident.1=i,only.pos=TRUE,min.pct=0.5,logfc.threshold=1,max.cells.per.ident = 200)
+    if(length(dat[,1])>0){
+    HiSelMark[[paste("SeuratClust",i,sep="_")]]<-dat}
+    }
+
+
+siggenesets<-list("SIG_cytotox"=c("Nkg7","Ccl4","Cst7","Prf1","Gzma",
+                              "Gzmb","Ifng","Ccl3"),
+                  "SIG_naive"=c("Ccr7","Tcf7","Lef1","Sell"),
+                  "SIG_exhaust"=c("Pdcd1","Tigit","Lag3","Havcr2","Ctla4"),
+                  "SIG_TregTissRepair"=c("Ccr2","Ccr5","Ccr6","Ccr8","Tnfrsf8",
+                                    "Tnfrsf9","Gata3","Tox","Bach2","Batf"),
+                  "STG_Treg"=c("Il1rl1","Areg","Klrg1","Il10","Gata3","Maf","Batf"),
+                  "STG_Tregcanon"=c("Foxp3","Ctla4","Il2ra","Il2rb","Tnfrsf18","Cd44","Itgal","Icam1","Tgfb1"),
+                  "STG_Treg_kill"=c("Gzma","Gzmb","Klrc1","Klrd1","Fasl","Prf1","Tgfb3","Il10", "Il12a","Klrk1","Klrc2"),
+                  "STG_Tregrepair"=c("Areg","Il1rl1","Klrg1","Nfil3"))
+                  #"TRcolon"=c(),
+                  #"TregSpleen"=c(),
+                  #"TregLiv=c(),)
+
+SObj<-AddModuleScore(object=SObj,
+                    features=siggenesets,
+                    ctrl=10)
+
+indx<-length(colnames(SObj@meta.data))
+colnames(SObj@meta.data)[(indx+1-length(names(siggenesets))):indx]<-names(siggenesets)
+for(i in names(siggenesets)){
+pd<-FeaturePlot(SObj,
+            features = i,label=T,pt.size=0.01,combine=F)
+            print(pd)
+            #ggsave(plot=pd[[1]],filename=file.path(vispath,paste("ExpressionSignatures_",i,"_",today,".pdf",sep="")),device="pdf")
+            #Sys.sleep=3
+            }
+
+## Heatmap of genes
+for(i in 1:length(siggenesets)){
+    pd<-DoHeatmap(SObj, features = siggenesets[[i]],cells=cellspl)
+    }
+
+
+```
+
+```{r Normcomp,eval=F,echo=F}
+
+SObj$clusterID <- Idents(SObj_sct)
+Idents(SObj) <- "clusterID"
+plot1 <- DimPlot(object = SObj_sct, label = TRUE) + NoLegend() + ggtitle("sctransform")
+plot2 <- DimPlot(object = SObj, label = TRUE)
+plot2 <- plot2 + NoLegend() + ggtitle("Log-normalization")
+plot1 + plot2
+
+
+```
+
+
+## Session Info
+
+```{r eval=T,echo=F}
+sessionInfo()
+```

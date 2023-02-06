@@ -1,0 +1,4918 @@
+---
+title: "Treg cells in mouse GvHD"
+author: "Nicholas Strieder"
+date: "`r format(Sys.Date())`"
+output:
+    html_document:
+    highligh: haddock
+    keep_md: yes
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_depth: 3
+    toc_float:
+        collapsed: no
+        smooth_scroll: no
+    pdf_document:
+        toc: yes
+        toc_depth: '3'
+    html_notebook:
+        highligh: haddock
+        number_sections: yes
+        theme: paper
+        toc: yes
+        toc_depth: 3
+        toc_float:
+            collapsed: no
+            smooth_scroll: no
+bibliography: reference/DeSeq_Nstrieder_kbibtex.bib
+---
+
+```{r libraries,eval=T,echo=F,message=F,warnings=F}
+# rhskl27
+# rbio3_12
+## add douplet finder data
+
+#load data
+source("loadLibandObjects_Seurat4.1.0.R")
+
+```
+
+```{r Setup,eval=F,echo=F}
+#  if not LoadLibandObjects eval=F
+## Setup of package paths
+  # libs="/misc/data/user/userID/R/R4.0.0"
+
+  libs="/misc/data/user/userID/R/R4.0.3"
+  # load different libs as in "loadLibandObjects!! 
+  #library("BiocParallel")
+   library("Seurat",lib.loc=libs)
+   library("ggpointdensity",lib.loc=libs)
+   library("knitr")
+   library("future")
+   library("RColorBrewer")
+   #BiocManager::install(pkgn, lib =libs,suppressUpdates=TRUE)
+    loadlibs<-c("cowplot","ggplot2","patchwork","dplyr","fgsea","slingshot")#,"SCnorm")
+    libpath<-.libPaths()
+    .libPaths<-.libPaths(c(libs,libpath))
+
+    for(i in loadlibs){
+       #print(i)
+        tryCatch({library(i,character.only=T,lib.loc=libs)
+             },warning=function(w){
+                  #print(w)
+             },error=function(e){
+                  #print(e)
+                  library(i,character.only=T)
+             })
+    }
+
+    set.seed(20)
+    today<-format(Sys.Date(), "%d_%m_%Y")
+    knitr::opts_chunk$set(fig.width = 12)
+    featscale<-scale_colour_gradientn(colours = rev(brewer.pal(n = 11, name = "Spectral")))
+```
+
+
+## parallel computing
+
+```{r Parallelsetup,eval=T,echo=F}
+## Parallel seurat
+
+plan("multisession",workers=6)
+options(future.globals.maxSize= 1500*1024^2)
+#plan()
+```
+
+
+## Loading Data 
+
+To load 10x data from cellranger output: use barcodes.tsv, genes.tsv, and matrix.mtx 
+
+```{r pathsetup,eval=F,echo=F }
+# use if no: source(loadLibandObjects_Seurat4.1.0.R")
+
+# primary processing based on /misc/data/user/userID/projects/pr036_dd_10x/scripts/scripts_seurat4/Analysis_Seurat_20210212_S4_noDoub.Rmd"
+# tardir
+tardir="/misc/data/processedData/mapping/RNA/GRCm38/singleCell/5prime/mouseTcells"
+projID="p036"
+analpath="/misc/data/user/userID/projects/pr036_dd_10x/RNA/analysis_seurat_nodoub"
+datapath=file.path(analpath,"data")
+tablepath=file.path(analpath,"table")
+vispath=file.path(analpath,"vis")
+```
+
+
+```{r importrawData, eval=F,echo=F}
+dday="15_02_2021"
+
+```
+
+
+## Normalizing and var Features
+
+Set features to 2000.
+```{r NormVarFeat,eval=F,echo=F}
+outfileUMAP<-file.path(datapath,paste("SeuratObj_",projID,"_UMAP_",dday,".rds",sep=""))
+RERUN=TRUE
+if(file.exists(outfileUMAP)){
+    RERUN=FALSE}
+if(RERUN){
+options(future.globals.maxSize= 1500*1024^2)
+    SObj <- NormalizeData(object = SObj, verbose = FALSE)
+    SObj <- FindVariableFeatures(object = SObj,
+                                 selection.method = "vst", 
+				 nfeatures = 2000,
+				 verbose = FALSE)
+}else{
+SObj<-readRDS(outfileUMAP)
+}
+SObj@meta.data$orig.ident<-factor(SObj@meta.data$orig.ident)
+print(head(VariableFeatures(SObj), 20))
+```
+
+
+
+
+
+## PCA
+
+
+```{r PCA,eval=T,echo=F}
+if(RERUN){
+SObj <- RunPCA(SObj, features = VariableFeatures(object = SObj))
+DimHeatmap(SObj, dims = 1:15, cells = 500, balanced = TRUE)
+DimHeatmap(SObj, dims = 16:25, cells = 500, balanced = TRUE)
+DimHeatmap(SObj, dims = 26:37, cells = 500, balanced = TRUE)
+
+#run on 02.03.2021
+SObj <- JackStraw(SObj, num.replicate = 100) # took about 5 Minutes
+head(JS(object = SObj[['pca']], slot = 'empirical'))
+#JS(object =SObj[['pca']], slot = 'full')
+SObj <- ScoreJackStraw(SObj, dims = 1:20,score.thresh=1e-05)
+#JackStrawPlot(SObj,dims=1:20)
+#ElbowPlot(SObj)
+SObj <- FindNeighbors(SObj, dims = 1:11)
+SObj <- FindClusters(SObj, resolution = 0.5)
+SObj <- RunUMAP(SObj, dims = 1:11)
+outfileUMAP<-file.path(datapath,paste("SeuratObj_",projID,"_UMAP_",today,".rds",sep=""))
+saveRDS(SObj,outfileUMAP)
+}
+
+# Examine and visualize PCA results a few different ways
+print(SObj[["pca"]], dims = 1:15, nfeatures = 10)
+
+```
+
+
+## Visualising cells with UMAP
+
+```{r UMAP,eval=T,echo=F}
+
+DimPlot(SObj, reduction = "umap",label=TRUE)
+for(i in unique(SObj@meta.data$group)){
+pd<-DimPlot(SObj, cells=grep(i,SObj@meta.data$group),
+        reduction = "umap",label=TRUE)+ggtitle(paste("UMAP Group: ",i,sep=""))
+print(pd)
+}
+
+for(i in unique(SObj@meta.data$orig.ident)){
+    pd<-DimPlot(SObj, cells=grep(i,SObj@meta.data$orig.ident),
+                        reduction = "umap",label=TRUE)+ggtitle(paste("UMAP Sample: ",i,sep=""))
+print(pd)
+}
+
+
+```
+
+## Search for batch effects in clusters
+
+There are some cluster with higher ribosomal gene percentage in clusters 3,6,11 and 12. 
+Cluster 3(12) is a rather spleen specific cluster, while 6 (11) are input cells.
+The number of counts per cell is especially high in 5,8 (liver/spleen) and 
+
+```{r BatchinCluster,eval=T,echo=F}
+
+batchitem<-c("nFeature_RNA","percent.mt",
+             "percent.rb","nCount_RNA")
+for(i in batchitem){
+pd<-VlnPlot(SObj, features = c(i),group.by="seurat_clusters",pt.size=0.01)
+print(pd)
+#Sys.sleep(3)
+}
+
+## Subset e.g cluster 8, on tissue or sample
+## Color umap by Sample e.g spleen only
+## Color umap by batchitems
+
+#DimPlot(SeuObj, reduction="umap", label=T,  cells.highlight= g1pl, cols.highlight = c("darkblue"), cols= "grey")
+FeaturePlot(SObj,feature="percent.rb")+featscale
+FeaturePlot(SObj,feature="nFeature_RNA")+featscale
+
+```
+
+## Vis Treg Genes
+
+```{r TregFeat,eval=T,echo=F}
+VlnPlot(SObj, features = c("Foxp3"))
+VlnPlot(SObj, features = c("Foxp3", "Tnfrsf1b"), slot = "counts", log = TRUE)
+
+#feats=c("Foxp3", "Tnfrsf1b", "Ccr8", "Ikzf4",
+#                                 "Batf","Klrg1","Nfil3","Areg",
+#          "Il1rl1")
+
+
+```
+
+
+
+## Fig 6c: Expression of selected marker genes
+
+Contains a lists of 34 marker genes, only 24 were selected for publication and assembled using the adobe suite. Single UMAP plots with feature expression visualiszed per cell.
+
+```{r Fig6c, eval=T,echo=F}
+
+infodatdir<-file.path(dirname(dirname(analpath)),"scripts","info")
+feats<-read.table(file.path(infodatdir,"GenesforUMAP.txt"))[,1]
+
+txtsize=12
+lfac=8.5
+
+for(i in feats){
+pd<-FeaturePlot(SObj,
+            features = i,label=T,pt.size=0.000005,combine=T,
+                    label.size=txtsize-lfac,raster=F,order=T)+
+             theme(plot.title=element_text(size=txtsize+2),
+                   axis.title.x = element_text(size=txtsize),
+                   axis.title.y = element_text(size=txtsize),
+                   axis.text.x = element_text(size=(txtsize-2)),
+                   axis.text.y = element_text(size=(txtsize-2)),
+                   legend.text=element_text(size=(txtsize-2)))+
+                   theme(legend.key.size=unit(0.5,"cm"),
+                         legend.key.height=unit(0.5,"cm"),
+                         legend.key.width=unit(0.5,"cm"))+
+                    featscale
+
+                   # geom_point(aes(x=UMAP_1,y=UMAP_2),shape=1)
+ggsave(filename=file.path(vispath,paste("ColorCoded_expressionplot_featscale_",i,"_",today,".pdf",sep="")),
+       plot=pd,
+       width=12,
+       height=9,
+       unit="cm",
+       device="pdf")
+}
+
+```
+
+## Tissue Repair Tregs Delacher
+
+Some overlap with the study of Delacher 2020/2021 is found for the Clusters:
+Colon(0,10): Expressing Klrg1,Il1rl1(ST2),Areg and BATF, Klrg1 is lower in Cluster 2
+Spleen(5): 
+
+```{r TissueRepTregDel,eval=T,echo=F}
+pd <- VlnPlot(SObj, 
+              features =c("Klrg1","Il1rl1","Areg","Batf","Pparg","Il10","Gata3"),
+              group.by="seurat_clusters",
+              pt.size=NULL)
+ggsave(filename=file.path(vispath,paste("TissueRepairTreg_Delchaer_",i,"_",today,".pdf",sep="")),
+              plot=pd,
+              device="pdf")
+
+```
+
+
+## Find Diff features
+
+```{r DiffFeat,eval=T,echo=F,fig.width=10,fig.height=10}
+
+
+#SObj.markers <- FindAllMarkers(SObj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+#cluster1.markers <- FindMarkers(SObj, ident.1 = 0, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)
+
+outmarkerpath=file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outmarkerpath)){
+
+SObj.markers <- FindAllMarkers(SObj, min.pct = 0.25, logfc.threshold = 0.25,verbose=TRUE)
+for(i in levels(SObj@meta.data$seurat_clusters)){
+    datout<-SObj.markers %>% filter(cluster==i)
+    outfilename=file.path(tablepath,paste("Marker_genes_logNorm_perCluster-",i,"_",today,".csv",sep=""))
+write.csv(as.data.frame(datout),file=outfilename)}
+#
+
+for(i in levels(SObj@meta.data$seurat_clusters)){
+    datout<-SObj.markers %>% filter(cluster==i)
+    outfilename=file.path(tablepath,paste("Marker_genes_logNorm_perCluster_onlygenenames-",i,"_",today,".csv",sep=""))
+    datout<-datout$gene
+write.csv(as.data.frame(datout),file=outfilename,row.names=F)
+#print(kable(head(datout,n=5)))
+}
+saveRDS(SObj.markers,file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",today,".rds",sep="")))
+}else{
+SObj.markers<-readRDS(file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",dday,".rds",sep="")))
+}
+
+
+```
+
+## Supplementary Figure 6b Heatmap all data
+
+```{r SubFig6b,eval=T,echo=F}
+####################################
+## Supplemental Fig 6b
+## Heatmap for clusters top 10 genes
+######################################
+
+
+Idents(SObj)<-"seurat_clusters"
+top10 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+if(all(top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+selfeat<-top10$gene[top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{
+    selfeat=top10$gene}
+set.seed=19
+
+
+levels(SObj@meta.data$seurat_clusters)<-as.character(1:length(levels(SObj@meta.data$seurat_clusters)))
+Idents(SObj)<-"seurat_clusters"
+cellspl<-sample(1:length(SObj@meta.data[,1]),2500,replace=F)
+
+pd<-DoHeatmap(SObj, features = selfeat,cells=cellspl) 
+print("gene list ordered by avg_log2FC")
+print(pd)
+ggsave(filename=file.path(vispath,paste("ClusterHeatmap_top10_",today,".pdf",sep="")),
+              plot=pd,
+              device="pdf",
+              width=26,
+              height=26,
+              unit="cm")
+
+##
+# Data Heatmap:This data is not what it is expected to be 
+cellIDs<-rownames(SObj@meta.data)[cellspl]
+#heatdat<-pd$data
+#heatdat$Cell<-as.character(heatdat$Cell)
+#heatdat <- pd$data[pd$data$Cell%in%cellIDs,]
+# create unique features
+
+doHeatmapData<-function(SeuratObj,features,cellsV,doHeatOut,outname){
+    # function to gather data needed to reproduce heatmap
+    # SeuratObj
+    # features: Genes
+    # cellsV=selected Cells
+    # doHeatOut: ggplot object, output from doHeatmap
+    # outname: name were to save full relative file path
+    selfeat<-unique(features)
+    cellsv<-unique(cellsV)
+    heatdat1<-as.data.frame(SeuratObj[["RNA"]]@scale.data[selfeat,cellsV])
+    CellOrder_Seurat<-levels(doHeatOut$data$Cell)
+    CellOrder_Seurat<-CellOrder_Seurat[CellOrder_Seurat%in%colnames(heatdat1)]
+    if(all(levels(doHeatOut$data$Feature)%in%selfeat)){
+        heatdat1<-heatdat1[rev(levels(doHeatOut$data$Feature)),]
+        heatdat1["seurat_clusters",]<-SeuratObj@meta.data[cellsV,"seurat_clusters"]
+        heatdat1<-heatdat1[,CellOrder_Seurat]
+    }else{stop("features are not identical")}
+    write.table(heatdat1,outname,sep="\t",quote=F)
+    return(heatdat1)
+}
+
+outfname <- paste("SupFig6b_Heatmap_data_corr_",today,".tsv",sep="")
+outfname <- file.path(datapath,outfname)
+odat<-doHeatmapData(SObj,features=selfeat,
+              cellsV=cellspl,
+              doHeatOut=pd,
+              outname=outfname)
+
+Annotdf<-data.frame("seurat_clusters"=unlist(unname(odat["seurat_clusters",])))
+rownames(Annotdf)<-colnames(odat)
+odatp<-odat[-grep("seurat_clusters",rownames(odat)),]
+odatp<-apply(odatp,2,function(x) as.numeric(x))
+rownames(odatp)<-rownames(odat)[-length(odat[,1])]
+
+fun_color_range <- colorRampPalette(c("violet","black","yellow"))
+my_colors<-fun_color_range(200)
+
+clipval<-function(x,dspmin=-2.5,dspmax=2.5){
+        x[which(x>dspmax)]<-dspmax
+        x[which(x<dspmin)]<-dspmin
+        return(x)}
+odatp<-apply(odatp,2,function(x) clipval(x,-2.5,2.5))
+library(pheatmap)
+
+pheatmap(odatp,cluster_rows=F,cluster_cols=F,
+         cluter_rows=F,show_colnames=F,
+         annotation_names_col = T,
+         annotation_col=Annotdf,
+         scale="none",na_col="black",
+         color=my_colors)
+
+```
+
+## Additional Heatmaps
+
+```{r additional Heatmaps,eval=T,echo=F}
+
+top10 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 10)
+if(all(top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+    selfeat<-top10$gene[top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{
+        selfeat=top10$gene}
+
+pd<-DoHeatmap(SObj, features = selfeat,cells=cellspl)
+print("gene list ranked by seurat")
+print(pd)
+
+set.seed=19
+cellspl<-sample(1:length(SObj@meta.data[,1]),2500,replace=F)
+top5 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 5,wt = avg_log2FC)
+if(all(top5$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+        selfeat<-top5$gene[top5$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{  
+        selfeat<-top5$gene}
+
+pd<-DoHeatmap(SObj,features=selfeat,
+              cells=cellspl
+              )
+#pd$data
+#library(pheatmap)
+ggsave(pd,file=file.path(vispath,paste("Marker_pos_logNorm_",projID,"_Heatm_top5_",today,".pdf",sep="")),device="pdf")
+
+
+# Sample for same amount of cells
+set.seed=19
+numbs<-1:length(SObj@meta.data[,1])
+numbsl<-split(numbs,SObj@meta.data$seurat_cluster)
+cellspl<-lapply(numbsl,function(x) sample(x,100,replace=F))
+cellspl<-unname(do.call(c,cellspl))
+top5 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 5,wt = avg_log2FC)
+if(all(top5$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+        selfeat<-top5$gene[top5$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{  
+        selfeat<-top5$gene}
+
+pd<-DoHeatmap(SObj,features=selfeat,
+              cells=cellspl
+              )
+#pd$data
+#library(pheatmap)
+ggsave(pd,file=file.path(vispath,paste("Marker_pos_logNorm_",projID,"_Heatm_top5_eqCellNum",today,".pdf",sep="")),device="pdf")
+# large PNG
+if(all(SObj.markers$gene%in%rownames(SObj[["RNA"]]@scale.data))){
+pd<-DoHeatmap(SObj,
+              features=SObj.markers$gene,
+              cells=cellspl,
+              group.bar=T,
+              label=T)
+
+ggsave(pd,
+       file=file.path(vispath,
+                      paste("Marker_pos_logNorm_",
+                            projID,
+                            "_Heatm_all_",today,
+                            "large.png",sep="")),
+       width=7,
+       height=9,
+       device="png")
+}
+#large PNG equal width
+#large PNG no genenames
+
+
+
+```
+
+## Classifying features:
+
+   
+```{r ClassFeat,eval=T,echo=F,fig.width=10,fig.height=10}
+
+outmarkerpathclass=file.path(datapath,paste("Markerall_CLASS_pos_perCluster_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outmarkerpathclass)){
+Class_markers<-FindAllMarkers(SObj,logfc.threshold=0.5,test.use = "roc",only.pos = TRUE,min.pct=0.25,max.cells.per.ident=1000)
+ 
+    datout<-Class_markers %>% group_by(cluster) %>% top_n(n=1,wt=power)
+#    outfilename=file.path(tablepath,paste("Marker_genes_logNorm_Harmony_S_D_Cluster-",i,"_",today,".csv",sep=""))
+#for(i in levels(SObj@meta.data$seurat_clusters)){
+#write.csv(as.data.frame(datout),file=outfilename)
+#print(kable(head(cluster.mark,n=5)))
+#}
+
+saveRDS(Class_markers,file.path(datapath,paste("Markerall_CLASS_pos_perCluster_logNorm_",projID,"_",today,".rds",sep="")))
+}else{
+Class_markers<-readRDS(outmarkerpathclass)
+}
+datout<-Class_markers %>% group_by(cluster) %>% top_n(n=1,wt=power)
+pd<-VlnPlot(SObj,features=datout$gene,pt.size=0,combine=T)
+pd
+
+#Class_markers<-FindAllMarkers(SObj,logfc.threshold=0.5,test.use = "roc",only.pos = TRUE,min.pct=0.25,max.cells.per.ident=1000)
+
+```
+
+
+
+## Specific Comparisons:
+
+```{r DiffFeatsel,eval=T,echo=F,fig.width=10,fig.height=10}
+
+# compare cluster 2,0,10 
+indx<-as.numeric(as.character(unique(SObj@meta.data$seurat_clusters)))
+# Correct
+compsets<-list("colon"=c(0,2,10),
+               "spleen"=c(7,4,3,9),
+               "liver"=c(1,5))
+comps<-list(c(1,3),
+            c(1,2),
+            c(3,2))
+names(comps)<-sapply(comps,function(x)paste(names(compsets)[x],collapse="_vs_"))
+
+newidents<-SObj@meta.data$seurat_clusters
+levels(newidents)<-c("colon","liver","colon",
+                     "spleen","spleen","liver",
+                     "Input","spleen","liverspleen",
+                     "spleen","colon","Input","spleen")
+
+SObj@meta.data$tissueidents<-newidents
+
+
+outselmarkerpath<-file.path(datapath,paste("Marker_sel_pos_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outselmarkerpath)){
+                 SObj_sel.markers <- lapply(comps,function(x) FindMarkers(SObj,
+                                                 ident.1=compsets[[x[1]]],
+                                                 ident.2=compsets[[x[2]]],
+                                                 only.pos = F,
+                                                 min.pct = 0.25))
+                                                #logfc.threshold=0.25))
+
+for (i in 1:length(SObj_sel.markers)){
+    outfilename=file.path(tablepath,paste("Marker_pos_Class_",names(SObj_sel.markers)[i],"_logNorm_",projID,"_",dday,".csv",sep=""))
+write.csv(SObj_sel.markers[[i]],file=outfilename)}
+#outselmarkerpath<-file.path(datapath,paste("Marker_sel_pos_logNorm_",projID,"_",today,".rds",sep=""))
+saveRDS(SObj_sel.markers,outselmarkerpath)
+}else{
+    SObj_sel.markers<-readRDS(outselmarkerpath)
+}    
+
+top30 <- unlist(lapply(SObj_sel.markers,function(x) rownames(x[order(x$avg_log2FC,decreasing=T),][1:10,])))
+
+
+if(all(top30 %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+    selfeat<-top30[which(top30 %in% rownames(GetAssayData(SObj, slot = 'scale.data')))]
+}else{
+        selfeat=top30}
+
+pd<-DoHeatmap(SObj,group.by="tissueidents",features = selfeat,cells=cellspl)
+print(pd)
+#ggsave(pd,file=file.path(vispath,paste("Marker_sel_pos_logNorm_",projID,"_Heatm_",today,".pdf",sep="")),device="pdf")
+#ggsave(pd,file=file.path(vispath,paste("Marker_sel_pos_logNorm_",projID,"_Heatm_",today,".pdf",sep="")),device="pdf")
+
+```
+
+## compare with bulk:
+
+```{r, eval=T,echo=F}
+## This does not work I need to summarize
+bulkdatdir<-file.path(dirname(dirname(analpath)),"scripts","info","bulkAnlaysis")
+fls<-list.files(bulkdatdir,pattern="pa.qstat.2021-06-07.txt")
+flsu<-lapply(fls,function(x) read.delim(file.path(bulkdatdir,x),header=TRUE,sep="\t",stringsAsFactors=F))
+names(flsu)<-sub(".txt","",sub(".pa.qstat.2021-06-07.txt","",fls))
+library(ggrepel)
+
+intersect_bulkSC<-function(scDE,bulkDE,scname,bulkname,fdr=0.1,lgFC=0,txtsize=14){
+    # There is no postHoc Test for Anovalike Tests in edgeR and DESeq
+    # We need to do all pairwise tests and then run p-adjust for all resutls!!
+    bulkDE<-bulkDE[which(bulkDE$FDR<fdr&abs(bulkDE$logFC)>lgFC),]
+    pldat<-merge(scDE,bulkDE,by.x=0,by.y="GeneSymbol",all.x=TRUE)
+    pldat<-na.omit(pldat)
+    library(reshape2)
+    mdat<-melt(pldat[,c(1,3,11)],id=c("Row.names","avg_log2FC"))
+    lim<-c(min(mdat$avg_log2FC),max(mdat$avg_log2FC))
+    mdat$labelu<-""
+    geneslabel<-unique(c(which(mdat$value>(lim[2]-0.15)),which(mdat$avg_log2FC>(lim[2]-0.15))))
+    mdat$labelu[geneslabel]<-mdat$Row.names[geneslabel]
+    
+    # plotting
+    pd<-ggplot(mdat,aes(x=avg_log2FC,y=value,colour=factor(variable)))+
+        geom_abline(slope=1,intercept=0,linetype="dashed",colour="grey",size=0.1)+
+        geom_smooth(method="lm",size=0.1)+
+        geom_point(alpha=0.75,size=0.1)+
+        #geom_text_repel(size=(txtsize-6),
+        #                min.segment.length = 0,
+        #                box.padding=0.5,
+        #                max.overlaps=Inf)+
+        labs(x=paste("singleCell ",scname," (avg_log2FC)",sep=""),
+        y=paste("bulkRNA ",bulkname,"(log2FC)",sep=""),colour="bulk comparisons")+
+         theme_bw()+
+         theme(axis.title.x = element_text(size=txtsize))+
+         theme(axis.title.y = element_text(size=txtsize))+
+         theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+         theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+         theme(strip.text.x=element_text(size=txtsize-2))+
+         theme(strip.background = element_blank())+
+         #theme(legend.text=element_text(size=txtsize-2))+
+         #theme(legend.title=element_text(size=txtsize))+
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               panel.background = element_blank(), axis.line = element_line(colour = "black"),
+               panel.border = element_blank())+
+         xlim(lim)+ylim(lim)+
+         NoLegend()+
+         scale_x_continuous(breaks=seq(-5,5,1))+
+         scale_y_continuous(breaks=seq(-5,5,1))
+
+
+   # ggsave(plot=pd,filename=file.path(vispath,paste(
+   #                                   "scDE_bulkDEcolon",today,
+   #                                   ".pdf",sep="")),
+   #                                   device="pdf")
+   return(pd)
+}
+
+for(i in 1:3){
+        print(paste(names(SObj_sel.markers)[i],names(flsu)[i],sep="_vs_"))
+  pd<-intersect_bulkSC(SObj_sel.markers[[i]],flsu[[i]],names(SObj_sel.markers)[i],names(flsu)[i],txtsize=8)
+  #print(pd)
+  outname=paste("Intersection_SC_",names(SObj_sel.markers)[i],"_vs_bulk_",names(flsu)[i],today,".pdf",sep="")
+  ggsave(plot=pd,filename=file.path(vispath,outname),
+         width=35,
+         height=35,
+         unit="mm",
+         device="pdf")
+    }
+
+
+```
+
+
+
+
+## TCR visualisation
+
+```{r TCR,echo=F,eval=T}
+
+#top clones
+# analysis based on https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-015-0613-1
+#
+TCRfls<-c("/misc/data/analysis/project_B07/scTCRrepertoire/analysis/TRAV4D-4_TRBV15.barcodes.txt",
+"/misc/data/analysis/project_B07/scTCRrepertoire/analysis/TRAV10D_TRBV13-1.barcodes.txt",
+"/misc/data/analysis/project_B07/scTCRrepertoire/analysis/TRAV16D-DV11_TRBV3.barcodes.txt")
+names(TCRfls)<-sub(".barcodes.txt","",basename(TCRfls))
+
+TCRclones<-lapply(TCRfls,
+                  function(x) read.delim(x,sep="\t",header=TRUE))
+cleanfunTCRcl<-function(x){
+    ind<-x[x$sample!="donor_2",]
+    out<-ind[!duplicated(ind$sample),]
+    rownames(out)<-out[,1]
+    if(length(which(duplicated(ind$sample)==TRUE))>0){
+    dup<-ind[duplicated(ind$sample),]
+    for(i in 1:length(dup[,1])){
+        out[dup[i,1],"barcodes"]<-paste(c(out[dup[i,1],"barcodes"],dup[i,2]),collapse=";")}}
+    return(out)}
+# clean up list, there seems to be barcodes from comparision of TCR seqs on nucleotide as well as aminoacid sequence.
+# here actually only the barcodes based on nucleotides and pottential sequencing errors should be used.
+
+TCRclonesc<-lapply(TCRclones,function(x) cleanfunTCRcl(x))
+
+TCRclones_matchlist<-data.frame(sample=TCRclonesc[[1]]$sample,
+                                origid=c("235d12","2C","3C","4C","2L","3L","4L","2S","3S","4S"))
+
+TCRclonesc<-lapply(TCRclonesc,function(x) merge(x,TCRclones_matchlist,by.x="sample",by.y="sample",all.x=TRUE))
+combinef<-function(x){
+    indf<-x
+    outlist<-list()
+    for(i in 1:length(indf[,1])){
+        bc<-strsplit(indf[i,"barcodes"],";")[[1]]
+        bcout<-paste(indf[i,"origid"],bc,sep="_")
+        outlist[[indf$sample[i]]]<-bcout
+    }
+    return(outlist)}
+TCRclonesl<-lapply(TCRclonesc,function(x) combinef(x))
+# highlight in UMAP plot
+
+TCRplotfun<-function(TCRcells,SeuObj,clonename=NULL,plotname="UMAP",fileout=NULL){
+    g1 <- unname(unlist(TCRcells))
+    g1cor<-g1[g1%in%rownames(SeuObj@meta.data)]
+    print(paste("TCRs included: ",length(g1cor),"\n",
+                "TCRs leftout: ",length(g1)-length(g1cor),sep=""))
+    # Plot
+    g1pl<-list(g1cor)
+    names(g1pl)<-clonename
+    pout<-DimPlot(SeuObj, reduction="umap", label=T,  cells.highlight= g1pl, cols.highlight = c("darkblue"), cols= "grey")+ggtitle(plotname)+
+        scale_fill_discrete(name="Experimental\nCondition",
+        breaks=c("Unselected", "Group_1", "trt2"),
+        labels=c("Control", "Treatment 1", "Treatment 2"))
+if(!is.null(fileout)){
+    ggsave(pout,filename=file.path(vispath,paste(fileout,"_",today,".pdf",sep="")),device="pdf")
+}else{
+    print(pout)}
+return(pout)
+}
+for(j in 1:length(TCRclonesl)){
+#pd<-TCRplotfun(TCRclonesl[[j]],SObj,clonename=names(TCRclonesl)[j],fileout=paste("TCR_clone_",names(TCRclonesl)[j],sep=""))
+pd<-TCRplotfun(TCRclonesl[[j]],SObj,clonename=names(TCRclonesl)[j])
+}
+```
+
+```{r PubPlot,eval=F,echo=F}
+# 20210803
+
+
+spl<-function(pl,outname,fig.width=9,fig.height=9){
+    ggsave(pl,
+           filename=file.path(vispath,paste(outname,"_",today,".pdf",sep="")),
+           device="pdf",
+           width=fig.width,
+           height=fig.height
+           units="mm")
+}            
+
+####
+#Fig 6a
+######
+
+#Base UMAP plot
+txtsize=12
+pd1<-DimPlot(SObj,
+             reduction = "umap",
+             label = TRUE,
+             label.size=(txtsize-2)*0.3, 
+             pt.size = 0.005) + NoLegend()+
+             theme(text=element_text(size=txtsize),
+                   axis.text=element_text(size=(txtsize-2)),
+                   axis.title=element_text(size=txtsize),
+                   legend.text=element_text(size=(txtsize-2)))+
+             coord_fixed()
+
+                
+#spl(pd,"UMAP_plot_base")
+
+# Colors per tissue
+colcolon<- colorRampPalette(c("beige","sienna"))(10)[c(10,8,5)]
+colspleen<- colorRampPalette(c("deeppink","lavenderblush"))(10)[c(1,4,5)]
+colliver<-colorRampPalette(c("lightskyblue","steelblue"))(10)[c(10,8,5)]
+colinput<-colorRampPalette(c("red"))(10)[c(1)]
+#plot(rep(1,10),col=
+#,pch=19,cex=3)
+
+# tissues
+tissueNames<-c(paste(rep(c("Colon","Liver","Spleen"),3),rep(c(1:3),each=3),sep="_"),"input")
+
+# IDs
+
+## data.frame for labels-cols
+
+df<-data.frame("IDs"=c(paste(rep(2:4,3),rep(c("C","L","S"),each=3),sep="_"),"235_d12"),
+               "colsvec"=c(colcolon,colliver,colspleen,colinput),
+               "tissues"=c(paste(rep(c("colon","liver","spleen"),each=3),rep(c(1:3),3),sep="_"),"donor_1"),
+               "group"=c(rep(c("colon","liver","spleen"),each=3),"donor"))
+df<-df[order(df$tissues),]
+df<-df[c(4,1:3,5:10),]
+rownames(df)<-df$tissue
+
+# UMAP plot with highlighting tissues
+## highlight tissues with replicates/batches in UMAP
+
+tissuecells<-split(rownames(SObj@meta.data),SObj@meta.data$SampleID)
+tissuecells<-tissuecells[df$IDs]
+names(tissuecells)<-df$tissues
+
+poutl<-list()
+for(j in unique(df$group)){
+poutl[[j]]<-DimPlot(SObj,
+                    label=T,
+                    group.by="seurat_clusters",
+                    cells.highlight= tissuecells[grep(j,df$group)],
+                    cols.highlight = rev(df$colsvec[grep(j,df$group)]),
+                    label.size=(txtsize-5)*0.3,
+                    pt.size=0.00005,
+                    sizes.highlight=0.00007,
+                    raster=F)+
+                    NoLegend()+
+                    #ggtitle(paste(j,sep=" "))+
+                    theme(plot.title=element_blank(),
+                           axis.text=element_text(size=txtsize-2),
+                           #axis.title=element_text(size=txtsize),
+                           axis.title=element_blank(),
+                           legend.text=element_text(size=txtsize-2),
+                           axis.line=element_line(size=0.5))+
+                    scale_x_continuous(breaks=c(0,10))+
+                    scale_y_continuous(breaks=c(-10,0,10))
+                   
+}
+
+#patch=poutl[[1]]/poutl[[2]]/poutl[[3]]/poutl[[4]]
+layout<-"
+AAAAB
+AAAAC
+AAAAD
+AAAAE"
+pd=pd1+poutl[[1]]+poutl[[2]]+poutl[[3]]+poutl[[4]]+plot_layout(design=layout)
+
+outname="Fig1_UMAP"
+ggsave(file=file.path(vispath,paste(outname,"_",today,".pdf",sep="")),
+       plot=pd,
+       width=125,
+       height=100,
+       units="mm",
+       device="pdf")
+# minimal plot size is 25 in R, so less is not possible, thus increase the size of the text and scale later.
+
+#Base UMAP plot no axistitle
+txtsize=24
+pd1<-DimPlot(SObj,
+             reduction = "umap",
+             label = TRUE,
+             label.size=(txtsize-1)*0.3, 
+             pt.size = 0.005) + NoLegend()+
+             theme(text=element_text(size=txtsize),
+                   axis.text=element_text(size=(txtsize-2)),
+                   axis.title=element_text(size=txtsize),
+                   legend.text=element_text(size=(txtsize-2)),
+                   plot.margin = unit(c(0,0.2, 0,0.2), "cm"))
+             #ylim(lims)+xlim(lims)+
+             #coord_fixed()
+
+                
+#spl(pd,"UMAP_plot_base")
+
+
+#######
+# Fig Supplemental Figure 6a
+########################
+
+
+# Colors per tissue
+colcolon<- colorRampPalette(c("beige","sienna"))(10)[c(10,8,5)]
+colspleen<- colorRampPalette(c("deeppink","lavenderblush"))(10)[c(1,4,5)]
+colliver<-colorRampPalette(c("lightskyblue","steelblue"))(10)[c(10,8,5)]
+colinput<-colorRampPalette(c("red"))(10)[c(1)]
+#plot(rep(1,10),col=
+#,pch=19,cex=3)
+
+# tissues
+tissueNames<-c(paste(rep(c("Colon","Liver","Spleen"),3),rep(c(1:3),each=3),sep="_"),"input")
+
+# IDs
+
+## data.frame for labels-cols
+
+df<-data.frame("IDs"=c(paste(rep(2:4,3),rep(c("C","L","S"),each=3),sep="_"),"235_d12"),
+               "colsvec"=c(colcolon,colliver,colspleen,colinput),
+               "tissues"=c(paste(rep(c("colon","liver","spleen"),each=3),rep(c(1:3),3),sep="_"),"donor_1"),
+               "group"=c(rep(c("colon","liver","spleen"),each=3),"donor"))
+df<-df[order(df$tissues),]
+df<-df[c(4,1:3,5:10),]
+rownames(df)<-df$tissue
+
+# UMAP plot with highlighting tissues
+## highlight tissues with replicates/batches in UMAP
+
+tissuecells<-split(rownames(SObj@meta.data),SObj@meta.data$SampleID)
+tissuecells<-tissuecells[df$IDs]
+names(tissuecells)<-df$tissues
+txtsize=24
+poutl<-list()
+for(j in unique(df$group)){
+poutl[[j]]<-DimPlot(SObj,
+                    label=F,
+                    group.by="seurat_clusters",
+                    cells.highlight= tissuecells[grep(j,df$group)],
+                    cols.highlight = rev(df$colsvec[grep(j,df$group)]),
+                    label.size=(txtsize-1)*0.3,
+                    pt.size=0.00005,
+                    sizes.highlight=0.00007,
+                    raster=F)+
+                    NoLegend()+
+                    labs(title=NULL)+
+                    theme(plot.title=element_text(size=txtsize),
+                           axis.text=element_text(size=txtsize-2),
+                           #axis.title=element_text(size=txtsize),
+                           axis.title=element_blank(),
+                           axis.text.x=element_blank(),
+                           legend.text=element_text(size=txtsize-2),
+                           axis.line=element_line(size=0.5)
+                           )
+                    #+
+                    #scale_x_continuous(breaks=c(0,10))+
+                    #scale_y_continuous(breaks=c(-10,0,10))
+                   
+}
+j="spleen"
+poutl[[j]]<-DimPlot(SObj,
+                    label=F,
+                    group.by="seurat_clusters",
+                    cells.highlight= tissuecells[grep(j,df$group)],
+                    cols.highlight = rev(df$colsvec[grep(j,df$group)]),
+                    label.size=(txtsize-1)*0.3,
+                    pt.size=0.00005,
+                    sizes.highlight=0.00007,
+                    raster=F)+
+                    NoLegend()+
+                    labs(title=NULL)+
+                    theme(plot.title=element_text(size=txtsize),
+                           axis.text=element_text(size=txtsize-2),
+                           #axis.title=element_text(size=txtsize),
+                           axis.title=element_blank(),
+                           legend.text=element_text(size=txtsize-2),
+                           axis.line=element_line(size=0.5)
+                           )
+                    #+
+                    #scale_x_continuous(breaks=c(0,10))+
+                    #scale_y_continuous(breaks=c(-10,0,10))
+#patch=poutl[[1]]/poutl[[2]]/poutl[[3]]/poutl[[4]]
+layout<-"
+AAAAB
+AAAAC
+AAAAD
+AAAAE"
+pd=pd1+poutl[[1]]+poutl[[2]]+poutl[[3]]+poutl[[4]]+plot_layout(design=layout)
+
+outname="Fig1_UMAP_no_axistitle"
+ggsave(file=file.path(vispath,paste(outname,"_",today,".pdf",sep="")),width=12,height=9,
+       plot=pd,device="pdf")
+
+# minimal plot size is 25 in R, so less is not possible, thus increase the size of the text and scale later.
+
+#spl(pout,paste("UMAP_base",j,sep=""))}
+
+# QC reads per cell in UMAP space
+
+SObj@meta.data$logreads<-log(SObj@meta.data$nCount_RNA)
+
+pd <-FeaturePlot(SObj,
+            features = c("nCount_RNA","nFeature_RNA","percent.mt","percent.rb"),label=T)
+ggsave(pd,file=file.path(vispath,paste("QC_UMAP_batchfac_per_cell_",today,".pdf",sep="")))
+
+
+pd <-FeaturePlot(SObj,
+            features = "logreads",label=T)+featscale
+ggsave(pd,file=file.path(vispath,paste("QC_UMAP_logreads_per_cell_",today,".pdf",sep="")))
+
+# is reads number a strong batch effect:
+# no
+vals<-summary(SObj@meta.data$nCount_RNA)
+vals[1] <- -Inf
+vals[6] <- Inf
+label<-c("min","lowmed","med","himed","hi")
+SObj@meta.data$nCount_RNAFr<-cut(SObj@meta.data$nCount_RNA,breaks=vals,labels=label)
+pd<-DimPlot(SObj,
+reduction="pca",
+group.by="nCount_RNAFr",split.by="nCount_RNAFr")
+ggsave(pd,file=file.path(vispath,paste("QC_PCA_reads_per_cell_",today,".pdf",sep="")),width=12,device="pdf")
+
+
+
+
+
+## Tcells
+################
+# Fig 6g
+# UMAP with highlighted TCRclones
+################
+
+## Plot Tcells with color per batch, for each TCR clone
+
+TCRplotfun<-function(TCRcells,SeuObj,colinfo=NULL,clonename=NULL,plotname="UMAP",sizeHIL=3){
+    g1 <- TCRcells
+    g1cor<-lapply(g1,function(x) x[x%in%rownames(SeuObj@meta.data)])
+    g1cor<-g1cor[which(sapply(g1cor,function(x) length(x))>0)]
+    print(paste("Tissues included: ",length(g1cor),"\n",
+                "Tissues leftout: ",length(g1)-length(g1cor),sep=""))
+    # Plot
+    pout<-DimPlot(SeuObj,
+                  reduction="umap",
+                  label=T,
+                  cells.highlight= g1cor,
+                  cols.highlight = rev(colinfo[names(g1cor),"colsvec"]),
+                  sizes.highlight = sizeHIL
+                  )+
+        ggtitle(paste(plotname,clonename,sep=":"))#+
+        #scale_color_manual(values=c("grey",colinfo$colsvec))
+return(pout)
+}
+
+for(j in 1:length(TCRclonesl)){
+pd<-TCRplotfun(TCRclonesl[[j]],SObj,clonename=names(TCRclonesl)[j],plotname="UMAP",
+    colinfo=df)
+#print(pd)
+spl(pd,paste(paste("UMAP_TCR_clone_",names(TCRclonesl)[j],sep="")))
+}
+
+## todo, plot again, improve order of legend, i.e. plot normal UMAP + metafeatures, adapt visulisation.
+
+### Find diff genes for liver spleen and colon in scData
+
+###############################################################
+# Fig 6h
+# Violin plot for different genes per tissue and TCR clone
+##############################################################
+
+
+featsel<-c("Areg","Tnfrsf9","Rora","Gzmb","Ramp3","Tcf7","Ccl5","Nkg7","Itga4","Myc","Bcl2")
+for(i in 1:length(TCRclonesl)){
+for(k in 1:length(featsel)){
+#VlnPlot(SObj, features = featsel[k],group.by="orig.ident",pt.size=0,cols=df$colsvec)
+
+dataObj<-SObj
+dataObj@meta.data[,"TCRc"]<-FALSE
+dataObj@meta.data[unlist(unname(TCRclonesl[[i]])),"TCRc"]<-TRUE
+pd<-VlnPlot(dataObj, features = featsel[k],split.by="TCRc",group.by="group",pt.size=0.5,cols=df$colsvec,combine=FALSE)
+
+dfpl<-pd[[1]]$data
+dfpl$ID<-rownames(pd[[1]]$data)
+dfpl$ident<-as.factor(dfpl$ident)
+dfpl<-dfpl[dfpl[,1]>0,]
+levels(dfpl$ident)<-c("colon","donor","liver","spleen")
+dfpl$ident<-factor(dfpl$ident,levels=c("donor","colon","liver","spleen"))
+levels(dfpl$split)<-c("all TCRs","selected TCRs")
+
+#dfpl<-as_tibble(dfpl)
+#dfpl<-dfpl %>% mutate(ID,TR=ifelse(split==TRUE,paste(as.character(ident),"TCR",sep="_"),as.character(ident)))
+#dfpl$TR<-as.factor(dfpl$TR)
+#levels(dfpl$TR)<-c("colon","colon_TCR","donor","donor_TCR","liver","liver_TCR","spleen","spleen_TCR")
+#dfpl$TR<-factor(dfpl$TR,levels=c("donor","donor_TCR","colon","colon_TCR","liver","liver_TCR","spleen","spleen_TCR"))
+txtsize=18
+pout<-ggplot(as.data.frame(dfpl),aes(x=ident,y=get(featsel[k])))+
+    geom_violin(adjust=.5,scale = "width",aes(fill=ident),
+                trim=T,draw_quantiles=c(0.25,0.5,0.75))+
+    #geom_jitter(height=0,width=0.1)+
+    ylim(0,max(dfpl[,1]))+
+    scale_fill_manual(values=c(df$colsvec[c(1,2,5,8)]))+
+    labs(x="cell origin",
+         y=featsel[k],
+         fill="cell origin")+
+         theme_bw()+
+         theme(axis.title.x = element_blank())+
+         theme(axis.title.y = element_text(size=txtsize,angle=0,face="italic",vjust=+0.3))+
+         theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+         theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+         theme(strip.text.x=element_text(size=txtsize-2))+
+         theme(strip.background = element_blank())+
+         theme(legend.text=element_text(size=txtsize-2))+
+         scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+         theme(legend.title=element_text(size=txtsize))+
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               panel.background = element_blank(), axis.line = element_line(colour = "black"),
+               panel.border = element_blank())+
+         facet_wrap(~split)
+pout
+spl(pout,paste("Violin_all_and_TCR_clone_",featsel[k],"_",names(TCRclonesl)[i],sep=""),fig.height=1.5,fig.width=8)
+
+pout<-ggplot(as.data.frame(dfpl),aes(x=ident,y=get(featsel[k])))+
+    geom_boxplot(aes(fill=ident),notch=F)+
+    geom_jitter(height=0,width=0.1)+
+    scale_fill_manual(values=c(df$colsvec[c(1,2,5,8)]))+
+    labs(x="cell origin",
+         y=paste("log-normalized expression values (",featsel[k],")",sep=""),
+         fill="cell origin")+
+         theme_bw()+
+         theme(axis.title.x = element_blank())+
+         theme(axis.title.y = element_text(size=txtsize))+
+         theme(axis.text.x = element_text(size=txtsize-1))+
+         theme(axis.text.y = element_text(size=txtsize-1))+
+         theme(strip.text.x=element_text(size=txtsize-1))+
+         theme(legend.text=element_text(size=txtsize-1))+
+         theme(legend.title=element_text(size=txtsize))+
+         facet_wrap(~split)
+pout
+spl(pout,paste("Box_all_and_TCR_clone_",featsel[k],"_",names(TCRclonesl)[i],sep=""))
+}}
+
+
+
+## Multi feature Violin plot for all clusters
+
+# stagged violin plot
+SObj.markers
+featsel<-c("Areg","Tnfrsf9","Ramp3","Rora","Ccl5","Cxcr3","Ms4a4b","Gzmb","Ramp3","Tcf7","Ccl5","Nkg7","Itga4","Myc","Bcl2")
+
+
+##source: Ming Tang
+##https://divingintogeneticsandgenomics.rbind.io/post/stacked-violin-plot-for-visualizing-single-cell-data-in-seurat/
+## remove the x-axis text and tick
+## plot.margin to adjust the white space between each plot.
+## ... pass any arguments to VlnPlot in Seurat
+modify_vlnplot<- function(obj, 
+                          feature, 
+                          pt.size = 0, 
+                          plot.margin = unit(c(-0.75, 0, -0.75, 0), "cm"),
+                          ...) {
+  p<- VlnPlot(obj, features = feature, pt.size = pt.size, ... )  + 
+    xlab("") + ylab(feature) + ggtitle("") + 
+    theme(legend.position = "none", 
+          axis.text.x = element_blank(), 
+          axis.ticks.x = element_blank(), 
+          axis.title.y = element_text(size = rel(1), angle = 0), 
+          axis.text.y = element_text(size = rel(1)), 
+          plot.margin = plot.margin ) 
+  return(p)
+}
+
+## extract the max value of the y axis
+extract_max<- function(p){
+  ymax<- max(ggplot_build(p)$layout$panel_scales_y[[1]]$range$range)
+  return(ceiling(ymax))
+}
+
+## main function
+StackedVlnPlot<- function(obj, features,
+                          pt.size = 0, 
+                          plot.margin = unit(c(-0.75, 0, -0.75, 0), "cm"),
+                          ...) {
+  
+  plot_list<- purrr::map(features, function(x) modify_vlnplot(obj = obj,feature = x, ...))
+  
+  # Add back x-axis title to bottom plot. patchwork is going to support this?
+  plot_list[[length(plot_list)]]<- plot_list[[length(plot_list)]] +
+    theme(axis.text.x=element_text(), axis.ticks.x = element_line())
+  
+  # change the y-axis tick to only max value 
+  ymaxs<- purrr::map_dbl(plot_list, extract_max)
+  plot_list<- purrr::map2(plot_list, ymaxs, function(x,y) x + 
+                            scale_y_continuous(breaks = c(y)) + 
+                            expand_limits(y = y))
+
+  p<- patchwork::wrap_plots(plotlist = plot_list, ncol = 1)
+  return(p)
+}
+
+pd<-StackedVlnPlot(obj = SObj, features = featsel)
+#    theme(axis.title.x = element_text( size=10))
+#print(pd)
+spl(pd,"Exp_Violin_selfeat",fig.width=9,fig.height=15)
+
+
+```
+
+
+## TCR Clones in specific clusters:
+
+Do analysis separately for alpha-chain, beta-chain and alpha-beta-chain pairs, count on a per cell basis.
+Do analysis for clusters or tissues, which is joined clusteirs.
+Calculate the odds ratio for a TCR clone to be used in cluster 2 versus cluster 0. Or in Colon versus 
+
+```{r TCRSubtypes in Colon,eval=F,echo=F}
+
+TCRdatpath="/misc/data/analysis/project_B07/scTCRrepertoire/cellRangerData"
+fls<-list.files(TCRdatpath,".csv")
+fls<-fls[-2]
+names(fls)<-sub(".csv","",fls)
+
+namesfls<-data.frame(substr(fls,nchar(fls)-4,nchar(fls)-4),
+                 toupper(substr(fls,1,1)))
+namesfls[,1]<-as.character(as.numeric(namesfls[,1])+1)
+names(fls)<-paste(namesfls[,1],namesfls[,2],sep="")
+names(fls)[1]<-"235d12"
+#names(fls)[1]<-"donor_1"
+
+TCRdatnames<-sub(".csv","",fls)
+TCRdatnames[1]<-"donor_1"
+
+
+TCRdat<-lapply(fls,function(x) read.csv(file.path(TCRdatpath,x)))
+
+
+## filtered_contig_annotations.csv
+# barcode: cell barcode
+# is_cell: barcode called as cell
+# chain associated with contig: TRA,TRB
+# v_gene: highest scoring V... segment
+# full length: if contig is full length
+# productive: if contig is rated productive
+# cdr3 predicted cdr3 aa
+# cdr3_nt predicted cdr3 nt
+# reads: reads aligned to this contig, including duplicates
+# umis: unique sequence reads aligned to this contig for this cell!
+# raw_clonotype_id_ the ID of the clonotype this cell barcode was assigned
+# raw_consensus_id: the ID of the consensus seqeunce to wchich this contig was assigned
+
+
+## clonotype.csv
+# contains information on  iNKT (invariant natural Killer cells) recognizing peptides utilizing a reduced TCR repertioire.
+#MAIT: mucosal-associated invariant T cells: recognizing peptides utilizing a reduced TCR repertioire
+#Mouse MAIT  
+#    TRAV1
+#   TRAJ33
+#    TRBV19
+#       TRBV13
+#Mouse iNKT  
+#           TRAV11
+#           TRAJ18
+#         TRBV13-2
+#                TRBV1
+#                    TRBV29
+
+# Import TCR data from Cellragner
+
+TCRnewanalpath="/misc/data/processedData/mapping/RNA/GRCm38/singleCell/vdj/pr036_TCR_1_10"
+TCRdirs<-list.dirs(path=TCRnewanalpath,full.names=F,recursive=F)
+TCRdirs<-TCRdirs[grepl("cr5",TCRdirs)]
+names(TCRdirs)<-sub("_ra_run_1_cr5","",sub("TCR_","",TCRdirs))
+clonotypesl<-lapply(TCRdirs,function(x) read.csv(file.path(TCRnewanalpath,x,"outs/clonotypes.csv")))
+
+
+lapply(clonotypesl,function(x) table(x$mait_evidence))
+lapply(clonotypesl,function(x) table(x$inkt_evidence))
+# it does not look like there is strong difference between the tissues in having these.
+
+
+
+
+# TCRs have to contain one alpha and one beta chain 
+ cleanTCR<-function(dat){
+     # function to control for one alpha and one beta chain.
+     bcB<-dat[dat$chain=="TRB","barcode"]
+     bcA<-dat[dat$chain=="TRA","barcode"]
+     bc<-intersect(bcB,bcA)
+     keep<-which(dat$barcode%in%bc)
+     dat<-dat[keep,]
+     indx<-names(which(colSums(table(dat$chain,dat$barcode))==2))
+     dat<-dat[dat$barcode%in%indx,]
+     return(dat)}
+
+TCRdatclean<-lapply(TCRdat,function(x) cleanTCR(x))
+
+labelfun <- function(x,ID){
+          dat <- x
+          dat$barcode <- paste(ID,dat$barcode,sep="_")
+          return(dat)}
+
+
+TCRdatannot <- lapply(1:length(TCRdatclean),function(x) labelfun(TCRdatclean[[x]],names(TCRdatclean)[x]))
+TCRdatannotd<-as.data.frame(do.call(rbind,TCRdatannot))
+
+splitval<-c("TRA","TRB")
+for(i in splitval){
+TCRannotation<-merge(SObj@meta.data,TCRdatannotd[TCRdatannotd$chain==i,],by.x=0,by.y="barcode",all.x=TRUE,sort=FALSE)
+rownames(TCRannotation)<-TCRannotation[,1]
+TCRannotation<-TCRannotation[,-1]
+outfname=paste("Counts_filtered_metainfo_TCRchain",i,sep="_")
+write.table(TCRannotation,file.path(datapath,outfname),sep="\t",row.names=T,col.names=T)
+print(outfname)
+}
+```
+
+
+
+
+```{r TCRannotation per Cell,eval=T,echo=F}
+
+# Select for only alpha beta or a combination of chains
+TCRalpha_clean<-lapply(TCRdatclean,function(x) x[x$chain=="TRA",])
+TCRbeta_clean<-lapply(TCRdatclean,function(x) x[x$chain=="TRB",])
+TCRab_clean<-TCRdatclean
+
+# Summary information
+scTCRsum_cells<-sapply(TCRab_clean, function(x) length(unique(x$barcode)))
+
+# Add information from scTCRseq to cells found in scRNA seq
+# due to sampling only a subset is found
+
+# add TCRalpha info
+for (i in names(TCRalpha_clean)){
+    datu<-TCRalpha_clean[[i]]
+    rownames(datu)<-paste(i,TCRalpha_clean[[i]]$barcode,sep="_")
+    rown_int<-intersect(rownames(SObj@meta.data[SObj@meta.data$orig.ident==i,]),
+                                 rownames(datu))
+    
+    SObj@meta.data[rown_int,"TCRalpha"]<-datu[rown_int,"v_gene"]}
+
+# add TCRbeta info
+for (i in names(TCRbeta_clean)){
+    datu<-TCRbeta_clean[[i]]
+    rownames(datu)<-paste(i,TCRbeta_clean[[i]]$barcode,sep="_")
+    rown_int<-intersect(rownames(SObj@meta.data[SObj@meta.data$orig.ident==i,]),
+                                 rownames(datu))
+    
+    SObj@meta.data[rown_int,"TCRbeta"]<-datu[rown_int,"v_gene"]}
+
+# add TCRBest info
+TCRBsetfun<-function(TCRtestset,value){
+        if(value%in%TCRtestset==TRUE){
+            return("TCRset")
+        }else if(is.na(value)==TRUE){
+            return(NA)
+        }else{return("TCRnonset")}}
+
+
+TCRBtestsetin<-c("TRBV26","TRBV12-1","TRBV12-2")
+#SObj@meta.data$TCRBset<-NA
+SObj@meta.data$TCRBset<-sapply(SObj@meta.data$TCRbeta,
+                       function(x) TCRBsetfun(TCRBtestsetin,x))
+
+
+outfileUMAPTCR<-file.path(datapath,paste("SeuratObj_",projID,"_UMAP_TCRdat",dday,".rds",sep=""))
+if(file.exists(outfileUMAPTCR)){
+    readRDS(outfileUMAPTCR)
+}else{
+outfileUMAPTCR<-file.path(datapath,paste("SeuratObj_",projID,"_UMAP_TCRdat",today,".rds",sep=""))
+saveRDS(SObj,outfileUMAPTCR)
+}
+#fishers exact test
+
+i="TRBV12-1"
+# get cluster ID of each cell add it to TCR data set
+retclusterID<-function(dat,scdat,namesDat){
+                dat$barcode<-paste(namesDat,dat$barcode,sep="_")
+                print(table(dat$barcode%in%rownames(scdat)))
+                bcfound<-dat$barcode[which(dat$barcode%in%rownames(scdat)==TRUE)]
+                dat<-dat[which(dat$barcode%in%bcfound),]
+                seurat_cluster<-scdat[dat$barcode,"seurat_clusters"]
+                dat$seurat_cluster<-seurat_cluster
+                return(dat)}
+#this contains: "TRBV12-2+TRBV13-2"   two beta chains whats wrong there.
+
+
+TCRdatclean_clust<-lapply(1:length(TCRdatclean),function(x) 
+                    retclusterID(TCRdatclean[[x]],
+                                 SObj@meta.data,
+                                 names(TCRdatclean)[x]))
+names(TCRdatclean_clust)<-names(TCRdatclean)
+
+TCRalpha_clean_clust<-lapply(1:length(TCRalpha_clean),function(x)
+                            retclusterID(TCRalpha_clean[[x]],
+                                         SObj@meta.data,
+                                        names(TCRalpha_clean)[x]))
+names(TCRalpha_clean_clust)<-names(TCRalpha_clean)
+
+
+TCRbeta_clean_clust<-lapply(1:length(TCRbeta_clean),function(x)
+                            retclusterID(TCRbeta_clean[[x]],
+                                         SObj@meta.data,
+                                        names(TCRbeta_clean)[x]))
+names(TCRbeta_clean_clust)<-names(TCRbeta_clean)
+
+
+# Function to count clones per chainID
+getCountsClone<-function(chainID,dat){
+        specClone<-table(dat[dat$v_gene==chainID,"seurat_cluster"])
+        return(specClone)}
+
+allchains<-unique(unlist(lapply(TCRdatclean_clust,function(x) unique(x$v_gene))))
+
+# Summarize over all clones and all samples
+CloneCounts<-sapply(allchains,function(c)
+                    rowSums(sapply(TCRdatclean_clust,function(x) getCountsClone(c,x))))
+# Summarize over all clone per sample
+CloneCountseach<-lapply(TCRdatclean_clust,function(y) sapply(allchains,function(c)                                                               getCountsClone(c,y)))
+
+
+## Betachains only
+# Summarize over all clones and all samples
+allchains<-unique(unlist(lapply(TCRbeta_clean_clust,function(x) unique(x$v_gene))))
+CloneCountsb<-sapply(allchains,function(c)
+                    rowSums(sapply(TCRbeta_clean_clust,function(x) getCountsClone(c,x))))
+# Summarize over all clone per sample
+CloneCountseachb<-lapply(TCRbeta_clean_clust,function(y) sapply(allchains,function(c)                                                               getCountsClone(c,y)))
+
+# Frequency #collapse tissues per replicate
+sel<-names(CloneCountseachb)[-1]
+sel<-split(sel,substr(sel,1,1))
+add <- function(x) Reduce("+", x)
+CloneCountsreplb<-lapply(sel,function(x) add(CloneCountseachb[x]))
+for(i in 1:length(CloneCountsreplb)){
+    summat<-sum(CloneCountsreplb[[i]])
+    CloneCountsreplb[[i]]<-CloneCountsreplb[[i]]/summat
+    CloneCountsreplb[[i]]<-data.frame(CloneCountsreplb[[i]])
+    CloneCountsreplb[[i]]$repl<-rep(paste("repl",names(CloneCountsreplb)[i],sep="_"),length(CloneCountsreplb[[i]][,1]))
+    CloneCountsreplb[[i]]$seurat_cluster<-factor(rownames(CloneCountsreplb[[i]]),levels=as.character(seq(0,12)))
+}
+
+
+CloneFreqball<-do.call(rbind,CloneCountsreplb)
+library(reshape2)
+CloneFreqballmel<-melt(CloneFreqball,id=c("repl","seurat_cluster"))
+pd<-ggplot(CloneFreqballmel,aes(x=seurat_cluster,y=value))+
+    geom_boxplot()+
+    geom_jitter(size=0.01)+
+    facet_wrap(~variable)
+
+ggsave(pd,width=9,file=file.path(vispath,paste("CloneFreq_",today,".pdf",sep="")),device="pdf")
+
+
+
+
+## Fisher exact
+
+
+ftestfun<-function(fmat){
+    # fisher exact test for pairs, run for each row
+    library(gtools)
+    combs<-gtools::combinations(n=length(rownames(fmat)),r=2,v=rownames(fmat))
+    rownames(combs)<-sapply(1:length(combs[,1]),function(x) paste(combs[x,],collapse="vs"))
+    res<-sapply(1:length(combs[,1]),function(x) fisher.test(fmat[combs[x,],])$p.value)
+    #fisher.test(x,alternative="two.sided",conf.int=TRUE) #x has to be matrix
+    names(res)<-rownames(combs)
+    return(res)
+    #res.p.adj<-p.adjust(res)
+    #outdf<-data.frame("comp"=rownames(combs),
+    #                  "pvalue"=res,
+    #                  "padj"=res.p.adj)
+    }
+
+
+
+
+
+ftestdatasetfun<-function(dat,totcountthres=200){
+    # This function test all pairwise comparisons between clusters for each chain
+    # select only clones with high counts for tests
+    dattest<-dat[,which(colSums(dat)>totcountthres)]
+    # get total number of clones for each cluster
+    total<-rowSums(dat)
+    res<-sapply(1:length(dattest[1,]),function(x) ftestfun(cbind(dattest[,x],total-dattest[,x])))
+    respadj<-p.adjust(c(res))
+    respadj<-matrix(respadj,nrow=length(res[,1]))
+    rownames(respadj)<-rownames(res)
+    colnames(respadj)<-colnames(dat)
+    return(respadj)
+    }
+
+## Select only 
+
+
+## Fisher Exact test each cluster against any of the others clusters
+## Sort data by padj values
+
+#
+resFischerTest_Clones<-ftestdatasetfun(CloneCountsb,totcountthres=1)
+CloneHits<-apply(resFischerTest_Clones,2,min)
+CloneHits<-CloneHits[which(CloneHits<0.05)]
+CloneHits<-sort(CloneHits)
+print(CloneHits)
+
+print("Colon")
+for(i in c("TRBV26","TRBV12-1","TRBV12-2")){
+    print(i)
+print(resFischerTest_Clones[which(resFischerTest_Clones[,i]<0.05),i])}
+getResFischInfo<-function(res,clone){
+    res[which(res[,clone]<0.05),clone]}
+print("liver,spleen")
+#sapply(CloneCountseach,function(x) x[,"TRBV12-1"])
+
+
+
+```
+
+## Fisherexact test two sided
+## Used finally for publication
+
+
+
+```{r Fisherexact0vsall,eval=T,echo=F}
+## Select only TRBV26","TRBV12-1","TRBV12-2"
+## redo fisherexact test for the set of 3 versus rest and each cluster against all other clusters
+
+########################
+# Supplemental Figure 6f
+#####################
+
+dattest<-CloneCountsb[,c("TRBV26","TRBV12-1","TRBV12-2")]
+dattestcomb<-data.frame("TRBVset"=rowSums(dattest))
+total<-rowSums(CloneCountsb)
+
+dattestu<-cbind(dattestcomb,total)
+dattestu$enrichment<-sapply(1:length(total),function(x) (dattestu[x,1]/dattestu[x,2])/(sum(dattestu[,1])/sum(dattestu[,2])))
+
+for(x in 1:13){
+ctable<-rbind(c(dattestcomb[x,1],sum(dattestcomb[-x,1])),c((total[x]-dattestcomb[x,1]),(sum(total[-x])-sum(dattestcomb[-x,1]))))
+colnames(ctable)<-c("TRBVset","nonset")
+rownames(ctable)<-c(names(total)[x],"rest")
+ftest.fin<-fisher.test(x=ctable,alternative="two.sided")
+dattestu$p.value[x]<-ftest.fin$p.value
+dattestu$test[x]<-ftest.fin$alternative
+dattestu$oddsratio[x]<-ftest.fin$estimate
+}
+dattestu$p.adj<-p.adjust(dattestu$p.value,method="BH")
+dattestu[dattestu$p.adj<0.05,]
+dattestu$cluster<-rownames(dattestu)
+
+kable(dattestu)
+write.csv(dattestu,
+          file=file.path(tablepath,
+                             paste("TCRBset_26_12-1_12-2vsTCRBall_fischerexact_two.sided",
+                                   today,
+                                   ".csv",
+                                   sep="")))
+
+## print results    
+#      for(i in c("TRBV16","TRBV5","TRBV2")){
+#    print(i)
+#print(resFischerTest_Clones[which(resFischerTest_Clones[,i]<0.05),i])}
+
+## oddratio 0 vs rest
+#ORindat<-outdat[,1:2]
+#r=1
+#OR<-sapply(1:13,function(x) ORindat[r,1]*ORindat[x,2]/(ORindat[r,2]*ORindat[x,1]))
+#ORdf<-data.frame("cluster"=factor(as.character(0:12),levels=as.character(0:12)),
+#              "OR"=OR,
+#              "padj"=as.numeric(outdat[r,3:15]))
+
+dattestu$modpadj<-(-1)*log10(dattestu$p.adj)
+dattestu$modpadj[dattestu$p.adj>=0.05]<-NA
+
+txtsize=16
+pd<-ggplot(dattestu,aes(x=enrichment,y=factor(cluster,levels=cluster),size=TRBVset))+
+    geom_point(aes(colour=modpadj))+
+    scale_size(range=c(1,15),name="TRBV26,12-1,12-2")+
+    scale_color_gradientn(colours=c("blue","yellow"),na.value="grey",name="-log10(padj)")+
+    theme_bw()+
+    labs(x="enrichment",y="seurat cluster")+
+    theme(plot.title=element_text(size=txtsize+2),
+                   axis.title.x = element_text(size=txtsize),
+                   axis.title.y = element_text(size=txtsize),
+                   axis.text.x = element_text(size=(txtsize-2)),
+                   axis.text.y = element_text(size=(txtsize-2)),
+                   legend.text=element_text(size=(txtsize-2)),
+                   legend.title=element_text(size=txtsize))+
+    theme(#panel.grid.major = element_blank(),# panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black"))#,
+
+ggsave(pd,file=file.path(vispath,paste("Enrichment_TRBVset26-12_1-12_2_",today,".pdf",sep="")),device="pdf")
+
+
+
+## Redone by Michael Rehli
+
+colnames(dattestu)[1]<-"cluster"
+dattestu <- dattestu[c(-10,-13),]
+dattestu$modpadj<-(-1)*log10(dattestu$p.adj)
+dattestu$modpadj[dattestu$p.adj>=0.05]<-NA
+dattestu$logenrich<-log2(dattestu$enrichment)
+
+
+pd <-  ggplot(dattestu,aes(y=factor(cluster,levels=cluster),x=logenrich)) +
+      geom_segment(aes(y=factor(cluster,levels=cluster), 
+                       yend=factor(cluster,levels=cluster), x=0, xend=logenrich), color="grey") +
+      geom_point(aes(fill=modpadj,size=TRBVset), shape=21)  + 
+      scale_size(range=c(1,7.5),name="Colon TRBVs\n(26,12-1,12-2)") +
+      scale_fill_gradientn(colors=c("yellow","red","purple","blue","cyan"),
+                           na.value="grey",name=expression(-log[10]~"("*italic(P)[adj.]*")")) +
+      xlim(-1,1) +
+      geom_vline(xintercept = 0) +
+      scale_y_discrete(limits=rev) +
+      xlab (bquote(TRBV~enrichment~"("*log[2]*")" ) ) +
+      ylab ("Cluster") +
+      theme_bw() + theme(panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+      text = element_text(size = 16),  
+      legend.text=element_text(size=10),
+      legend.title=element_text(size=12))
+
+ggsave(pd,file=file.path(vispath,paste("Enrichment_TRBVset26-12_1-12_2_versfinal",today,".pdf",sep="")),device="pdf")
+
+# see functions below. Code captured in funtions:
+levels(SObj@meta.data$seurat_clusters) <- as.character(1:length(levels(SObj@meta.data$seurat_clusters)))
+
+Idents(SObj)<-"seurat_clusters"
+TCR_fishertest<-function(obj,TCRsetu,level1,level2,outname,tabpath,clusterset=NULL){
+      # Seurat Object
+      # comparisons over all seurat_clusters
+      # TCRset columnname of meta.data  character vector
+      # level1 character vector: name of the set
+      # level2 character vector: name of the nonset
+      Idents(obj)<-"seurat_clusters"         
+      
+      
+      # use only specified clusters
+      if(length(clusterset)>0){
+        clustersplot<-clusterset
+      }else{
+        clustersplot<-levels(Idents(obj))
+      }
+      names(clustersplot)<-clustersplot
+
+      #check for all cluster values: there must be two values on for level1 and one for level2
+      checkdat<-lapply(clustersplot,
+             function(x) table(obj@meta.data[obj@meta.data$seurat_clusters==x,TCRsetu]))
+      if(!all(lengths(checkdat)>1)){
+        clustersplot <- clustersplot[lengths(checkdat)>1]}
+
+
+      CountsTCRset_per_Cluster<-as.data.frame(t(sapply(clustersplot,
+                                                     function(x) table(obj@meta.data[obj@meta.data$seurat_clusters==x,TCRsetu]))))
+      CountsTCRset_per_Cluster$total<-rowSums(CountsTCRset_per_Cluster)
+      dattestu<-CountsTCRset_per_Cluster
+      # enrichment is defined as
+      dattestu$enrichment<-sapply(1:length(dattestu[,level1]),function(x) (dattestu[x,level1]/dattestu[x,"total"])/(sum(dattestu[,level1])/sum(dattestu[,"total"])))
+
+      for(x in 1:length(dattestu[,1])){
+      ctable<-cbind(c(dattestu[x,level1],sum(dattestu[-x,level1])),c((dattestu$total[x]-dattestu[x,level1]),(sum(dattestu$total[-x])-sum(dattestu[-x,level1]))))
+      colnames(ctable)<-c("SELset","nonset")
+      rownames(ctable)<-c(rownames(dattestu)[x],"rest")
+      ftest.fin<-fisher.test(x=ctable,alternative="two.sided")
+      dattestu$p.value[x]<-ftest.fin$p.value
+      print(dattestu$p.value[x])
+      dattestu$test[x]<-ftest.fin$alternative
+      dattestu$oddsratio[x]<-ftest.fin$estimate
+      }
+colnames(dattestu)[grep(level1,colnames(dattestu))]<-"SELset"
+colnames(dattestu)[grep(level2,colnames(dattestu))]<-"nonset"
+
+dattestu$p.adj<-p.adjust(dattestu$p.value,method="BH")
+dattestu[dattestu$p.adj<0.05,]
+dattestu$cluster<-rownames(dattestu)
+
+kable(dattestu)
+write.csv(dattestu,
+          file=file.path(tabpath,
+                             paste(outname,
+                                   "_fischerexact_two.sided",
+                                   today,
+                                   ".csv",
+                                   sep="")))
+return(dattestu)
+}
+
+Enrichplotfun<-function(dat,outName,outpath,TCRset,clusterset=NULL){
+
+    dat$modpadj <- (-1)*log10(dat$p.adj)
+    dat$modpadj[dat$p.adj>=0.05] <- NA
+    dat$logenrich <- log2(dat$enrichment)
+    if(length(clusterset)>0){
+    dat <- dat[clusterset,]}
+
+    p <-  ggplot(dat,aes(y=factor(cluster,levels=cluster),x=logenrich)) +
+          geom_segment(aes(y=factor(cluster,levels=cluster), yend=factor(cluster,levels=cluster), x=0, xend=logenrich), color="grey") +
+          geom_point(aes(fill=modpadj,size=SELset), shape=21)  + 
+          scale_size(range=c(1,7.5),name=TCRset) +
+          scale_fill_gradientn(colors=c("yellow","red","purple","blue","cyan"),na.value="grey",name=expression(-log[10]~"("*italic(P)[adj.]*")")) +
+          xlim(-1,1) +
+          geom_vline(xintercept = 0) +
+          scale_y_discrete(limits=rev) +
+          xlab (bquote(TRBV~enrichment~"("*log[2]*")" ) ) +
+          ylab ("Cluster") +
+          theme_bw() + theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(), 
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), 
+          text = element_text(size = 16),  
+          legend.text=element_text(size=10),
+          legend.title=element_text(size=12))
+    
+    ggsave(file=file.path(outpath,
+                paste(outName,
+                "_EnrichmentPlot_",
+                today,
+                ".pdf",
+                sep="")),
+            plot=p,
+            device="pdf",
+            height=4, 
+            width=4)
+                    
+   
+    return(p)
+}
+
+
+AllTCRset_Fish<-TCR_fishertest(SObj,
+                             "TCRBset",
+                             level1="TCRset",
+                             level2="TCRnonset",
+                             outname="Fulldataset_TCRBset_26_12-1_12-2vsTCRBall_final",
+                             tabpath=tablepath
+                             )
+Enrichplotfun(AllTCRset_Fish,
+              outName="Fulldataset_TCRBset_26_12-1_12-2vsTCRBall_final",
+              outpath=vispath,
+              TCRset="TRBVs\n(26,12-1,12-2)",
+              clusterset=as.character(c(1:9,11:12)))
+
+
+
+
+
+```
+
+## Hypergeometric test
+
+```{r Hypergeometric,eval=F,echo=F}
+#Counts for all Samples in the different Clusters
+CloneCountsb
+N=sum(CloneCountsb)                                   #N: this all cells with an 
+                                                                 # T cell beta chain annotation
+
+# Case Cluster 
+cluster<-seq(0,12)
+TRBVClassCl<-list()
+for(i in 1:length(cluster)){
+ cl=as.character(cluster[i])
+
+ # Class:TRBV26+TRBV12-1+TRBV12-2
+ # selection equals one cluster
+
+
+ x=sum(CloneCountsb[i,c("TRBV26","TRBV12-1","TRBV12-2")])  # x:marked in selection, genes
+                                                                  #  being in a GO Categorie or 
+                                                                  #  here in the TCRBClass 
+                                                                  #  (26,12-1,12-2) and in cluster i
+ m=sum(CloneCountsb[,c("TRBV26","TRBV12-1","TRBV12-2")])      # m: marked genes genes being in 
+                                                                  #  a GO Category or here in the 
+                                                                  #  TCRBClass (26,12-1,12-2)
+ k=sum(CloneCountsb[i,])                                        # k:size of selection, all TRCB ce                                                                                                                                #  lls in cluster i
+ n<-N-m                                                         # n =N-m cells not marked, not in                                                                                                                                 #  Class
+
+ # fold enrichment: (x/k)/(m/N) or observed vs expected by random chance (m/N)*k # marked in selection
+  enrich=(x/k)/(m/N)
+ ratio=log10(enrich)
+
+ # Find at least x or more elements in TRBVClass in Cluster i
+ # p.value enrichment
+ p.value <-  phyper(q=x-1, m=m, n=n, k=k, lower.tail=FALSE)
+ # p.value derichment
+ m2=N-m
+ x2=k-x
+ n2=N-m2
+ enrich2=(x2/k)/(m2/N)
+ p.value2 <- phyper(q=x2-1,m=m2,n=n2,k=k,lower.tail=FALSE)
+ TRBVClassCl[[i]]<-c(cl,x,x2,enrich,enrich2,ratio,p.value,p.value2)}
+
+ TRBVClassdb<-do.call(rbind,TRBVClassCl)
+TRBVClassdb<-as.data.frame(TRBVClassdb)
+colnames(TRBVClassdb)<-c("cl","TRBVsetcount_x","TRBVsetcount_x2","enrich","enrich2","lg10ratio","p.value","p.value2")
+TRBVClassdb1<-TRBVClassdb[,c("cl","TRBVsetcount_x","enrich","lg10ratio","p.value")]
+TRBVClassdb2<-TRBVClassdb[,c("cl","TRBVsetcount_x2","enrich2","lg10ratio","p.value2")]
+TRBVClassdb2$lg10ratio=log10(as.numeric(TRBVClassdb2$enrich2))
+
+
+TRBVClassdb1[,c(1:5)]<-apply(TRBVClassdb1[,c(1:5)],2,as.numeric)
+dfpcor<-data.frame("ID"=c(paste(TRBVClassdb$cl,"up",sep="_"),
+                          paste(TRBVClassdb$cl,"dn",sep="_")),  
+                   "pval"=c(TRBVClassdb$p.value,TRBVClassdb$p.value2))
+dfpcor$padj<-p.adjust(dfpcor$pval,method ="BH")
+
+TRBVClassdb$padj <- dfpcor$padj[which(grepl("up",dfpcor$ID))]
+TRBVClassdb$padj2 <- dfpcor$padj[which(grepl("dn",dfpcor$ID))]
+TRBVClassdb$padjlg10 <- (-1)*log10(TRBVClassdb$padj)
+TRBVClassdb$padj2lg10 <- (-1)*log10(TRBVClassdb$padj2)
+TRBVClassdb$log10Count <- log10(TRBVClassdb$TRBVsetcount)
+TRBVClassdb$padjsum <- TRBVClassdb$padjlg10 +TRBVClassdb$padj2lg10
+TRBVClassdb$enrichf<-as.factor(TRBVClassdb$padjlg10>0)
+TRBVClassdb$cl<-factor(TRBVClassdb$cl,levels=TRBVClassdb$cl)
+
+
+pd<-ggplot(TRBVClassdb,aes(x=lg10ratio,y=cl,size=log10Count,fill=padjsum))+
+    geom_point(alpha=0.5,shape=21,color="black")+
+    scale_size(range(0,2500))+
+    scale_fill_gradient2()+
+    #theme(strip.background = element_blank())+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          panel.background = element_blank(), axis.line = element_line(colour = "black"),
+          panel.border = element_blank())+
+    geom_vline(xintercept=0)+
+    labs(x="lg10(enrichment)",
+         y="seurat cluster",
+         fill="log10padj")+
+           guides(size=guide_legend(title="log10(cellcounts)"))+
+    facet_wrap(~enrichf)
+
+    ggsave(pd,file=file.path(vispath,paste("TRBV_set_enrich_",today,".pdf",sep="")),device="pdf")
+
+
+
+
+
+
+
+```
+
+
+## Counttable after filtering 
+
+```{r Count_filterd, eval=T,echo=F}
+
+head(SObj@assays$RNA@counts)
+countsdat <- SObj@assays$RNA@counts
+outfname="Counts_filtered.tsv"
+write.table(countsdat,file.path(datapath,outfname),sep="\t",
+            col.names=TRUE,row.names=TRUE)
+countsannotation <- SObj@meta.data[,c("orig.ident","SampleID","Repl","seurat_clusters","tissueidents","TCRalpha","TCRbeta")]
+outfname="Counts_filtered_annotation.tsv"
+write.table(countsannotation,file.path(datapath,outfname),sep="\t",
+                        col.names=TRUE,row.names=TRUE)
+
+
+```
+
+
+## Save HDF5 anndata object
+
+```{r HDF5anndata,eval=T,echo=F}
+library(SeuratData)
+library(SeuratDisk)
+outfname="SingleCellRNA_full.h5Seurat"
+SaveH5Seurat(SObj, filename = file.path(datapath,outfname))
+Convert(file.path(datapath,outfname), dest = "h5ad")
+outfname="SingleCellRNA_full_test.h5ad"
+# Import fails,as reductions are missing UMAP is not transferred
+Convert(file.path(datapath,outfname),"h5seurat",overwrite=TRUE)
+outfname="SingleCellRNA_full.h5Seurat"
+hfile <- Connect(file.path(datapath,outfname))
+hfile$close_all()
+
+## library(zellkonverter,lib.loc=lib)
+# load to sce
+readH5AD("example.h5ad")
+
+# write sce to h5ad
+
+SObj.sce<-as.SingleCellExperiment(SObj)
+Outname="SingleCellRNA_full_zk.h5ad"
+writeH5AD(SObj.sce,file=file.path(datapath,Outname))
+
+SObjzk<-readH5AD(file=file.path(datapath,Outname))
+
+# write to rds
+outfname="Seurat_SingleCellRNA_plusTCR.rds"
+saveRDS(SObj,file=file.path(datapath,outfname))
+
+
+
+```
+
+
+```{r DEgenes0vs2,eval=T,echo=F}
+
+SObj_markers0vs2 <- FindMarkers(SObj,
+                                ident.1=0,
+                                ident.2=2,
+                                only.pos = F,
+                                min.pct = 0.25,
+                                logfc.threshold=0.25)
+outselmarkerp0vs2<-file.path(datapath,paste("Marker_0vs2_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outselmarkerp0vs2)){
+outfilename=file.path(tablepath,paste("Marker_0vs2_logNorm_",projID,"_",today,".csv",sep=""))
+write.csv(SObj_markers0vs2,file=outfilename)
+allgenes<-rownames(SObj)
+outfilename=file.path(tablepath,paste("Allgenes_0vs2_logNorm_",projID,"_",today,".csv",sep=""))
+write.csv(allgenes,outfilename)
+outfilename=file.path(tablepath,paste("Marker_0vs2_logNorm_UP",projID,"_",today,".csv",sep=""))
+write.csv(SObj_markers0vs2[SObj_markers0vs2$avg_log2FC>0,],file=outfilename)
+
+outfilename=file.path(tablepath,paste("Marker_0vs2_logNorm_DOWN",projID,"_",today,".csv",sep=""))
+write.csv(SObj_markers0vs2[SObj_markers0vs2$avg_log2FC<0,],file=outfilename)
+outselmarkerp0vs2<-file.path(datapath,paste("Marker_0vs2_",projID,"_",today,".rds",sep=""))
+saveRDS(SObj_markers0vs2,outselmarkerp0vs2)
+}else{
+    SObj_markers0vs2<-readRDS(outselmarkerp0vs2)
+}    
+
+selgenesUP<-rownames(SObj_markers0vs2%>%slice_max(n=20,avg_log2FC))
+selgenesDown<-rownames(SObj_markers0vs2%>%slice_min(n=20,avg_log2FC))
+    #install.packages("ggrepel",lib=libs)
+    #library(geom_text_repel)
+    expDat3<-AverageExpression(SObj,group.by="seurat_clusters",slots="data",return.seurat=T)
+
+    outfilename=file.path(tablepath,paste("AverageExpression_Scaled10000_logNormalized_",projID,"_",today,".csv",sep=""))
+    write.csv(expDat3[["RNA"]]@data,file=outfilename)
+    
+    dat<-as.data.frame(expDat3[["RNA"]]@data[,c(1,3)])
+    # seurat object contains: data=log-normalized, log transformed average of expresseion
+    #                          counts=log-normalized,average expression
+    #                        scale.data=log-normalized,scaled average expression
+    # log_normalized data is scaled by factor 10000, log1p, genes are scaled=devided by total counts for    # that cell and multiplied by scale factor 10000., like cpm, but here it is division by library coun    #ts times 1e6
+
+
+
+    colnames(dat)<-c("Cluster0","Cluster2")
+    dat$reg<-"non"
+    dat$reg[which(rownames(dat)%in%selgenesUP)]<-"UP"
+    dat$reg[which(rownames(dat)%in%selgenesDown)]<-"Down"
+    dat$reg<-factor(dat$reg,levels=c("non","UP","Down"))
+    #define nudge so that values go along the edges of the figure!
+    dat$ynudge<-sapply(1:length(dat$reg),function(x) if(dat$reg[x]=="UP"){dat$Cluster2-0.2}else if(dat$reg[x]=="Down"){dat$Cluster2+0.2}else{0})
+    dat$xnudge
+    glabel=rep("",length(dat[,1]))
+    labelind<-which(rownames(dat)%in%selgenes)
+    glabel[labelind]<-rownames(dat)[labelind]
+    txtsize=16
+pd<-ggplot(dat,aes(x=Cluster0,y=Cluster2,label=glabel))+
+    geom_point(aes(color=reg))+
+    theme_bw()+
+    geom_text_repel(aes(label=glabel,color=reg),box.padding = 0.5,
+                    point.padding=0.1,
+                    min.segment.length=0,
+                    #nudge_x=0.5,
+                    #nudge_y=dat$ynuge,
+                    max.iter=1e7,
+                    max.overlaps = Inf,
+                    direction="x"
+                    )+
+    scale_color_manual(values=c("grey","blue","green"),
+                       labels=c("all genes","top 20 UP regulated in Cluster 0",
+                                "top 20 UP regulated in Cluster 2"))+
+    labs(x="ln(norm.exp*scaleF) Cluster 0",
+         y="ln(norm.exp*scaleF) Cluster 2",
+         color="")+
+    theme(axis.title.x = element_text(size=txtsize))+
+    theme(axis.title.y = element_text(size=txtsize))+
+             theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+             theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+    #         theme(strip.text.x=element_text(size=txtsize-2))+
+    #         theme(strip.background = element_blank())+
+             theme(legend.text=element_text(size=txtsize-2))+
+    #         scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+             theme(legend.text=element_text(size=txtsize-2))+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line = element_line(color = "black"),
+          panel.border = element_blank())+
+          theme(legend.position = c(0.7, 0.1))
+ggsave(pd,file=file.path(vispath,paste("Cluster0vs2_",today,".pdf",sep="")),device="pdf")
+```
+
+```{r scatterplot, eval=F,echo=F}
+library("ggplot2")
+library("ggrepel")
+
+#data <- read.csv(file = '/Users/michaelrehli/Desktop/AverageExpression_Scaled10000_logNormalized_p036_16_09_2021.csv')
+#updata <- read.csv(file = '/Users/michaelrehli/Desktop/Marker_0vs2_logNorm_UPp036_09_08_2021.csv')
+#downdata <- read.csv(file = '/Users/michaelrehli/Desktop/Marker_0vs2_logNorm_DOWNp036_09_08_2021.csv')
+
+sig.UP <- c("Tnfsfr9","Tnfsfr4","Rora","Ramp3","Rel","Klrg1","Areg","Tgfb1")
+sig.DOWN <- c("Irf1","Fos","Infg","Rgs1","Klf6","Jun","Gzmb","Ccl5")
+
+scat <- ggplot(data, aes(x=X0, y=X2, label = X)) +
+      scale_x_continuous(limits = c(-.5,5.5),
+                         breaks = c(0,1,2,3,4,5),
+                         expand = c(0,0)
+                         )+
+     scale_y_continuous(limits = c(-.5,5.5),
+                        breaks = c(0,1,2,3,4,5),
+                        expand = c(0,0)
+                        )+
+     geom_point(colour=rgb(50,50,50,30,maxColorValue = 255), shape=16, size = .375)+
+     geom_point(data = subset(data, direction = "both", X %in% updata$X), aes(x=X0, y=X2),
+                              colour="salmon", shape=16, size = .5, alpha=.75)+
+     geom_point(data = subset(data, direction = "both", X %in% downdata$X), aes(x=X0, y=X2),
+                              colour="peru", shape=16, size = .5, alpha=.75)+
+     geom_text_repel(data = subset(data, direction = "both", X %in% sig.UP),
+                              aes(label = X), colour="salmon",
+                              force = 50, force_pull = 1, size=2, min.segment.length=0, 
+                              segment.size=0.15, point.padding=unit(0.00,"cm"),
+                              box.padding=unit(0.1,"cm"), max.overlaps = 25, nudge_x = 1.25,
+                              direction = "both", fontface="italic")+
+     geom_text_repel(data = subset(data, direction = "both", X %in% sig.DOWN),
+                              aes(label = X), colour="peru",
+                              force = 50, force_pull = 1, size=2, min.segment.length=0, 
+                              segment.size=0.15, point.padding=unit(0.00,"cm"),
+                              box.padding=unit(0.1,"cm"), max.overlaps = 25, nudge_x = -1.25,
+                              direction = "both", fontface="italic")+
+    ggtitle(label = "cluster 0 vs 2", subtitle = "re-isolated Treg \nselected differences")+ 
+            ylab(bquote(log[2]~CPM ~"("*cluster~2*")"))+
+            xlab(bquote(log[2]~CPM ~"("*cluster~0*")"))+
+            theme(plot.title = element_text(size = 10, face = "bold"),
+                  plot.subtitle = element_text(size = 6, face = "bold"),
+                  axis.title = element_text(size = 8),
+                  axis.text.x = element_text(size = 6, colour = "black"), #,angle = 90
+                  axis.text.y =element_text(size = 6, colour = "black"),
+                  axis.ticks.length.x = unit(0.1,"cm"),
+                  axis.ticks.length.y = unit(0.1,"cm"),
+                  axis.ticks = element_line(size=.236),
+                  plot.background = element_rect(fill="white",colour = "white"),
+                  panel.background = element_rect(fill = NA,color = "black", size=.236),
+                  panel.grid.major = element_blank(), 
+                  panel.grid.minor = element_blank())
+
+#ggsave(scat,file=file.path(vispath
+
+```
+
+```{r EdgeRfunction, eval=F,echo=F}
+
+suppressPackageStartupMessages(library(edgeR))
+
+run_edgeRQLFDetRate <- function(DGEL) {
+  #run edgeR DESeq with DGEL object
+  #returns the RESobj
+  message("edgeRQLFDetRate")
+    session_info <- sessionInfo()
+    tryCatch({
+           timing <- system.time({
+              dge <- DGEL
+              #keep <- filterByExpr(dge,design)
+              #dge <- dge[keep,]
+              dge <- calcNormFactors(dge)
+              cdr <- scale(colMeans(dge$counts > 0))
+              # correct for genes with low mean counts in statistical design
+              design <- model.matrix(~ cdr + dge$samples$group)
+              dge <- estimateDisp(dge, design = design)
+              fit <- glmQLFit(dge, design = design)
+              qlf <- glmQLFTest(fit)
+              tt <- topTags(qlf, n = Inf)
+              tts <- topTags(qlf,p=0.05, n = Inf)
+             })
+            list(session_info = session_info,
+                 timing = timing,
+                 tt = tt,
+                 df = data.frame(pval = tt$table$PValue,
+                 padj = tt$table$FDR,
+                 row.names = rownames(tt$table)))
+           }, error = function(e) {
+                 "edgeRQLFDetRate results could not be calculated"
+                 list(session_info = session_info)
+           })
+           reslist<-list(dge,fit,qlf,tt,tts)
+           names(reslist)<-c("DGE","fit","qlf","tt","tts")
+           return(reslist)
+}
+
+run_edgeRQLFDetRateRepl <- function(DGEL) {
+  #run edgeR DESeq with DGEL object
+  #returns the RESobj
+  message("edgeRQLFDetRate")
+    session_info <- sessionInfo()
+    tryCatch({
+           timing <- system.time({
+              dge <- DGEL
+              #keep <- filterByExpr(dge,design)
+              #dge <- dge[keep,]
+              dge <- calcNormFactors(dge)
+              cdr <- scale(colMeans(dge$counts > 0))
+              # correct for genes with low mean counts in statistical design
+              design <- model.matrix(~ cdr+dge$samples$repl + dge$samples$group)
+              dge <- estimateDisp(dge, design = design)
+              fit <- glmQLFit(dge, design = design)
+              qlf <- glmQLFTest(fit)
+              tt <- topTags(qlf, n = Inf)
+              tts <- topTags(qlf,p=0.05, n = Inf)
+             })
+            list(session_info = session_info,
+                 timing = timing,
+                 tt = tt,
+                 df = data.frame(pval = tt$table$PValue,
+                 padj = tt$table$FDR,
+                 row.names = rownames(tt$table)))
+           }, error = function(e) {
+                 "edgeRQLFDetRate results could not be calculated"
+                 list(session_info = session_info)
+           })
+           reslist<-list(dge,fit,qlf,tt,tts)
+           names(reslist)<-c("DGE","fit","qlf","tt","tts")
+           return(reslist)
+}
+#https://www.huber.embl.de/users/klaus/Teaching/DESeq2Predoc2014.html
+edgeRplotsfun<-function(RESobj){
+            print(plotBCV(RESobj[["DGE"]]))
+            print(plotQLDisp(RESobj[["fit"]]))
+            tt<-RESobj[["tt"]]
+            print(hist(tt$table$PValue, 50))
+            print(hist(tt$table$FDR, 50))
+            #print(limma::plotMDS(RESobj[["DGE"]],
+            #                     col = as.numeric(as.factor(RESobj[["DGE"]]$samples$group), pch = 19)))
+            #print(plotSmear(RESobj[["qlf"]]))
+            }
+
+#edgeRGSEA<-function(RESobj,genesets){
+#           y=RESobj[["DGE"]]
+#           qlf=RESobj[["qlf"]]
+#           for(i in 1:length(genesets)){
+#           index=names(gene)
+#           fry(y,index,adjust.method="BH")
+#           # list of index vectors specifying wich rowas for y are test set, integers=rows,logical,geneIDs=geneid
+#          
+#           fry(y,index)
+#
+#           #cameray(y,index)
+#           #GSEA()
+#           #romer(y,index)
+#           barcodeplot(qlf$table$logFC, index[[1]], index[[2]])}}
+
+```
+
+```{r DiffGenes WilcoxRankSum 0vs2, eval=T,echo=F}
+
+set.seed=19
+#redo# sample from each cl0,cl2 each 130 for each replicate
+cl0f<-vector()
+for(i in c("2C","3C","4C")){
+cl0<-sample(1:length(SObj@meta.data[SObj@meta.data$seurat_clusters==0&SObj@meta.data$orig.ident==i,1]),130,replace=F)
+cl0<-rownames(SObj@meta.data[SObj@meta.data$seurat_clusters==0&SObj@meta.data$orig.ident==i,][cl0,])
+cl0f<-append(cl0f,cl0)}
+
+cl2f<-vector()
+for(i in c("2C","3C","4C")){
+cl2<-sample(1:length(SObj@meta.data[SObj@meta.data$seurat_clusters==2&SObj@meta.data$orig.ident==i,1]),130,replace=F)
+cl2<-rownames(SObj@meta.data[SObj@meta.data$seurat_clusters==2&SObj@meta.data$orig.ident==i,][cl2,])
+cl2f<-append(cl2f,cl2)}
+
+
+DE0vs2markers<-FindMarkers(SObj,ident.1=0,ident.2=2,logfc.threshold=0.25,min.pct=0.25)
+
+DE0_TCRset_vs_nonTCRset<-
+add vector to metadata TCRset vs TCRnotinsetbutTCR
+# Take all cells in cluster 2, and find markers that separate cells in the 'g1' group (metadata
+# variable 'group')
+markers <- FindMarkers(pbmc_small, ident.1 = "g1", group.by = 'groups', subset.ident = "2")
+head(x = markers)
+
+
+```
+
+
+```{r DEexpression 0vs2 edgeR,eval=T,echo=F}
+
+set.seed=19
+#redo# sample from each cl0,cl2 each 130 for each replicate
+cl0f<-vector()
+for(i in c("2C","3C","4C")){
+cl0<-sample(1:length(SObj@meta.data[SObj@meta.data$seurat_clusters==0&SObj@meta.data$orig.ident==i,1]),130,replace=F)
+cl0<-rownames(SObj@meta.data[SObj@meta.data$seurat_clusters==0&SObj@meta.data$orig.ident==i,][cl0,])
+cl0f<-append(cl0f,cl0)}
+
+cl2f<-vector()
+for(i in c("2C","3C","4C")){
+cl2<-sample(1:length(SObj@meta.data[SObj@meta.data$seurat_clusters==2&SObj@meta.data$orig.ident==i,1]),130,replace=F)
+cl2<-rownames(SObj@meta.data[SObj@meta.data$seurat_clusters==2&SObj@meta.data$orig.ident==i,][cl2,])
+cl2f<-append(cl2f,cl2)}
+
+#use edgeRQLFDetRate
+
+# use design=~repl+group
+# combine respective counts
+counts<-SObj@assays$RNA@counts[,c(cl0f,cl2f)]
+# create metadata
+meta<-data.frame(id=colnames(counts),
+                 repl=rep(rep(c("R1","R2","R3"),each=130),2),
+                 group=rep(c("cluster0","cluster2"),each=390),
+                 stringsAsFactors=FALSE)
+
+meta$repl<-factor(meta$repl)
+meta$group<-factor(meta$group,levels=c("cluster0","cluster2"))
+rownames(meta)<-meta$id
+
+# greate DGEL-List Object
+dgeSCL0_vs2<-DGEList(counts=counts,
+                     samples=meta,
+             group=meta$group)
+
+outname<-file.path(datapath,paste("DEgenes_edgeR_Cluster0_vs_Cluster2_repl_",dday,".rds",sep=""))
+
+if(!file.exists(outname)){
+    outname<-file.path(datapath,paste("DEgenes_edgeR_Cluster0_vs_Cluster2_repl_",today,".rds",sep=""))
+    res_dgeSCL0_vs2r<-run_edgeRQLFDetRateRepl(dgeSCL0_vs2)
+    saveRDS(res_dgeSCL0_vs2r,outname)
+}else{
+    res_dgeSCL0_vs2r<-readRDS(outname)
+}
+
+pdf(file=file.path(vispath,paste("edgeR_QCplots_Cl0vsCl2_r_",today,".pdf",sep="")))
+edgeRplotsfun(res_dgeSCL0_vs2r)
+dev.off()
+
+
+outname<-file.path(datapath,paste("DEgenes_edgeR_Cluster0_vs_Cluster2_",dday,".rds",sep=""))
+
+if(!file.exists(outname)){
+    outname<-file.path(datapath,paste("DEgenes_edgeR_Cluster0_vs_Cluster2_",today,".rds",sep=""))
+    res_dgeSCL0_vs2<-run_edgeRQLFDetRate(dgeSCL0_vs2)
+    saveRDS(res_dgeSCL0_vs2,outname)
+}else{
+    res_dgeSCL0_vs2<-readRDS(outname)
+}
+
+
+dim(res_dgeSCL0_vs2[["tts"]])
+res_dgeSCL0_vs2[["tts"]]
+
+pdf(file=file.path(vispath,paste("edgeR_QCplots_Cl0vsCl2",today,".pdf",sep="")))
+edgeRplotsfun(res_dgeSCL0_vs2)
+dev.off()
+
+#library(fdrtool)
+#testcor<-res_dgeSCL0_vs2[["tts"]]
+#FDR.testcor <- fdrtool(testcor[[1]]$F, statistic= "normal", plot = T)
+#fails
+
+            tt<-res_dgeSCL0_vs2["tt"]]
+            print(hist(tt$table$PValue, 50))
+            print(hist(tt$table$FDR, 50))
+
+tablefilename=file.path(tablepath,paste("DEgenes_edgeR_Cluster0_vs2_",today,".csv",sep=""))
+write.csv(res_dgeSCL0_vs2[["tts"]],tablefilename)
+
+tablefilename=file.path(tablepath,paste("AllGenes_edgeR_Cluster0_vs2_",today,".csv",sep=""))
+write.csv(rownames(res_dgeSCL0_vs2[["tt"]]),tablefilename)
+
+
+
+
+```
+
+
+```{r DEexpressionforTCRBset,eval=T,echo=F}
+TCRBset<-c("TRBV26","TRBV12-1","TRBV12-2")
+TCRBsetbc<-lapply(TCRbeta_clean_clust,function(x) x[which(x$v_gene%in%TCRBset),"barcode"])
+TCRBsetbc<-unlist(TCRBsetbc)
+TCRBinfobc<-lapply(TCRbeta_clean_clust,function(x) x[,"barcode"])
+TCRBinfobc<-unlist(TCRBinfo)
+SObj@meta.data$TCRBset<-rep(FALSE,length(SObj@meta.data[,1]))
+SObj@meta.data[TCRBsetbc,"TCRBset"]<-TRUE
+
+#############################################################
+## Comparison Cluster 0 TCRBset versus Cluster 0 not in set
+############################################################
+
+
+set.seed=19
+SObjTCRb<-SObj[,TCRBinfobc]
+BC0noTCRB<-sample(1:length(SObjTCRb@meta.data[SObjTCRb@meta.data$seurat_clusters==0&SObjTCRb@meta.data$TCRBset==FALSE,1]),400,replace=F)
+BC0noTCRB<-rownames(SObjTCRb@meta.data[SObjTCRb@meta.data$seurat_clusters==0&SObjTCRb@meta.data$TCRBset==FALSE,][BC0noTCRB,])
+
+
+BC0withTCRB<-sample(1:length(SObjTCRb@meta.data[SObjTCRb@meta.data$seurat_clusters==0&SObjTCRb@meta.data$TCRBset==TRUE,1]),400,replace=F)
+BC0withTCRB<-rownames(SObjTCRb@meta.data[SObjTCRb@meta.data$seurat_clusters==0&SObjTCRb@meta.data$TCRBset==TRUE,][BC0withTCRB,])
+
+#use edgeRQLFDetRate
+
+# combine respective counts
+counts<-SObjTCRb@assays$RNA@counts[,c(BC0noTCRB,BC0withTCRB)]
+# create metadata
+meta<-data.frame(id=colnames(counts),
+                 group=rep(c("control","TCRBset"),each=400),
+                 stringsAsFactors=FALSE)
+meta$group<-factor(meta$group,levels=c("control","TCRBset"))
+rownames(meta)<-meta$id
+
+# greate DGEL-List Object
+dgeSCL0_TCRB<-DGEList(counts=counts,
+             group=meta$group)
+
+outname<-file.path(datapath,paste("DEgenes_edgeR_Cluster0_TCRBset_",dday,".rds",sep=""))
+
+if(!file.exists(outname)){
+    outname<-file.path(datapath,paste("DEgenes_edgeR_Cluster0_TCRBset_",today,".rds",sep=""))
+    res_dgeSCL0_TCRB<-run_edgeRQLFDetRate(dgeSCL0_TCRB)
+    saveRDS(res_dgeSCL0_TCRB,outname)
+}else{
+    res_dgeSCL0_TCRB<-readRDS(outname)
+}
+
+tablefilename=file.path(tablepath,paste("DEgenes_edgeR_Cluster0_TCRBset_",today,".csv",sep=""))
+write.csv(res_dgeSCL0_TCRB[["tts"]],tablefilename)
+
+tablefilename=file.path(tablepath,paste("AllGenes_edgeR_Cluster0_TCRBset_",today,".csv",sep=""))
+write.csv(rownames(res_dgeSCL0_TCRB[["tt"]]),tablefilename)
+
+
+dim(res_dgeSCL0_TCRB[["tts"]])
+res_dgeSCL0_TCRB[["tts"]]
+edgeRplotsfun(res_dgeSCL0_TCRB)
+####
+#############################################################
+## Comparison Cluster 2 TCRBset versus Cluster 2 not in set
+############################################################
+
+
+set.seed=19
+
+BC2noTCRB<-sample(1:length(SObjTCRb@meta.data[SObjTCRb@meta.data$seurat_clusters==2&SObjTCRb@meta.data$TCRBset==FALSE,1]),400,replace=F)
+BC2noTCRB<-rownames(SObjTCRb@meta.data[SObjTCRb@meta.data$seurat_clusters==0&SObjTCRb@meta.data$TCRBset==FALSE,][BC2noTCRB,])
+
+
+BC2withTCRB<-sample(1:length(SObjTCRb@meta.data[SObjTCRb@meta.data$seurat_clusters==2&SObjTCRb@meta.data$TCRBset==TRUE,1]),400,replace=F)
+BC2withTCRB<-rownames(SObjTCRb@meta.data[SObjTCRb@meta.data$seurat_clusters==0&SObjTCRb@meta.data$TCRBset==TRUE,][BC2withTCRB,])
+
+#use edgeRQLFDetRate
+
+counts<-SObjTCRb@assays$RNA@counts[,c(BC2noTCRB,BC2withTCRB)]
+meta<-data.frame(id=colnames(counts),
+                 group=rep(c("control","TCRBset"),each=400),
+                 stringsAsFactors=FALSE)
+meta$group<-factor(meta$group,levels=c("control","TCRBset"))
+rownames(meta)<-meta$id
+
+
+dgeSCL2_TCRB<-DGEList(counts=counts,
+             group=meta$group)
+
+
+outname<-file.path(datapath,paste("DEgenes_edgeR_Cluster2_TCRBset_",dday,".rds",sep=""))
+
+if(!file.exists(outname)){
+    outname<-file.path(datapath,paste("DEgenes_edgeR_Cluster2_TCRBset_",today,".rds",sep=""))
+    res_dgeSCL2_TCRB<-run_edgeRQLFDetRate(dgeSCL2_TCRB)
+    saveRDS(res_dgeSCL2_TCRB,outname)
+}else{
+
+    res_dgeSCL2_TCRB<-readRDS(outname)
+}
+
+
+edgeRplotsfun(res_dgeSCL2_TCRB)
+
+
+dim(res_dgeSCL2_TCRB[["tts"]])
+res_dgeSCL2_TCRB[["tts"]]
+
+tablefilename=file.path(tablepath,paste("DEgenes_edgeR_Cluster2_TCRBset_",today,".csv",sep=""))
+write.csv(res_dgeSCL2_TCRB[["tts"]],tablefilename)
+
+
+
+#############################################################
+## Comparison Colon Cluster0,2,10 TCRBset versus Colon not in set
+############################################################
+
+# make specific annotation column for comparisons
+
+SObj@meta.data$Clust_TCRset <- paste(SObj@meta.data$seurat_clusters,
+                                     SObj@meta.data$TCRBset,
+                                     sep="_")
+
+SObj@meta.data$Clust_TCRset <- factor(SObj@meta.data$Clust_TCRset)
+
+# Reset idents
+Idents(object=SObj) <- "Clust_TCRset"
+
+testclust<-c("0","2","10")
+
+DE_TCRset<-list()
+for( i in testclust){
+identsuse<-levels(Idents(SObj))[grep(paste("^",i,"_TCR",sep=""),
+                                     levels(Idents(SObj)))]
+DE_TCRset[[i]]<-FindMarkers(SObj,
+                            ident.1 = identsuse[2],
+                            ident.2 = identsuse[1],
+                            only.pos=F,
+                            min.pct=0.25,
+                            logfc.threshold=0.25)
+
+}
+
+names(DE_TCRset) <- paste("Cluster_",
+                                   testclust,
+                                   "_TCRset_vs_nonSet_",
+                                   sep="")
+
+
+# Tissue comparison Colon
+
+SObj@meta.data$tiss_TCRset <- paste(SObj@meta.data$tissueident,
+                                    SObj@meta.data$TCRBset,                                                         sep="_")
+SObj@meta.data$tiss_TCRset <- factor(SObj@meta.data$tiss_TCRset)
+
+# Reset idents
+Idents(object=SObj) <- "tiss_TCRset"
+
+
+testclust<-c("colon")
+
+for( i in testclust){
+identsuse<-levels(Idents(SObj))[grep(paste("^",i,"_TCR",sep=""),
+                                     levels(Idents(SObj)))]
+DE_TCRset[[i]]<-FindMarkers(SObj,
+                            ident.1 = identsuse[2],
+                            ident.2 = identsuse[1],
+                            only.pos=F,
+                            min.pct=0.25,
+                            logfc.threshold=0.25)
+
+}
+indx<-sapply(testclust,function(x) grep(x,names(DE_TCRset)))
+
+names(DE_TCRset)[indx] <- paste("Cluster_",
+                                   testclust,
+                                   "_TCRset_vs_nonSet_",
+                                   sep="")
+
+## QC pval histogramm
+
+for(i in names(DE_TCRset)){
+    pdf(file=file.path(vispath,
+                       paste("QC_PvalHist_DE_",
+                             i,
+                             today,
+                             ".pdf",
+                             sep="")
+                       )
+       )
+    hist(DE_TCRset[[i]]$p_val)
+    dev.off()
+}
+
+
+#    ggsave(pd,file=file.path(vispath,paste("TRBV_colon_",today,".pdf")),device="pdf")
+#    WriteXLS(as.data.frame(datu),
+#             ExcelFileName=file.path(tablepath,
+#                                     paste("TRBV_colon_",today,".xlsx")))
+
+# Output of DE results and enrichR and fgsea
+
+
+
+for (k in names(DE_TCRset)){
+    print(k)
+    DEresfun(datset=DE_TCRset[[k]],
+             namedatset=k,
+             tablepath=tablepath,
+             vispath=vispath,
+             dayuse=today,
+             dbs=NULL)}
+    
+install.packages("VennDiagram",lib=libs)
+library("VennDiagram",lib.loc=libs)
+library(RColorBrewer)
+myCol <- brewer.pal(3, "Pastel2")
+
+venn.diagram(
+             x = DE_TCRset,
+             category.names = paste("Cluster",names(DE_TCRset),sep="_"),
+             filename = file.path('#14_venn_diagramm.png',
+                                     output=TRUE,
+                                     
+                                   # Output features
+                                     imagetype="png" ,
+                                             height = 480 , 
+                                             width = 480 , 
+                                                     resolution = 300,
+                                                     compression = "lzw",
+                                                             
+                                                             # Circles
+                                                             lwd = 2,
+                                                             lty = 'blank',
+                                                                     fill = myCol,
+                                                                     
+                                                                     # Numbers
+                                                                     cex = .6,
+                                                                             fontface = "bold",
+                                                                             fontfamily = "sans",
+                                                                                     
+                                                                                     # Set names
+                                                                                     cat.cex = 0.6,
+                                                                                     cat.fontface = "bold",
+                                                                                             cat.default.pos = "outer",
+                                                                                             cat.pos = c(-27, 27, 135),
+                                                                                                     cat.dist = c(0.055, 0.055, 0.085),
+                                                                                                     cat.fontfamily = "sans",
+                                                                                                             rotation = 1
+                                                                                                     )
+
+
+
+
+
+
+set.seed=19
+dat<-SObjTCRb@meta.data[((SObjTCRb@meta.data$seurat_clusters==2&SObjTCRb@meta.data$TCRBset==FALSE)|(SObjTCRb@meta.data$seurat_clusters==0&SObjTCRb@meta.data$TCRBset==FALSE)|(SObjTCRb@meta.data$seurat_clusters==10&SObjTCRb@meta.data$TCRBset==FALSE)),]
+BCColonnoTCRB<-sample(1:length(dat[,1]),400,replace=F)
+BCColonnoTCRB<-rownames(dat[BCColonnoTCRB,])
+rm(dat)
+
+dat<-SObjTCRb@meta.data[((SObjTCRb@meta.data$seurat_clusters==2&SObjTCRb@meta.data$TCRBset==T)|(SObjTCRb@meta.data$seurat_clusters==0&SObjTCRb@meta.data$TCRBset==T)|(SObjTCRb@meta.data$seurat_clusters==10&SObjTCRb@meta.data$TCRBset==T)),]
+
+BCColonwithTCRB<-sample(1:length(dat[,1]),400,replace=F)
+BCColonwithTCRB<-rownames(dat[BCColonwithTCRB,])
+rm(dat)
+
+#use edgeRQLFDetRate
+
+counts<-SObjTCRb@assays$RNA@counts[,c(BCColonnoTCRB,BCColonwithTCRB)]
+meta<-data.frame(id=colnames(counts),
+                 group=rep(c("control","TCRBset"),each=400),
+                 stringsAsFactors=FALSE)
+meta$group<-factor(meta$group,levels=c("control","TCRBset"))
+rownames(meta)<-meta$id
+
+
+dgeSCLColon_TCRB<-DGEList(counts=counts,
+             group=meta$group)
+
+
+outname<-file.path(datapath,paste("DEgenes_edgeR_Colon_TCRBset_",dday,".rds",sep=""))
+
+if(!file.exists(outname)){
+    outname<-file.path(datapath,paste("DEgenes_edgeR_Colon_TCRBset_",today,".rds",sep=""))
+    res_dgeSCLColon_TCRB<-run_edgeRQLFDetRate(dgeSCLColon_TCRB)
+    saveRDS(res_dgeSCLColon_TCRB,outname)
+}else{
+
+    res_dgeSCLColon_TCRB<-readRDS(outname)
+}
+
+
+edgeRplotsfun(res_dgeSCLColon_TCRB)
+
+
+dim(res_dgeSCLColon_TCRB[["tts"]])
+res_dgeSCLColon_TCRB[["tts"]]
+
+tablefilename=file.path(tablepath,paste("DEgenes_edgeR_Colon_TCRBset_",today,".csv",sep=""))
+write.csv(res_dgeSCLColon_TCRB[["tts"]],tablefilename)
+
+
+
+
+```
+
+
+```{r TregClonePlotting2,eval=F,echo=F}
+TregTRBVstats<-sapply(c("TRBV12-1","TRBV12-2","TRBV26"),function(x) t(resFischerTest_Clones[which(resFischerTest_Clones[,x]<0.05),x])
+
+
+
+TregTRBVs<-c("TRBV12-1","TRBV12-2","TRBV26","TRBV16","TRBV5","TRBV2")
+clonesTrgTRBV<-lapply(TregTRBVs,function(x) sapply(1:length(TCRdatclean),
+                                                  function(d) paste(names(TCRdatclean)[d],
+                                                                    TCRdatclean[[d]][which(TCRdatclean[[d]]$v_gene==x),                                                                                "barcode"],sep="_")))
+
+
+
+names(clonesTrgTRBV)<-TregTRBVs
+namingfun<-function(x,NAME){
+    names(x)<-NAME
+    return(x)}
+clonesTrgTRBV<-lapply(clonesTrgTRBV,function(x) namingfun(x,TCRdatnames))
+
+
+for(j in 1:length(clonesTrgTRBV)){
+pd<-TCRplotfun(clonesTrgTRBV[[j]],SObj,clonename=names(clonesTrgTRBV)[j],plotname="UMAP",sizeHIL=0.5,
+    colinfo=df)
+#print(pd)
+spl(pd,paste("UMAP_TCR_clone_",names(clonesTrgTRBV)[j],sep=""))
+}
+
+
+    dfplt<-as_tibble(SObj@meta.data[,c(1:9,30:35)])
+    dfplt$ID<-rownames(SObj@meta.data)
+    dfplt$TCRc<-"none"
+    for(i in 1:length(clonesTrgTRBV)){
+        dfplt$TCRc[which(dfplt$ID%in%unlist(unname(clonesTrgTRBV[[i]])))]=names(clonesTrgTRBV)[i]}
+    dfplt$TCRc<-as.factor(dfplt$TCRc)
+    dfpltu<-dfplt %>% group_by(seurat_clusters,TCRc,group,orig.ident) %>%
+       dplyr::summarize(n=dplyr::n())
+    
+    datu<-dfpltu%>%filter(seurat_clusters %in% c(0,2,10))%>%filter(group %in% "C")                   
+    datu<-datu%>%group_by(seurat_clusters)%>%dplyr::mutate(totalCluster=sum(n))
+    datu<-datu%>%dplyr::mutate(clusterFrac=round(n/totalCluster,4))
+    pd<-ggplot(datu,aes(x=seurat_clusters,y=clusterFrac,fill=TCRc))+geom_bar(stat="identity")
+    ggsave(pd,file=file.path(vispath,paste("TRBV_colon_",today,".pdf")),device="pdf")
+    WriteXLS(as.data.frame(datu),
+             ExcelFileName=file.path(tablepath,
+                                     paste("TRBV_colon_",today,".xlsx")))
+
+
+#VlnPlot(SObj, features = featsel[k],group.by="orig.ident",pt.size=0,cols=df$colsvec)
+parallelVlnPlot<-function(dataObj,TCRclonesl,i,feat){
+    #dataObj<-SObj
+    dataObj@meta.data[,"TCRc"]<-FALSE
+    dataObj@meta.data[unlist(unname(TCRclonesl[[i]])),"TCRc"]<-TRUE
+    pd<-VlnPlot(dataObj, features = feat,split.by="TCRc",group.by="group",pt.size=0.5,cols=df$colsvec,combine=FALSE)
+    #pd<-VlnPlot(dataObj, features = feat,split.by="TCRc",group.by="group",pt.size=0,cols=df$colsvec,combine=FALSE)
+    print(feat)
+    print(table(dataObj@meta.data[,"TCRc"]))
+    dfpl<-pd[[1]]$data
+    dfpl$ID<-rownames(pd[[1]]$data)
+    dfpl$ident<-as.factor(dfpl$ident)
+    dfpl<-dfpl[dfpl[,1]>0,]
+    levels(dfpl$ident)<-c("colon","donor","liver","spleen")
+    dfpl$ident<-factor(dfpl$ident,levels=c("donor","colon","liver","spleen"))
+    levels(dfpl$split)<-c("non-selected TCRs","selected TCRs")
+
+    #levels(dfpl$TR)<-c("colon","colon_TCR","donor","donor_TCR","liver","liver_TCR","spleen","spleen_TCR")
+    #dfpl$TR<-factor(dfpl$TR,levels=c("donor","donor_TCR","colon","colon_TCR","liver","liver_TCR","spleen","spleen_TCR"))
+        txtsize=18
+    pout<-ggplot(as.data.frame(dfpl),aes(x=ident,y=get(feat)))+
+        geom_violin(adjust=.5,scale = "width",aes(fill=ident),
+                    trim=T,draw_quantiles=c(0.25,0.5,0.75))+
+        #geom_jitter(height=0,width=0.1)+
+        ylim(0,max(dfpl[,1]))+
+        scale_fill_manual(values=c(df$colsvec[c(1,2,5,8)]))+
+        labs(x="cell origin",
+             y=feat,
+             fill="cell origin")+
+             theme_bw()+
+             theme(axis.title.x = element_blank())+
+             theme(axis.title.y = element_text(size=txtsize,angle=0,face="italic",vjust=+0.3))+
+             theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+             theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+             theme(strip.text.x=element_text(size=txtsize-2))+
+             theme(strip.background = element_blank())+
+             theme(legend.text=element_text(size=txtsize-2))+
+             scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+             theme(legend.title=element_text(size=txtsize))+
+             theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                   panel.background = element_blank(), axis.line = element_line(colour = "black"),
+                   panel.border = element_blank())+
+             facet_wrap(~split)
+    return(pout)
+}
+
+featsel<-c("Foxp3","Il2ra","Ctla4","Fasl","Gzma","Gzmb","Il10","Tgfb1","Prf1")
+for(i in 1:length(clonesTrgTRBV)){
+for(k in 1:length(featsel)){
+    pout<-parallelVlnPlot(dataObj=SObj,TCRclonesl=clonesTrgTRBV,i=i,feat=featsel[k])
+    #print(pout)
+    spl(pout,paste("Violin_all_and_TCR_clone_",featsel[k],"_",names(clonesTrgTRBV)[i],sep=""),fig.height=1.5,fig.width=8)
+}
+}
+# 
+# Run statistics: subsample cells, then see if the count of the special TCR per cluster is significant
+
+# run fishers exact test of independence
+
+# test if there is one cluster which has statistically more clones..
+
+#for( i in 1:length(clonesTrgTRBV){
+
+
+
+```
+
+## CellSignature
+
+
+```{r CellSignature,eval=T,echo=F}
+########################
+# Fig 6d CellSignature
+######################
+
+siggenesets<-list("STG_Tregcanon"=c("Foxp3","Ctla4","Il2ra","Il2rb","Tnfrsf18","Cd44","Itgal","Icam1","Tgfb1"),
+                  "STG_Treg_kill"=c("Gzma","Gzmb","Klrc1","Klrd1","Fasl","Prf1","Tgfb3","Il10", "Il12a","Klrk1","Klrc2"),
+                  "STG_Tregrepair"=c("Areg","Il1rl1","Klrg1","Nfil3"))
+
+#flssig<-list.files(file.path(analpath,"../../scripts/info/bulkAnlaysis/signaturesBulkMR"),pattern="csv",full.names=T)
+#names(flssig)<-sub(".csv","",list.files(file.path(analpath,"../../scripts/info/bulkAnlaysis/signaturesBulkMR"),pattern="csv"))
+#sigMR<-lapply(flssig,function(x) read.csv(x,header=T)[,1])
+#sigMRcorr<-lapply(sigMR, function(x) x[which(x%in%rownames(SObj))])
+
+
+flssignew<-read.delim(file="../../scripts/info/bulkAnlaysis/signaturesBulkMR/allCluster_new.txt")
+sigMRnew<-split(flssignew$geneID,flssignew$Louvain.Cluster)
+sigMRnewc<-lapply(sigMRnew, function(x) x[which(x%in%rownames(SObj))])
+names(sigMRnewc)<-as.character(1:9)
+siggenesets<-c(sigMRnewc)
+                  #"TRcolon"=c(),
+                  #"TregSpleen"=c(),
+                  #"TregLiv=c(),)
+
+SObj<-AddModuleScore(object=SObj,
+                    features=siggenesets,
+                    ctrl=100)
+# ctrl=10 before
+indx<-length(colnames(SObj@meta.data))
+colnames(SObj@meta.data)[(indx+1-length(names(siggenesets))):indx]<-names(siggenesets)
+pdl<-list()
+txtsize=14
+lfac=10
+for(i in names(siggenesets)[7]){
+pdl[[i]]<-FeaturePlot(SObj,
+            features = i,label=F,pt.size=0.005,combine=T,
+                    label.size=txtsize-lfac,raster=F)+featscale+
+             theme(plot.title=element_blank(),
+                   axis.title.x = element_text(size=txtsize),
+                   axis.title.y = element_text(size=txtsize),
+                   axis.text.x = element_text(size=(txtsize-2)),
+                   axis.text.y = element_text(size=(txtsize-2)),
+                   legend.text=element_text(size=(txtsize-2)))+
+                   theme(#legend.key.size=unit(1,"cm"),
+                         legend.key.height=unit(0.5,"cm"),
+                         legend.key.width=unit(0.1,"cm"),
+                         plot.margin = unit(c(-0.75, -0.75, -0.75, -0.75), "cm"))
+                         #plot_margin(2,2,2,2))#+
+                   #coord_fixed()
+                   #scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+            #print(pdl[[i]])
+            }
+
+for(i in names(siggenesets)[c(1,4)]){
+pdl[[i]]<-FeaturePlot(SObj,
+            features = i,label=F,pt.size=0.005,combine=T,
+                    label.size=txtsize-lfac,raster=F)+featscale+
+             theme(plot.title=element_blank(),
+                   axis.title.x = element_blank(),
+                   axis.title.y = element_text(size=txtsize),
+                   axis.text.x = element_text(size=(txtsize-2)),
+                   axis.text.y = element_text(size=(txtsize-2)),
+                   legend.text=element_text(size=(txtsize-2)))+
+                   theme(#legend.key.size=unit(0.1,"cm"),
+                         legend.key.height=unit(0.5,"cm"),
+                         legend.key.width=unit(0.1,"cm"),
+                         plot.margin = unit(c(-0.75, -0.75, -0.75, -0.75), "cm"))
+                         #plot_margin(2,2,2,2))#+
+                   #coord_fixed()
+                   #scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+            #print(pdl[[i]])
+            }
+
+for(i in names(siggenesets)[c(2,3,5,6)]){
+pdl[[i]]<-FeaturePlot(SObj,
+            features = i,label=F,pt.size=0.005,combine=T,
+                    label.size=txtsize-lfac,raster=F)+featscale+
+             theme(plot.title=element_blank(),
+                   axis.title.x = element_blank(),
+                   axis.title.y = element_blank(),
+                   axis.text.x = element_text(size=(txtsize-2)),
+                   axis.text.y = element_text(size=(txtsize-2)),
+                   legend.text=element_text(size=(txtsize-2)))+
+                   theme(#legend.key.size=unit(0.1,"cm"),
+                         legend.key.height=unit(0.5,"cm"),
+                         legend.key.width=unit(0.1,"cm"),
+                         plot.margin = unit(c(-0.75, -0.75, -0.75, -0.75), "cm"))
+                         #plot_margin(2,2,2,2))#+
+                   #coord_fixed()
+                   #scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+            #print(pdl[[i]])
+            }
+
+for(i in names(siggenesets)[c(8,9)]){
+pdl[[i]]<-FeaturePlot(SObj,
+            features = i,label=F,pt.size=0.005,combine=T,
+                    label.size=txtsize-lfac,raster=F)+featscale+
+             theme(plot.title=element_blank(),
+                   axis.title.x = element_text(size=txtsize),
+                   axis.title.y = element_blank(),
+                   axis.text.x = element_text(size=(txtsize-2)),
+                   axis.text.y = element_text(size=(txtsize-2)),
+                   legend.text=element_text(size=(txtsize-2)))+
+                   theme(#legend.key.size=unit(0.1,"cm"),
+                         legend.key.height=unit(0.5,"cm"),
+                         legend.key.width=unit(0.1,"cm"),
+                         plot.margin = unit(c(-0.75, -0.75, -0.75, -0.75), "cm"))
+                         #plot_margin(2,2,2,2))#+
+                   #coord_fixed()
+                   #scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+            #print(pdl[[i]])
+            }
+pd<-pdl[["1"]]+pdl[["2"]]+pdl[["3"]]+pdl[["4"]]+pdl[["5"]]+pdl[["6"]]+pdl[["7"]]+pdl[["8"]]+pdl[["9"]]+plot_layout(ncol=3)
+
+#pdtestd<-ptest[[1]]$data
+#pd<-ggplot(pdtestd,aes(x=UMAP_1,y=UMAP_2,color=x7))+geom_point(shape=".",size=0.05,alpha=1/10)+theme(legend.position="none")+featscale
+
+ggsave(filename=file.path(vispath,paste("Fig1_CellSignature_",today,".pdf",sep="")),
+       plot=pd,
+       width=18,
+       height=15,
+       unit="cm",
+       device="pdf")
+
+## Heatmap of genes
+for(i in 6:8){
+    pd<-DoHeatmap(SObj, features = siggenesets[[i]],cells=cellspl)
+    print(pd)i
+    }
+
+```
+
+## HiSelGenes:
+
+```{r HiSelGens,eval=T,echo=F}
+
+
+# source: Tirosh_2016
+# Cell type spec signatures
+# genes which: 1. avg. rel expression >3 (~8 fold higher than in other cells)
+# 2. expressed in > 50% of cells
+# 3. p<0.001, when comparing cells classified into that cell to those in other cell types. P values wer dertermined  for each pairwise comparison of cell types by comparing the observed fold-change to that seen between 10,000 pairs of control sets.  The  control  sets  were  generated  such  that  each  pair  is  mutually  exclusive,  has  the  same number of cells as classified to the two cell types, and each set is composed of equal number of cells  from  the  two  cell  types.
+# Gene sets from fig 5Bfor(i in names(siggenesets)[7]){
+pdl[[i]]<-FeaturePlot(SObj,
+                                  features = i,label=T,pt.size=0.005,combine=T,
+                                                      label.size=txtsize-lfac,raster=F)+featscale+
+                 theme(plot.title=element_text(size=txtsize+2),
+                                          axis.title.x = element_text(size=txtsize),
+                                                             axis.title.y = element_text(size=txtsize),
+                                                             axis.text.x = element_text(size=(txtsize-2)),
+                                                                                axis.text.y = element_text(size=(txtsize-2)),
+                                                                                legend.text=element_text(size=(txtsize-2)))+
+                       theme(legend.key.size=unit(0.1,"cm"),
+                                                      legend.key.height=unit(0.2,"cm"),
+                                                                               legend.key.width=unit(0.1,"cm"),
+                                                                               plot.margin = unit(c(-0.75, -0.75, -0.75, -0.75), "cm"))+
+                       geom_point(alpha=1/100)
+                                            #plot_margin(2,2,2,2))#+
+                                      #coord_fixed()
+                                      #scale_y_continuous(breaks=round(max(dfpl[,1]),0))+
+                               #print(pdl[[i]])
+                               }
+
+
+
+#AvgExpObj<-AverageExpression(SObj,
+#                        return.seurat=F,
+#                        group.by="ident")
+#head(AvgExpObj$RNA)
+#head(FindMarkers(SObj,ident.1=c(0,2),only.pos=TRUE,min.pct=0.5,logfc.threshold=3,max.cells.per.ident = 200))
+              #p_val avg_log2FC pct.1 pct.2    p_val_adj
+              #Vps37b 4.234357e-61   3.154526 0.962 0.233 6.738132e-57
+              #Areg   8.284626e-17   3.276115 0.534 0.134 1.318333e-12
+# 
+
+outHiselmarkerpath<-file.path(datapath,paste("Marker_sel_Hi_pos_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outHiselmarkerpath)){
+HiSelMark<-list()
+indx<-c(0:12)
+for (i in indx){
+    #print(i)
+    dat<-FindMarkers(SObj,ident.1=i,only.pos=T,min.pct=0.5,logfc.threshold=1,max.cells.per.ident = 200)
+    if(length(dat[,1])>0){
+    HiSelMark[[paste("SeuratClust",i,sep="_")]]<-dat}
+    }
+
+outHiselmarkerpath<-file.path(datapath,paste("Marker_sel_Hi_pos_logNorm_",projID,"_",today,".rds",sep=""))
+saveRDS(HiSelMark,outHiselmarkerpath)
+}else{
+    HiSelMark<-readRDS(outHiselmarkerpath)
+}    
+
+
+for(i in HiSelMark){
+    pd<-DoHeatmap(SObj, features = rownames(i)[1:30],cells=cellspl)
+    print(pd)
+    }
+
+# enrichR
+#https://cran.r-project.org/web/packages/GOplot/vignettes/GOplot_vignette.html
+#EnrichmentAnalysis
+#library(pathfindR)
+##enrichR
+#install.packages("enrichR")
+library(enrichR)
+dbs <- listEnrichrDbs()
+dbsu<-c("Mouse_Gene_Atlas", "ARCHS4_Tissues")
+Erresl<-list()
+for(k in 1:length(HiSelMark)){
+    Erresl[[k]]<-enrichr(rownames(HiSelMark[[k]]), dbsu)
+}
+enrichRtab<-data.frame(
+                       "name"=names(HiSelMark),
+                       "Mouse_Gene_Atlas"=sapply(Erresl,function(x) paste(x[[1]][1:3,1],collapse=";")),
+                       "ARCHS4_Tissues"=sapply(Erresl,function(x) x[[2]][1,1]))
+kable(enrichRtab)
+
+
+```
+
+
+## fgsea from clusters summarized in tissues
+
+```{r fgsea,eval=T,echo=F,fig.height=30}
+
+## Parallel Computing
+    library(BiocParallel)
+    NCORES <-6
+    mysystem = Sys.info()[["sysname"]]
+        if (mysystem == "Darwin"){
+                    registerDoParallel(NCORES)
+            register(DoparParam())
+                }else if (mysystem == "Linux"){
+                            register(bpstart(MulticoreParam(workers=NCORES)))
+                }else{
+                            print("Please change this to allow parallel computing on your computer.")
+                        register(SerialParam())
+                            }
+
+
+
+## fgsea
+       
+#df<-toTable(org.Mm.egALIAS2EG)
+fgseaH<-list()
+fgseaC2<-list()
+fgseaC3<-list()
+fgseaC7<-list()
+
+    #https://cran.r-project.org/web/packages/msigdbr/vignettes/msigdbr-intro.html
+    library("msigdbr",lib.loc=libs)    
+    hmsigdbr_df= msigdbr(species = "mouse", category = "H")
+    hmsigdbr_list = split(x = hmsigdbr_df$gene_symbol, f = hmsigdbr_df$gs_name)
+    C2msigdbr_df= msigdbr(species = "mouse", category = "C2")
+    C2msigdbr_list = split(x = C2msigdbr_df$gene_symbol, f = C2msigdbr_df$gs_name)
+    C3msigdbr_df= msigdbr(species = "mouse", category = "C3")
+    C3msigdbr_list = split(x = C3msigdbr_df$gene_symbol, f = C3msigdbr_df$gs_name)
+    C7msigdbr_df= msigdbr(species = "mouse", category = "C7")
+    C7msigdbr_list = split(x = C7msigdbr_df$gene_symbol, f = C7msigdbr_df$gs_name)
+    #gmt.file<-"/misc/rci/genomes/AnnotationHub/GSEA/msigdb_v7.0_GMTs/h.all.v7.0.entrez.gmt"
+    #pathways<-gmtPathways(gmt.file)
+
+    PWlist<-list(hmsigdbr_list,C2msigdbr_list,C3msigdbr_list,C7msigdbr_list)
+    names(PWlist)<-c("Hallmark","curatedGene","regulatoryTarget","Immunologic Signature")
+    
+    #SObj_sel.markers
+    SObj.markersl<-split(SObj.markers,SObj.markers$cluster)
+
+    fgseaanal<-function(data,pathwayset,fdr=0.05){
+        rank<-sign(data$avg_log2FC)*-(log10(data$p_val_adj))
+        if(length(which(data$p_val_adj==0))){
+           indx=which(data$p_val_adj==0)
+           val<-308+0.01*rev(indx)
+           rank[indx]<-val}
+        
+        names(rank)<-rownames(data)
+
+        #plotEnrichment(hmsigdbr_list[["HALLMARK_TNFA_SIGNALING_VIA_NFKB"]],
+        #                              rank) + labs(title="HALLMARK_TNFA_SIGNALING_VIA_NFKB")
+
+        fgseaRes<-fgsea(pathways=pathwayset,
+                        stats=rank,
+                        minSize=15,
+                        maxSize=500,nperm=10000)
+        if(length(fgseaRes$pathway)>0){
+        sigPathways<-fgseaRes[head(order(pval), n=length(fgseaRes$pathway)), pathway]
+        sigPathwaysOut<-fgseaRes[padj<fdr][head(order(pval),n=min(15,length(sigPathways))),pathway]
+        if(length(sigPathwaysOut)>0){
+        pdl<-lapply(sigPathwaysOut,function(x) plotEnrichment(pathwayset[[x]],
+                                                                         rank) + labs(title=x))
+        pdl<-lapply(pdl,function(x) x+ylab("ES"))
+
+        print(patchwork::wrap_plots(pdl,ncol=1))
+
+        #plotGseaTable(pathwayset[sigPathwaysOut], rank, fgseaRes, 
+        #                            gseaParam=0.5)
+        
+        }}
+        return(fgseaRes[padj<0.05][order(pval),])
+        #plotEnrichment(C7msigdbr_list[[]])
+    }
+
+    fgseaResl<-list()
+    fgseaResl_sel<-list()
+    for (i in 1:length(SObj_sel.markers)){
+        print(paste("pathways for: ",names(SObj_sel.markers)[i],sep=""))
+        outd<-fgseaanal(SObj_sel.markers[[i]],C7msigdbr_list)
+        if(length(outd[,1])>0){
+            fgseaResl_sel[[names(SObj_sel.markers)[i]]]<-outd}}
+```
+
+## Fgsea from clusters
+
+```{r fgsea_all,eval=T,echo=F,fig.height=30}
+
+    for (i in 1:length(SObj.markersl)){
+        print(paste("pathways for: ",names(SObj.markersl)[i],sep=""))
+        outd<-fgseaanal(SObj.markersl[[i]],C7msigdbr_list)
+        if(length(outd[,1])>0){
+            fgseaResl[[names(SObj.markersl)[i]]]<-outd}}
+```
+
+```{r Normcomp,eval=F,echo=F}
+
+SObj$clusterID <- Idents(SObj_sct)
+Idents(SObj) <- "clusterID"
+plot1 <- DimPlot(object = SObj_sct, label = TRUE) + NoLegend() + ggtitle("sctransform")
+plot2 <- DimPlot(object = SObj, label = TRUE)
+plot2 <- plot2 + NoLegend() + ggtitle("Log-normalization")
+plot1 + plot2
+
+
+```
+
+
+```{r Volcano,eval=T,echo=F}
+fdr=0.05
+#BiocManager::install("EnhancedVolcano",lib=libs)
+
+library('EnhancedVolcano',lib.loc=libs)
+for(j in 1:length(SObj_sel.markers)){
+
+datpl<-as.data.frame(SObj_sel.markers[[j]])
+markgenes<-c("Areg","Cd74")
+names(markgenes)<-markgenes
+
+    ylim<-c(0,308)
+    xlim<-c(0,3)
+    pvaluethres<-0.005
+    summary(datpl[which(datpl$p_val_adj<fdr),"p_val"])
+    pvaluethres<-(-log10(max(datpl[which(datpl$p_val_adj<fdr),"p_val"])))
+    log2FCthres<-1
+    datpl$pvalplot<-(-log10(datpl$p_val))
+    triangle<-datpl$pvalplot>ylim[2]
+    datpl$pvalplot[triangle]<-ylim[2]
+    datpl$shape<-16
+    datpl$shape[triangle]<-6
+    datpl$col<-"grey"
+    datpl$col[abs(datpl$avg_log2FC)>log2FCthres&datpl$pvalplot>pvaluethres]<-"lightblue"
+                        
+    dattext<-datpl[markgenes,]    
+    datpl$col[which(rownames(datpl)%in%markgenes)]<-"green"
+    #install.packages("ggrepel",lib=libs)
+    library("ggrepel",lib.loc=libs)
+    pd<-ggplot(datpl,aes(x=avg_log2FC,y=pvalplot))+
+        geom_point(col=datpl$col,shape=datpl$shape)+
+        geom_hline(yintercept=pvaluethres,linetype="dotdash")+
+        geom_vline(xintercept=range(-log2FCthres,log2FCthres),linetype="dotdash")+
+        geom_text_repel(data=dattext,aes(x=avg_log2FC,y=pvalplot,label=rownames(dattext)),size=3)+
+        labs(x=expression(Log["2"]*"fold change"),y=expression(-Log["10"]*"Pvalue"))+
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour = "black"))
+    print(pd)
+    #ggsave(file.path(anal.path,paste("Volc_adjusted",paste(contr,collapse="_"),"_",today,".pdf",sep="")),pd)
+    #rm(pd)
+}
+
+```
+
+## Publication Figures2:
+
+```{r Fig1UMAPSupplement,eval=F,echo=F}
+##########################
+## Supplemental Figure 6a
+##########################
+
+
+
+
+#cols:
+gg_color_hue <- function(n) {
+      hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
+colsu<-gg_color_hue(13)
+names(colsu)<-as.character(0:12)
+
+library(ggpubr)
+#p1<-DimPlot(SObj,group.by="ident",cols=colsu,reduction = "umap",label=TRUE,combine=T)
+p1noLeg<-myDimPlot(SObj,group.by="ident",cols=colsu,reduction = "umap",label=TRUE,combine=T)#+NoLegend()+coord_fixed()
+p1<-myDimPlot(SObj,group.by="ident",cols=colsu,reduction = "umap",label=TRUE,combine=T)+
+    guides(colour=guide_legend(ncol=3,title="seurat cluster",override.aes=list(size=3)))
+library(grid)
+p1
+#grid::grid.ls(grid::grid.force())
+#grid::grid.gedit("key-[-0-9]-1-1", size = unit(4, "mm"))
+#grid::grid.gedit("key-[-0-9]-5-1", size = unit(4, "mm"))
+#g2 <- grid::grid.grab()
+
+leg<-get_legend(p1)
+pleg<-as_ggplot(leg)
+
+#p1l<-list()
+#for(i in unique(SObj@meta.data$group)){
+#    cellshi<-FetchData(object=SObj,
+#                       vars="ident",
+#                       cells=grep(i,SObj@meta.data$group))
+#
+#    cellshilist<-split(rownames(cellshi),cellshi$ident)
+#    p1l[[i]]<-myDimPlot(SObj,group.by="ident",
+#                  pt.size=0.001,
+#                  cells.highlight=cellshilist[sapply(cellshilist,function(x) length(x)>0)],
+#                  cols.highlight=colsu[sapply(cellshilist,function(x) length(x)>0)],
+#                  sizes.highlight=0.001,
+#                  label=T,
+#                  reduction="umap")+theme(legend.position='none')}
+#
+#patch=p1l[["d12"]]/p1l[["C"]]/p1l[["S"]]/p1l[["L"]]
+#p1+patch+plot_layout(widths=c(3,1))+ 
+#      plot_annotation(tag_levels = 'A') & 
+#        theme(plot.tag = element_text(size = 14))
+#
+#ggsave(filename=file.path(vispath,paste("UMAP_Fig1_",today,".pdf")),device="pdf")
+
+## Fig1_S
+
+p1l<-list()
+for(i in unique(SObj@meta.data$orig.ident)){
+    cellshi<-FetchData(object=SObj,
+                       vars="ident",
+                       cells=grep(i,SObj@meta.data$orig.ident))
+
+    cellshilist<-split(rownames(cellshi),cellshi$ident)
+    p1l[[i]]<-myDimPlot(SObj,group.by="ident",
+                    pt.size=0.001,
+                  cells.highlight=cellshilist[sapply(cellshilist,function(x) length(x)>0)],
+                  cols.highlight=colsu[sapply(cellshilist,function(x) length(x)>0)],
+                  sizes.highlight=0.001,
+                  label=T,
+                  reduction="umap")+
+                  NoLegend()
+                  }
+
+
+(p1noLeg+p1l[["235d12"]]+plot_spacer()+
+p1l[["2C"]]+p1l[["3C"]]+p1l[["4C"]]+
+p1l[["2S"]]+p1l[["3S"]]+p1l[["4S"]]+
+p1l[["2L"]]+p1l[["3L"]]+p1l[["4L"]]+plot_layout(ncol=3))+plot_layout(guides="collect")
+
+#patch1/patch2/patch3/patch4+plot_layout(guides="collect")
+
+ggsave(filename=file.path(vispath,paste("UMAP_Fig1_S",today,".pdf",sep="")),device="pdf")
+
+
+```
+
+
+```{r FigSignature,eval=F,echo=F}
+
+##########################
+## Fig 6d
+####################
+
+# Signatures
+siggenesets<-list("STG_Tregcanon"=c("Foxp3","Ctla4","Il2ra","Il2rb","Tnfrsf18","Cd44","Itgal","Icam1","Tgfb1"),
+                  "STG_Treg_kill"=c("Gzma","Gzmb","Klrc1","Klrd1","Fasl","Prf1","Tgfb3","Il10", "Il12a","Klrk1","Klrc2"),
+                  "STG_Tregrepair"=c("Areg","Il1rl1","Klrg1","Nfil3"))
+
+#flssig<-list.files(file.path(analpath,"../../scripts/info/bulkAnlaysis/signaturesBulkMR"),pattern="csv",full.names=T)
+#names(flssig)<-sub(".csv","",list.files(file.path(analpath,"../../scripts/info/bulkAnlaysis/signaturesBulkMR"),pattern="csv"))
+#sigMR<-lapply(flssig,function(x) read.csv(x,header=T)[,1])
+#sigMRcorr<-lapply(sigMR, function(x) x[which(x%in%rownames(SObj))])
+
+
+flssignew<-read.delim(file="../../scripts/info/bulkAnlaysis/signaturesBulkMR/allCluster_new.txt")
+sigMRnew<-split(flssignew$geneID,flssignew$Louvain.Cluster)
+sigMRnewc<-lapply(sigMRnew, function(x) x[which(x%in%rownames(SObj))])
+
+siggenesets<-c(siggenesets,sigMRnewc)
+                  #"TRcolon"=c(),
+                  #"TregSpleen"=c(),
+                  #"TregLiv=c(),)
+
+SObj<-AddModuleScore(object=SObj,
+                    features=siggenesets,
+                    ctrl=10)
+
+indx<-length(colnames(SObj@meta.data))
+colnames(SObj@meta.data)[(indx+1-length(names(siggenesets))):indx]<-names(siggenesets)
+pdl<-list()
+for(i in names(siggenesets)){
+pdl[[i]]<-FeaturePlot(SObj,
+            features = i,label=T,pt.size=0.01,combine=T)+featscale
+            #print(pdl[[i]])
+            }
+
+patch1<-pdl[["1"]]+pdl[["2"]]+pdl[["3"]]+plot_layout(ncol=3)
+patch2<-pdl[["5"]]+pdl[["6"]]+pdl[["7"]]+plot_layout(ncol=3)
+patch3<-pdl[["8"]]+pdl[["9"]]+pdl[["10"]]+plot_layout(ncol=3)
+
+patch1/patch2/patch3
+ggsave(filename=file.path(vispath,paste("Fig1_CellSignature_",today,".pdf")),device="pdf")
+```
+
+```{r FigHeatmap,eval=F,echo=F}
+
+
+#dat<-FindMarkers(SObj,ident.1=i,only.pos=T,min.pct=0.5,logfc.threshold=1,max.cells.per.ident = 200)
+outHiselmarkerpath<-file.path(datapath,paste("Marker_sel_Hi_pos_logNorm_",projID,"_",dday,".rds",sep=""))
+HiSelMark<-readRDS(outHiselmarkerpath)
+    
+
+pd<-DoHeatmap(SObj, features = unname(unlist(lapply(HiSelMark,function(x) rownames(x)[1:30]))),cells=cellspl)
+    print(pd)
+    }
+cellspl<-sample(1:length(SObj@meta.data[,1]),2500,replace=F)
+## Heatmap of genes
+pd<-DoHeatmap(SObj, features = siggenesets[[i]],cells=cellspl)
+    print(pd)
+    }
+
+
+
+outmarkerpath=file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",dday,".rds",sep=""))
+if(!file.exists(outmarkerpath)){
+
+SObj.markers <- FindAllMarkers(SObj, min.pct = 0.25, logfc.threshold = 0.25,verbose=TRUE)
+for(i in levels(SObj@meta.data$seurat_clusters)){
+    datout<-SObj.markers %>% filter(cluster==i)
+    outfilename=file.path(tablepath,paste("Marker_genes_logNorm_perCluster-",i,"_",today,".csv",sep=""))
+write.csv(as.data.frame(datout),file=outfilename)
+#print(kable(head(datout,n=5)))
+}
+saveRDS(SObj.markers,file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",today,".rds",sep="")))
+}else{
+SObj.markers<-readRDS(file.path(datapath,paste("Marker_pos_perCluster_logNorm_",projID,"_",dday,".rds",sep="")))
+}
+
+top10 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+if(all(top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+selfeat<-top10$gene[top10$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{
+    selfeat=top10$gene}
+set.seed=19
+cellspl<-sample(1:length(SObj@meta.data[,1]),2500,replace=F)
+pd<-DoHeatmap(SObj, features = selfeat,cells=cellspl) 
+print("gene list ordered by avg_log2FC")
+print(pd)
+
+```
+
+
+
+
+
+```{r Violinplots per cluster }
+
+##########################################################
+# Fig 6b
+# Violin plots per cluster 2-4 genes for each cluster
+########################################################
+
+
+top3 <- SObj.markers %>% group_by(cluster) %>% top_n(n = 3, wt = avg_log2FC)
+top3<-top3%>%filter(as.character(cluster)%in%as.character(c(0:8,10,11)))
+if(all(top3$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data')))==FALSE){
+selfeat<-top3$gene[top3$gene %in% rownames(GetAssayData(SObj, slot = 'scale.data'))]
+}else{
+    selfeat=top3$gene}
+
+
+
+## Multi feature Violin plot for all clusters
+
+# stagged violin plot
+
+
+##source: Ming Tang
+##https://divingintogeneticsandgenomics.rbind.io/post/stacked-violin-plot-for-visualizing-single-cell-data-in-seurat/
+## remove the x-axis text and tick
+## plot.margin to adjust the white space between each plot.
+## ... pass any arguments to VlnPlot in Seurat
+modify_vlnplot<- function(obj, 
+                          feature, 
+                          pt.size = 0, 
+                          plot.margin = unit(c(-0.75, 0, -0.75, 0), "cm"),
+                          ...) {
+  p<- VlnPlot(obj, features = feature, pt.size = pt.size, ... )  + 
+    xlab("") + ylab(feature) + ggtitle("") + 
+    theme(legend.position = "none", 
+          axis.text.x = element_blank(), 
+          axis.ticks.x = element_blank(), 
+          axis.title.y = element_text(size = rel(1), angle = 0), 
+          axis.text.y = element_text(size = rel(1)), 
+          plot.margin = plot.margin ) 
+  return(p)
+}
+
+## extract the max value of the y axis
+extract_max<- function(p){
+  ymax<- max(ggplot_build(p)$layout$panel_scales_y[[1]]$range$range)
+  return(ceiling(ymax))
+}
+
+## main function
+StackedVlnPlot<- function(obj, features,
+                          pt.size = 0, 
+                          plot.margin = unit(c(-0.75, 0, -0.75, 0), "cm"),
+                          ...) {
+  
+  plot_list<- purrr::map(features, function(x) modify_vlnplot(obj = obj,feature = x, ...))
+  
+  # Add back x-axis title to bottom plot. patchwork is going to support this?
+  plot_list[[length(plot_list)]]<- plot_list[[length(plot_list)]] +
+    theme(axis.text.x=element_text(), axis.ticks.x = element_line())
+  
+  # change the y-axis tick to only max value 
+  ymaxs<- purrr::map_dbl(plot_lis t, extract_max)
+  plot_list<- purrr::map2(plot_list, ymaxs, function(x,y) x + 
+                            scale_y_continuous(breaks = c(y)) + 
+                            expand_limits(y = y))
+
+  p<- patchwork::wrap_plots(plotlist = plot_list, ncol = 1)
+  return(p)
+}
+
+pd<-StackedVlnPlot(obj = SObj, features =selfeat)
+#    theme(axis.title.x = element_text( size=10))
+
+selfeat<-unique(selfeat)
+pd<-VlnPlot(SObj, features = selfeat,group.by="seurat_clusters",pt.size=0.5,combine=F)
+retrieveDataggplot<-function(dat){
+    dat<-dat$data
+    gene=colnames(dat)[1]
+    datout<-dat
+    datout$gene<-rep(gene,length(dat[,1]))
+    colnames(datout)<-c("expression","ident","gene")
+    return(datout)
+}
+pdl<-lapply(pd,function(x) x$data)
+#pdl<-do.call(rbind,pdl)
+#pdl$gene<-as.factor(pdl$gene)
+txtsize=18
+poutl<-list()
+for(i in 1:(length(pdl)-1)){
+    genename=colnames(pdl[[i]])[1]
+    dat<-pdl[[i]]
+    dat<-dat[as.character(dat$ident)%in%as.character(c(0:8,10,11)),]
+    dat<-droplevels(dat)
+    colnames(dat)<-c("gene","ident")
+    poutl[[i]]<-ggplot(as.data.frame(dat),aes(x=ident,y=gene))+
+        geom_violin(adjust=.5,scale = "width",aes(fill=ident),
+                trim=T,draw_quantiles=c(0.5))+
+    #geom_jitter(height=0,width=0.1)+
+    ylim(0,max(dat[,1]))+
+    labs(x="seurat clusters",
+         y=genename,
+         fill="ident")+
+         theme_bw()+
+         theme(axis.title.x = element_blank())+
+         theme(axis.title.y = element_text(size=txtsize,angle=0,face="italic",vjust=+0.3))+
+         theme(axis.text.x = element_blank())+
+         theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+         theme(strip.text.x=element_text(size=txtsize-2))+
+         theme(strip.background = element_blank())+
+         theme(legend.text=element_text(size=txtsize-2))+
+         scale_y_continuous(breaks=c(0,floor(max(dat[,1]))))+
+         theme(legend.title=element_text(size=txtsize))+
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               panel.background = element_blank(), axis.line = element_line(colour = "black"),
+               panel.border = element_blank())#,
+               #plot.margin = unit(c(0, 0, 0, 0.2), "cm"))
+}
+
+i=length(pdl)
+
+    genename=colnames(pdl[[i]])[1]
+    dat<-pdl[[i]]
+    dat<-dat[as.character(dat$ident)%in%as.character(c(0:8,10,11)),]
+    dat<-droplevels(dat)
+    colnames(dat)<-c("gene","ident")
+    poutl[[i]]<-ggplot(as.data.frame(dat),aes(x=ident,y=gene))+
+        geom_violin(adjust=.5,scale = "width",aes(fill=ident),
+                trim=T,draw_quantiles=c(0.5))+
+    #geom_jitter(height=0,width=0.1)+
+    ylim(0,max(dat[,1]))+
+    labs(x="seurat clusters",
+         y=genename,
+         fill="ident")+
+         theme_bw()+
+         theme(axis.title.x = element_blank())+
+         theme(axis.title.y = element_text(size=txtsize,angle=0,face="italic",vjust=+0.3))+
+         theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+         theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+         theme(strip.text.x=element_text(size=txtsize-2))+
+         theme(strip.background = element_blank())+
+         theme(legend.text=element_text(size=txtsize-2))+
+         scale_y_continuous(breaks=c(0,floor(max(dat[,1]))))+
+         theme(legend.title=element_text(size=txtsize))+
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               panel.background = element_blank(), axis.line = element_line(colour = "black"),
+               panel.border = element_blank())#,
+               #plot.margin = unit(c(0, 0, 0, 0), "cm"))
+
+
+p<- patchwork::wrap_plots(plotlist = poutl, ncol = 1)+plot_layout(guides="collect")
+ggsave(plot=p,
+       filename=file.path(vispath,
+                          paste("MultiViolinPlot_top3",
+                                today,
+                                ".pdf",
+                                sep="")),
+       width=6,
+       height=14,
+       device="pdf")
+
+
+
+
+#spl(pd,"Exp_Violin_selfeat",fig.width=9,fig.height=15)
+
+
+```
+
+
+## compare with bulk:
+
+```{r, eval=F,echo=F}
+## This does not work I need to summarize
+bulkdatdir<-file.path(dirname(dirname(analpath)),"scripts","info","bulkAnlaysis")
+fls<-list.files(bulkdatdir,pattern="pa.qstat.2021-06-07.txt")
+flsu<-lapply(fls,function(x) read.delim(file.path(bulkdatdir,x),header=TRUE,sep="\t",stringsAsFactors=F))
+names(flsu)<-sub(".txt","",sub(".pa.qstat.2021-06-07.txt","",fls))
+library(ggrepel)
+
+intersect_bulkSC<-function(scDE,bulkDE,scname,bulkname,fdr=0.1,lgFC=0,txtsize=14){
+    # There is no postHoc Test for Anovalike Tests in edgeR and DESeq
+    # We need to do all pairwise tests and then run p-adjust for all resutls!!
+    bulkDE<-bulkDE[which(bulkDE$FDR<fdr&abs(bulkDE$logFC)>lgFC),]
+    pldat<-merge(scDE,bulkDE,by.x=0,by.y="GeneSymbol",all.x=TRUE)
+    pldat<-na.omit(pldat)
+    Specor<-cor.test(pldat[,"avg_log2FC"],pldat[,"logFC"],method="spearman")
+    Specor
+    library(reshape2)
+    mdat<-melt(pldat[,c(1,3,11)],id=c("Row.names","avg_log2FC"))
+    mdat$labelu<-""
+    lim<-c(min(mdat$avg_log2FC),max(mdat$avg_log2FC))
+    geneslabel<-unique(c(which(mdat$value>(max(mdat$value)-sum(abs(range(mdat$value)))/5)),
+                         which(abs(mdat$avg_log2FC)>(max(mdat$avg_log2FC)-sum(abs(range(mdat$avg_log2FC)))/5))))
+    
+    mdat$labelu[geneslabel]<-mdat$Row.names[geneslabel]
+    
+    # plotting
+    pd<-ggplot(mdat,aes(x=avg_log2FC,y=value,colour=factor(variable),label=labelu))+geom_point()+
+        geom_smooth(method="lm")+
+        geom_text_repel()+labs(x=paste("singleCell ",scname," (avg_log2FC)",sep=""),
+        y=paste("bulkRNA ",bulkname,"(log2FC)",sep=""),colour="bulk comparisons")+
+         theme_bw()+
+         theme(axis.title.x = element_text(size=txtsize))+
+         theme(axis.title.y = element_text(size=txtsize))+
+         theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+         theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+         theme(strip.text.x=element_text(size=txtsize-2))+
+         theme(strip.background = element_blank())+
+         theme(legend.text=element_text(size=txtsize-2))+
+         theme(legend.title=element_text(size=txtsize))+
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               panel.background = element_blank(), axis.line = element_line(colour = "black"),
+               panel.border = element_blank())+
+         geom_abline(slope=1,intercept=0)+
+         xlim(lim)+ylim(lim)+
+         annotate("text",label=paste("rho=",round(Specor$estimate,2),"\n",
+                                                 "p<",Specor$p.value,sep=""),
+                               x=lim[1]+1,
+                               y=lim[2]-1)+
+         theme(legend.position="none")
+                
+
+
+   #ggsave(plot=pd,filename=file.path(vispath,paste(
+   #                                   "scDE_bulkDEcolon",today,
+   #                                   ".pdf",sep="")),
+   #                                   device="pdf")
+   return(pd)
+}
+
+for(i in 1:3){
+        print(paste(names(SObj_sel.markers)[i],names(flsu)[i],sep="_vs_"))
+   
+  pd<-intersect_bulkSC(SObj_sel.markers[[i]],flsu[[i]],names(SObj_sel.markers)[i],names(flsu)[i])
+  print(pd)
+  outname=paste("Intersection_SC_bulk_",names(SObj_sel.markers)[i],"_",today,".pdf",sep="")
+  ggsave(plot=pd,filename=file.path(vispath,outname),device="pdf")
+    }
+
+
+## Consistency check
+
+pd<-DimPlot(SObj, reduction = "umap",cells=rownames(SObj@meta.data[SObj@meta.data$seurat_clusters==0,])
+# UMAP and FindClusters are different algorithms, therefore there is no 1:1 representation.
+
+# Count sample contribution per cluster
+
+
+df <- clustercontrib_fun(SObj,clusterCol="seurat_clusters",spCol="orig.ident",cellnum=T)
+
+df <- df[,c("235d12",paste(rep(c(2,3,4),3),
+                           rep(c("C","L","S"),each=3),
+                           sep=""))]
+
+rmNA<-function(x){
+    if(
+df<- apply(df,2,function(x) ifelse(grepl("NA",x),"",x))
+write.csv(df,
+          file=file.path(tablepath,
+                paste("SampleContribution_per_Cluster_precent_",
+                today,
+                ".csv",
+                sep="")))
+
+
+
+summarydf<-data.frame("cells per cluster"=table(SObj@meta.data$orig.ident),
+                      "cells with TCR"=table(!is.na(SObj@meta.data$TCRalpha),SObj@meta.data$orig.ident)[2,])
+
+summarydf<-summarydf[,-1]
+write.csv(summarydf,
+          file=file.path(tablepath,
+                paste("AnalysisSummary_Cells_",
+                today,
+                ".csv",
+                sep="")))
+
+```
+
+```{r ColonSubcluster,eval=T,echo=F}
+## Colon Subcluster 1
+#rbio3_14
+#FindSubCluster
+# https://rdrr.io/cran/Seurat/man/FindSubCluster.html
+# need to specify graph
+#names(yourSeuratObject@graphs)
+SObjsub<-SObj
+Idents(object=SObjsub)<-"seurat_clusters"
+SObjsub<-FindSubCluster(SObjsub,
+                        cluster=c(0,2,10),
+                        graph.name="RNA_snn",
+                        subcluster.name = "colon.cluster",
+                          resolution = 0.8,
+                            algorithm = 1
+                            )
+# Running Louvian algorithm, no new features selected
+saveRDS(SObjsub,file=file.path(datapath,
+                                paste("Colon_Subclustering",
+                                                "_",
+                                    today,
+                                ".rds",
+                                sep="")))
+
+Idents(SObjsub)<-"colon.cluster"
+pd<-DimPlot(SObjsub,split.by="tissueidents")
+ggsave(file.path(vispath,paste("UMAP_SObjsubcluster_",today,".pdf",sep="")),
+      plot=pd,
+      device="pdf",
+      width=12)
+
+
+                        
+```
+
+
+# Colon Cluster sub-analysis
+
+```{Seurat Colon,eval=T,echo=F}
+dirslist<-c(datapath,vispath,tablepath)
+dircreatefun <- function(dirin,newsubfolder){
+    subfolder=file.path(dirin,newsubfolder)
+    if(!dir.exists(subfolder)){
+        dir.create(subfolder)}
+    return(subfolder)}
+
+colondirs <- lapply(dirslist,function(x) dircreatefun(x,"sub_cluster_colon"))
+names(colondirs) <- c("data","vis","table")
+
+SCdday="11_04_2022"
+if(file.exists(file.path(colondirs$data,paste("Colon_UMAP_",SCdday,".rds",sep="")))){
+SOcol<-readRDS(file.path(colondirs$data,paste("Colon_UMAP_",SCdday,".rds",sep="")))
+RERUNCol=FALSE
+}else{
+RERUNCol=TRUE
+}
+
+if(RERUNCol){
+SOcol<-subset(x=SObj,subset=(tissueidents=="colon"&orig.ident%in%c("2C","3C","4C")))
+table(SOcol@meta.data$orig.ident)
+
+#235d12     2C     2L     2S     3C     3L     3S     4C     4L     4S 
+#     0   5143      0      0   4797      0      0   4841      0      0 
+
+
+# find variable Features
+
+SOcol<-FindVariableFeatures(SOcol,selection.method = "vst", nfeatures = 2500)
+}
+
+# Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(SOcol), 10)
+print("Comparison of variable features Colon vs all tissues")
+print(table(VariableFeatures(SOcol)%in%VariableFeatures(SObj)))
+
+colon_uniq_VarFeat<-VariableFeatures(SOcol)[!(VariableFeatures(SOcol)%in%VariableFeatures(SObj))]
+top10sel<-head(colon_uniq_VarFeat,n=10)
+
+
+plot1 <- VariableFeaturePlot(SOcol)
+plot2 <- LabelPoints(plot = plot1, points = top10sel, repel = TRUE)
+pd<-plot1 + plot2
+ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Colon_VarFeatures",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")),
+       plot=pd,
+       width=12,
+       #height=7,
+       #unit="cm",
+       device="pdf")
+
+
+## Scale data
+## see if removal of some features is needed
+Idents(SOcol)<-"Repl"
+pd <- VlnPlot(SOcol,split.by = "Repl", pt.size=NULL,features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Colon_QCFeatures",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")),
+                                plot=pd,
+                                width=20)
+
+if(RERUNCol){
+
+all.genes <- rownames(SOcol)
+SOcol <- ScaleData(SOcol, features = all.genes)
+
+# Dimreduction and PCA
+
+SOcol <- RunPCA(SOcol, features = VariableFeatures(object = SOcol))
+
+# Examine and visualize PCA results a few different ways
+print(SOcol[["pca"]], dims = 1:5, nfeatures = 5)
+
+
+pdf(file.path(colondirs[["vis"]],
+                          paste("Colon_DimHeatmap1_15",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")))
+DimHeatmap(SOcol, dims = 1:15, cells = 500, balanced = TRUE)
+dev.off()
+
+
+pdf(file.path(colondirs[["vis"]],
+                          paste("Colon_DimHeatmap16_30",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")))
+DimHeatmap(SOcol, dims = 16:30, cells = 500, balanced = TRUE)
+dev.off()
+
+## use dim 1:17
+## dim tests
+SOcol <- JackStraw(SOcol, num.replicate = 100)
+SOcol <- ScoreJackStraw(SOcol, dims = 1:20)
+
+pdf(file.path(colondirs[["vis"]],
+                          paste("Colon_JackStraw",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")))
+JackStrawPlot(SOcol, dims = 1:20)
+dev.off()
+
+pdf(file.path(colondirs[["vis"]],
+                          paste("Colon_ElbowPlot",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")))
+ElbowPlot(SOcol)
+dev.off()
+
+# Clustering of cells
+
+SOcol <- FindNeighbors(SOcol, dims = 1:30)
+SOcol <- FindClusters(SOcol, resolution = 0.5)
+
+Idents(SOcol)<-"seurat_clusters"
+head(Idents(SOcol), 5)
+SOcol<- RunUMAP(SOcol, dims = 1:30)
+
+
+levels(SOcol@meta.data$seurat_clusters)<-as.character(1:length(levels(SOcol@meta.data$seurat_clusters)))
+Idents(SOcol)<-"seurat_clusters"
+saveRDS(SOcol,file=file.path(colondirs[["data"]],
+                                paste("Colon_UMAP",
+                                                "_",
+                                    today,
+                                ".rds",
+                                sep="")))
+
+}            
+
+
+
+## FindClusters:
+if(RERUN){
+SOcol.markers <- FindAllMarkers(SOcol, only.pos = F, min.pct = 0.25, logfc.threshold = 0.25)
+
+saveRDS(SOcol.markers,file=file.path(colondirs[["data"]],
+                                paste("Colon_SOcolMarkers",
+                                                "_",
+                                    today,
+                                ".rds",
+                                sep="")))
+
+}else{
+SOcol.markers<-readRDS(file=file.path(colondirs[["data"]],
+                                paste("Colon_SOcolMarkers",
+                                                "_",
+                                    SCdday,
+                                ".rds",
+                                sep="")))
+}
+```
+
+
+## Fig 7a UMAP Colon
+
+
+```{r Fig7aUMAPcolon, eval=T,echo=F}
+
+#################################
+# Fig 7a
+# Colon_UMAP
+#######################################
+
+limits<-apply(SOcol@reductions$umap@cell.embeddings,2,range)
+xlimits<-c(min(limits[1,]),max(limits[2,]))
+ylimits<-xlimits
+
+txtsize=12
+pd<-DimPlot(SOcol,
+            reduction = "umap",
+            label=T,
+            label.size=(txtsize-2)*0.3,
+            pt.size = 0.05) + NoLegend()+
+            theme(text=element_text(size=txtsize),
+                  axis.text=element_text(size=(txtsize-2)),
+                  axis.title=element_text(size=txtsize),
+                  legend.text=element_text(size=(txtsize-2)))+
+            xlim(xlimits)+ylim(ylimits)+
+            coord_fixed(ratio = 1)
+
+ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Colon_UMAP",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")),
+       plot=pd,
+       width=100,
+       height=90,
+       unit="mm",
+       device="pdf")
+```
+
+
+
+
+## Cluster Contribution Colon 
+
+```{r CluterContributionColon,eval=T,echo=F}
+source("scAnalysis_function2_b.R")
+df <- clustercontrib_fun(SOcol,clusterCol="seurat_clusters",spCol="orig.ident",cellnum=T)
+
+
+df<- replace_na(df,"")
+write.csv(df,
+          file=file.path(colondirs[["table"]],
+                paste("SampleContribution_per_Cluster_precent_ColonSubClusters",
+                today,
+                ".csv",
+                sep="")))
+
+
+
+## Select Clusters fdr 0.05
+
+SOcol.markersf<-SOcol.markers%>%filter(p_val_adj<0.05)
+
+kable(SOcol.markersf%>%group_by(cluster)%>%tally())
+dat<-SOcol.markersf%>%group_by(cluster)%>%tally()
+```
+
+## Heatmap of clusters in colon Supp-Fig7a
+
+```{r SupFig7a, eval=T,echo=F}
+
+#####################################
+## Supplemental Figure 7a
+## Heatmap of Clusters Colon
+################################
+set.seed=19
+## Heatmap of Clusters
+SOcol.markersf %>%
+    group_by(cluster) %>%
+    top_n(n = 10, wt = avg_log2FC) -> top10
+    
+    cellsplCol<-sample(1:length(SOcol@meta.data[,1]),2500,replace=F)
+    pd<-DoHeatmap(SOcol, features = top10$gene,cells=cellsplCol) + NoLegend()
+
+    ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Colon_HeatmapTop10",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")),
+       plot=pd,
+       width=12,
+       #height=7,
+       #unit="cm",
+       device="pdf")
+    
+# Data Heatmap: 
+#cellIDsCol<-rownames(SOcol@meta.data)[cellsplCol]
+#heatdat <- pd$data[pd$data$Cell%in%cellIDsCol,]
+#outfname <- "SupFig7b_Heatmap_data.tsv"
+#write.table(heatdat,file.path(colondirs[["table"]],outfname))
+
+outfname <- paste("SupFig7a_Heatmap_data_corr_",today,".tsv",sep="")
+outfname <- file.path(colondirs[["table"]],outfname)
+odat<-doHeatmapData(SOcol,
+                   features=top10$gene,
+              cellsV=cellsplCol,
+              doHeatOut=pd,
+              outname=outfname)
+
+Annotdf<-data.frame("seurat_clusters"=unlist(unname(odat["seurat_clusters",])))
+rownames(Annotdf)<-colnames(odat)
+odatp<-odat[-grep("seurat_clusters",rownames(odat)),]
+odatp<-apply(odatp,2,function(x) as.numeric(x))
+rownames(odatp)<-rownames(odat)[-length(odat[,1])]
+
+fun_color_range <- colorRampPalette(c("violet","black","yellow"))
+my_colors<-fun_color_range(200)
+
+clipval<-function(x,dspmin=-2.5,dspmax=2.5){
+        x[which(x>dspmax)]<-dspmax
+        x[which(x<dspmin)]<-dspmin
+        return(x)}
+odatp<-apply(odatp,2,function(x) clipval(x,-2.5,2.5))
+
+pheatmap(odatp,cluster_rows=F,cluster_cols=F,
+         cluter_rows=F,show_colnames=F,
+         annotation_names_col = T,
+         annotation_col=Annotdf,
+         scale="none",na_col="black",
+         color=my_colors)
+```
+
+
+
+
+
+## DEgenes analysis Col
+
+```{r, DEgenesanalCol,eval=T,echo=F}
+
+SOcol.markersl<-split(SOcol.markers,
+                      SOcol.markers$cluster)
+names(SOcol.markersl) <- paste("ColonCl",
+                                names(SOcol.markersl),
+                                sep="_")
+
+for( l in 1:length(SOcol.markersl)){
+DEresfun(datset=SOcol.markersl[[l]],
+         namedatset=names(SOcol.markersl)[l],
+         tablepath=colondirs[["table"]],
+         vispath=colondirs[["vis"]],
+         dayuse=today,dbs=NULL,fgseafdr=0.05)}
+```
+
+## Multi feature Violin plot for all clusters in colon
+
+
+```{r Violinplots per cluster colon,eval=T,echo=F}
+
+############################################
+## Fig 7b
+## Multi feature Violin plot for all clusters in colon
+########################################
+
+top3 <- SOcol.markers %>% group_by(cluster) %>% top_n(n = 3, wt = avg_log2FC)
+if(all(top3$gene %in% rownames(GetAssayData(SOcol, slot = 'scale.data')))==FALSE){
+selfeat<-top3$gene[top3$gene %in% rownames(GetAssayData(SOcol, slot = 'scale.data'))]
+}else{
+    selfeat=top3$gene}
+
+
+
+# stagged violin plot
+
+
+#pd<-StackedVlnPlot(obj = SObj, features =selfeat)
+#    theme(axis.title.x = element_text( size=10))
+
+selfeat<-unique(selfeat)
+pd<-VlnPlot(SOcol, features = selfeat,group.by="seurat_clusters",pt.size=0.5,combine=F)
+retrieveDataggplot<-function(dat){
+    dat<-dat$data
+    gene=colnames(dat)[1]
+    datout<-dat
+    datout$gene<-rep(gene,length(dat[,1]))
+    colnames(datout)<-c("expression","ident","gene")
+    return(datout)
+}
+pdl<-lapply(pd,function(x) x$data)
+#pdl<-do.call(rbind,pdl)
+#pdl$gene<-as.factor(pdl$gene)
+txtsize=18
+poutl<-list()
+for(i in 1:(length(pdl)-1)){
+    genename=colnames(pdl[[i]])[1]
+    dat<-pdl[[i]]
+    #dat<-dat[as.character(dat$ident)%in%as.character(c(0:8,10,11)),]
+    dat<-droplevels(dat)
+    colnames(dat)<-c("gene","ident")
+    poutl[[i]]<-ggplot(as.data.frame(dat),aes(x=ident,y=gene))+
+        geom_violin(adjust=.5,scale = "width",aes(fill=ident),
+                trim=T,draw_quantiles=c(0.5))+
+    #geom_jitter(height=0,width=0.1)+
+    ylim(0,max(dat[,1]))+
+    labs(x="seurat clusters",
+         y=genename,
+         fill="ident")+
+         theme_bw()+
+         theme(axis.title.x = element_blank())+
+         theme(axis.title.y = element_text(size=txtsize,angle=0,face="italic",vjust=+0.3))+
+         theme(axis.text.x = element_blank())+
+         theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+         theme(strip.text.x=element_text(size=txtsize-2))+
+         theme(strip.background = element_blank())+
+         theme(legend.text=element_text(size=txtsize-2))+
+         scale_y_continuous(breaks=c(0,floor(max(dat[,1]))))+
+         theme(legend.title=element_text(size=txtsize))+
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               panel.background = element_blank(), axis.line = element_line(colour = "black"),
+               panel.border = element_blank())#,
+               #plot.margin = unit(c(0, 0, 0, 0.2), "cm"))
+}
+
+i=length(pdl)
+
+    genename=colnames(pdl[[i]])[1]
+    dat<-pdl[[i]]
+    #dat<-dat[as.character(dat$ident)%in%as.character(c(0:8,10,11)),]
+    dat<-droplevels(dat)
+    colnames(dat)<-c("gene","ident")
+    poutl[[i]]<-ggplot(as.data.frame(dat),aes(x=ident,y=gene))+
+        geom_violin(adjust=.5,scale = "width",aes(fill=ident),
+                trim=T,draw_quantiles=c(0.5))+
+    #geom_jitter(height=0,width=0.1)+
+    ylim(0,max(dat[,1]))+
+    labs(x="seurat clusters",
+         y=genename,
+         fill="ident")+
+         theme_bw()+
+         theme(axis.title.x = element_blank())+
+         theme(axis.title.y = element_text(size=txtsize,angle=0,face="italic",vjust=+0.3))+
+         theme(axis.text.x = element_text(size=txtsize-2,colour="black"))+
+         theme(axis.text.y = element_text(size=txtsize-2,colour="black"))+
+         theme(strip.text.x=element_text(size=txtsize-2))+
+         theme(strip.background = element_blank())+
+         theme(legend.text=element_text(size=txtsize-2))+
+         scale_y_continuous(breaks=c(0,floor(max(dat[,1]))))+
+         theme(legend.title=element_text(size=txtsize))+
+         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+               panel.background = element_blank(), axis.line = element_line(colour = "black"),
+               panel.border = element_blank())#,
+               #plot.margin = unit(c(0, 0, 0, 0), "cm"))
+
+
+p<- patchwork::wrap_plots(plotlist = poutl, ncol = 1)+plot_layout(guides="collect")
+ggsave(plot=p,
+       filename=file.path(colondirs[["vis"]],
+                          paste("MultiViolinPlot_top3_",
+                                today,
+                                ".pdf",
+                                sep="")),
+       width=6,
+       height=14,
+       device="pdf")
+
+
+
+
+#spl(pd,"Exp_Violin_selfeat",fig.width=9,fig.height=15)
+
+
+```
+
+
+## FeaturePlots in Colon Supplemental Figure 7b
+
+```{r SOcolFeaturePlots, eval=T, echo=F}
+########################################
+## Supplemental Figure 7b
+## Feature Plots in Colon
+###############################
+
+txtsize=12
+lfac=8.5
+
+feats<-read.delim(file.path("/misc/data/user/userID/projects/pr036_dd_10x",
+                            "RNA/analysis_seurat_nodoub/info/SOcol_genelist.txt"))
+feats<-feats[,1]
+
+limits<-apply(SOcol@reductions$umap@cell.embeddings,2,range)
+xlimits<-c(min(limits[1,]),max(limits[2,]))
+ylimits<-xlimits
+
+feats<-feats[sapply(feats,function(x) any(grepl(x,rownames(SOcol))))]
+
+for(i in feats){
+pd<-FeaturePlot(SOcol,
+            features = i,label=F,pt.size=0.05,combine=T,
+                    label.size=txtsize-lfac,raster=F,order=T)+
+             theme(plot.title=element_text(size=txtsize+2),
+                   axis.title.x = element_text(size=txtsize),
+                   axis.title.y = element_text(size=txtsize),
+                   axis.text.x = element_text(size=(txtsize-2)),
+                   axis.text.y = element_text(size=(txtsize-2)),
+                   legend.text=element_text(size=(txtsize-2)))+
+                   theme(legend.key.size=unit(0.5,"cm"),
+                         legend.key.height=unit(0.5,"cm"),
+                         legend.key.width=unit(0.5,"cm"))+
+                   xlim(xlimits)+ylim(ylimits)+
+                   featscale+coord_fixed(ratio=1)
+
+                   # geom_point(aes(x=UMAP_1,y=UMAP_2),shape=1)
+ggsave(filename=file.path(colondirs[["vis"]],
+                paste("ColorCoded_expressionplot_featscale_",i,"_",today,".pdf",sep="")),
+       plot=pd,
+       width=12,
+       height=9,
+       unit="cm",
+       device="pdf")
+}
+
+
+for(i in feats){
+pd<-FeaturePlot(SOcol,
+            features = i,label=T,pt.size=0.05,combine=T,
+                    label.size=txtsize-lfac,raster=F,order=T)+
+             theme(plot.title=element_text(size=txtsize+2),
+                   axis.title.x = element_text(size=txtsize),
+                   axis.title.y = element_text(size=txtsize),
+                   axis.text.x = element_text(size=(txtsize-2)),
+                   axis.text.y = element_text(size=(txtsize-2)),
+                   legend.text=element_text(size=(txtsize-2)))+
+                   theme(legend.key.size=unit(0.5,"cm"),
+                         legend.key.height=unit(0.5,"cm"),
+                         legend.key.width=unit(0.5,"cm"))+
+                   xlim(xlimits)+ylim(ylimits)+
+                   featscale+coord_fixed(ratio=1)
+
+                   # geom_point(aes(x=UMAP_1,y=UMAP_2),shape=1)
+ggsave(filename=file.path(colondirs[["vis"]],
+                paste("ColorCoded_expressionplot_featscale_",i,"_",today,".pdf",sep="")),
+       plot=pd,
+       width=12,
+       height=9,
+       unit="cm",
+       device="pdf")
+}
+```
+
+## Signature Sets colon
+
+```{r signature sets colon, eval=T,echo=F}
+###########################
+## Figure 7c
+## Signature plot Colon
+##########################
+
+
+
+## signature sets
+siggenesets<-list(c("Hspa5", "Slc16a3", "Aldoa", "Pgk1", "Tpi1", "Ldha", "Pkm", "Pgam1", "Got1", "Glrx", "Eno1"),
+                  c("Jun", "Zfp36", "Klf6", "Klf2", "Tnfrsf9", "Ppp1r15a", "Nfkbia", "Junb", "Dusp1", "Ier2", "Cd69", "Nr4a1", "Fos", "Btg2", "Gadd45b", "Tnfaip3", "Atf3", "Irf1", "Map3k8", "Gpr183", "Btg1"),
+                  c("Fgl2", "Il10", "Il18", "Tfpi", "Cybb", "Entpd1", "Nt5e", "Ccr6", "Nrp1", "Itgae", "Il1rl1"),
+                  c("Fbl", "Apex1", "C1qbp", "Nhp2", "Nop16", "Rps2", "Npm1", "Nme1", "Eif4a1", "Pa2g4", "Ppia", "Ranbp1", "Mrps18b", "Nolc1", "Phb", "Set", "Ran", "Snrpd3", "Hsp90ab1", "Cct5", "Ddx21", "Abce1", "Ldha", "Nop56", "Cnbp", "Impdh2", "Ruvbl2", "Cct3", "Lsm7", "Hnrnpa1", "Gnl3", "Mrpl23", "Snrpa1", "Eif3b", "Snrpa", "Serbp1", "Eif2s1", "Rack1", "Tcp1", "Cct2", "Ddx18", "Hspd1", "Slc25a3", "G3bp1", "Rpl14", "Phb2", "Hnrnpa2b1", "Eif4e", "Tomm70a", "Hspe1", "Snrpd1", "Cdk4", "Prpf31", "Syncrip", "U2af1", "Cyc1", "Eif1ax", "Eif3d", "Snrpd2", "Lsm2", "Pgk1", "Rps6", "Psma7", "Ndufab1", "Ube2e1", "Canx"),
+                  c("Il1rl1", "Areg", "Klrg1"),
+c("Ifit1", "Ifit3", "Ifi208", "Ifi214", "Ifit3b", "Irf7", "Ifi213", "Rsad2", "Rtp4", "Cmpk2"))
+names(siggenesets)<-c("HALLMARK_GLYCOLYSIS_(leading_edge_cluster2)",
+                      "HALLMARK_TNFA_SIGNALING_VIA_NFKB_(leading_edge_cluster3)",
+                      "Lkb1_dependent",
+                      "HALLMARK_MYC_TARGETS_V1_(leading_edge_cluster7)",
+                      "Tissue_Protection",
+                       "Interferon-induced")
+#siggenesets<-c(siggenesets,sigMRnewc)
+                  #"TRcolon"=c(),
+                  #"TregSpleen"=c(),
+                  #"TregLiv=c(),)
+
+SOcol<-AddModuleScore(object=SOcol,
+                    features=siggenesets,
+                    ctrl=10)
+
+indx<-length(colnames(SOcol@meta.data))
+colnames(SOcol@meta.data)[(indx+1-length(names(siggenesets))):indx]<-names(siggenesets)
+
+
+limits<-apply(SOcol@reductions$umap@cell.embeddings,2,range)
+xlimits<-c(min(limits[1,]),max(limits[2,]))
+ylimits<-xlimits
+
+pdl<-list()
+for(i in names(siggenesets)){
+pdl[[i]]<-FeaturePlot(SOcol,
+            features = i,label=F,pt.size=0.05,combine=T)+
+            featscale+
+            coord_fixed(ratio=1)+
+            xlim(xlimits)+ylim(ylimits)
+            #print(pdl[[i]])
+ggsave(filename=file.path(colondirs[["vis"]],paste("CellSignature_",i,"_",today,".pdf",sep="")),
+       plot=pdl[[i]],
+       device="pdf",
+       width=12,
+       height=9,
+       unit="cm")
+            }
+```
+
+
+
+```{r SOcol_TCREnrichment, eval=T,echo=F}
+## Plot UMAP with new subclustering
+## This is senseless
+
+
+## TCRset 26,12-1,12-2
+SOcol@meta.data$TCRalpha<-SObj@meta.data[rownames(SOcol@meta.data),"TCRalpha"]
+SOcol@meta.data$TCRbeta<-SObj@meta.data[rownames(SOcol@meta.data),"TCRbeta"]
+SOcol@meta.data$TCRBset<-SObj@meta.data[rownames(SOcol@meta.data),"TCRBset"]
+
+
+
+#TCRsetcells<-list("TCRBset"=which(SOcol@meta.data$TCRBset%in%"TCRset"))
+#TCRpos<-which(!is.na(SOcol@meta.data$TCRBset))
+
+```
+
+## Counttable after filtering Colon
+
+```{r Count_filterdColon, eval=T,echo=F}
+
+head(SOcol@assays$RNA@counts)
+countsdat <- SOcol@assays$RNA@counts
+outfname="Counts_Colon_filtered.tsv"
+write.table(countsdat,file.path(colondirs$table,outfname),sep="\t",
+            col.names=TRUE,row.names=TRUE)
+countsannotation <- SOcol@meta.data[,c("orig.ident","SampleID","Repl","seurat_clusters","tissueidents","TCRalpha","TCRbeta")]
+outfname="Counts_Colon_filtered_annotation.tsv"
+write.table(countsannotation,file.path(colondirs$table,outfname),sep="\t",
+                        col.names=TRUE,row.names=TRUE)
+
+
+splitval<-c("TRA","TRB")
+for(i in splitval){
+TCRannotation<-merge(SOcol@meta.data,TCRdatannotd[TCRdatannotd$chain==i,],by.x=0,by.y="barcode",all.x=TRUE,sort=FALSE)
+rownames(TCRannotation)<-TCRannotation[,1]
+TCRannotation<-TCRannotation[,-1]
+outfname=paste("Counts_Colon_filtered_metainfo_TCRchain_",i,".tsv",sep="")
+write.table(TCRannotation,file.path(colondirs$table,outfname),sep="\t",row.names=T,col.names=T)
+print(outfname)
+}
+```
+
+
+## TCR set enrichemnt per Cluster in Colon
+## Fig 7e
+
+Visualisation of cells comprising TCR TCRB16,12-1,12-2 using a UMAP plot.
+
+```{r Fig7e-ColonTCRsetUMAP, eval=T,echo=F}
+
+##########################
+## Fig 7e
+#########################
+
+
+Idents(SOcol)<-"seurat_clusters"
+
+dat <- SOcol@meta.data %>%
+       select(seurat_clusters,TCRBset) %>%
+       filter(!is.na(TCRBset)) %>%
+       group_by(seurat_clusters,TCRBset) %>% 
+       summarise(n = n()) %>%
+       ungroup() %>%
+       pivot_wider(names_from=TCRBset,values_from =n)
+dat <- dat %>%
+       group_by(seurat_clusters) %>%
+       mutate(ratio=TCRset/sum(TCRset+TCRnonset))
+
+dat1 <- SOcol@meta.data
+dat1$rownames<-rownames(SOcol@meta.data)
+dat2 <- merge(dat1,dat[,c("seurat_clusters","ratio")],by.x="seurat_clusters",by.y="seurat_clusters",all.x=TRUE,sort=F)
+rownames(dat2)<-dat2$rownames
+SOcol@meta.data$TCRBsetratio <- dat2[rownames(SOcol@meta.data),"ratio"]
+
+
+txtsize=18
+lfac=8.5
+
+
+limits<-apply(SOcol@reductions$umap@cell.embeddings,2,range)
+xlimits<-c(min(limits[1,]),max(limits[2,]))
+ylimits<-xlimits
+cols<-scale_colour_gradient(low = "grey50",
+                            high = "red",
+                            space = "Lab",
+                            guide = "colourbar",
+                            aesthetics = "colour"
+                             )
+pd<-FeaturePlot(SOcol, reduction = "umap",feature="TCRBsetratio",
+            pt.size=0.5,label=T,label.size=txtsize-lfac)+
+            theme(plot.title=element_text(size=txtsize+2),
+                  axis.title.x = element_text(size=txtsize),
+                  axis.title.y = element_text(size=txtsize),
+                  axis.text.x = element_text(size=(txtsize-2)),
+                  axis.text.y = element_text(size=(txtsize-2)),
+                  legend.text=element_text(size=(txtsize-2)))+
+                  theme(legend.key.size=unit(0.5,"cm"),
+                        legend.key.height=unit(0.5,"cm"),
+                        legend.key.width=unit(0.5,"cm"))+
+                  xlim(xlimits)+ylim(ylimits)+
+                  coord_fixed(ratio=1)+
+                  cols+
+                  labs(title="TCRB:26,12-1,12-2 ratio per cluster")#+
+pd
+ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Fig_7e_Colon_UMAP_TCRBsetratio",
+                           "_",
+                                today,
+                             ".pdf",
+                                sep="")),
+       plot=pd,
+       width=12,
+       height=9,
+       unit="cm",
+       device="pdf")
+```
+
+Improved visualisation using point density. Aim is to visualize an enrichment of cells containing the respecitve TCRs, here TCRB16,12-1,12-2.
+[ggpointdensity](https://github.com/LKremer/ggpointdensity)
+
+```{r Fig7e-new-ColonTCRsetUMAP, eval=F,echo=F}
+
+library(dplyr)
+library(viridis)
+library(ggpointdensity)
+
+Idents(SOcol)<-"seurat_clusters"
+
+
+txtsize=12
+lfac=8.5
+
+dat <- bind_cols(cellID=rownames(SOcol@reductions$umap@cell.embeddings),
+                 UMAP_1=SOcol@reductions$umap@cell.embeddings[,1],
+                 UMAP_2=SOcol@reductions$umap@cell.embeddings[,2],
+                 TCRalpha=SOcol@meta.data$TCRalpha,
+                 seurat_clusters=SOcol@meta.data$seurat_clusters,
+                 TCRbeta=SOcol@meta.data$TCRbeta,TCRset=SOcol@meta.data$TCRBset)
+
+dat <- dat %>% filter(is.na(TCRset)==FALSE)
+
+limits<-apply(dat[,c("UMAP_1","UMAP_2")],2,range)
+xlimits<-c(min(limits[1,]),max(limits[2,]))
+ylimits<-xlimits
+
+pd<-ggplot(data = dat,
+       mapping = aes(x = UMAP_1, y = UMAP_2))+
+       geom_pointdensity(size=0.2)+
+       scale_color_viridis()+
+       facet_wrap(~TCRset)+
+       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                            panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+                  theme(legend.key.size=unit(0.5,"cm"),
+                        legend.key.height=unit(0.5,"cm"),
+                        legend.key.width=unit(0.5,"cm"))+
+                  xlim(xlimits)+ylim(ylimits)+
+                  coord_fixed(ratio=1)
+
+
+
+ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Fig_7eSupplement_new_Colon_UMAP_TCRBall",
+                           "_",
+                                today,
+                             ".pdf",
+                                sep="")),
+       plot=pd,
+       width=18,
+       height=6,
+       unit="cm",
+       device="pdf")
+
+pd<-ggplot(data = dat,
+       mapping = aes(x = UMAP_1, y = UMAP_2))+
+       geom_pointdensity(size=0.2)+
+       scale_color_viridis()+
+       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                            panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+                  theme(legend.key.size=unit(0.5,"cm"),
+                        legend.key.height=unit(0.5,"cm"),
+                        legend.key.width=unit(0.5,"cm"))+
+                  xlim(xlimits)+ylim(ylimits)+
+                  coord_fixed(ratio=1)
+
+
+
+ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Fig_7eSupplement_new_Colon_UMAP_TCRBany",
+                           "_",
+                                today,
+                             ".pdf",
+                                sep="")),
+       plot=pd,
+       width=18,
+       height=6,
+       unit="cm",
+       device="pdf")
+
+datTCRset <- dat %>%
+             filter(TCRset == "TCRset")
+pd<-ggplot(data = datTCRset,
+       mapping = aes(x = UMAP_1, y = UMAP_2))+
+       geom_pointdensity(size=0.5)+
+       scale_color_viridis()+
+       theme(plot.title=element_text(size=txtsize+2),
+                  axis.title.x = element_text(size=txtsize),
+                  axis.title.y = element_text(size=txtsize),
+                  axis.text.x = element_text(size=(txtsize-2)),
+                  axis.text.y = element_text(size=(txtsize-2)),
+                  legend.text=element_text(size=(txtsize-2)))+
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+                  theme(legend.key.size=unit(0.5,"cm"),
+                        legend.key.height=unit(0.5,"cm"),
+                        legend.key.width=unit(0.5,"cm"))+
+                  xlim(xlimits)+ylim(ylimits)+
+                  coord_fixed(ratio=1)+
+                  labs(title="TCRB:26,12-1,12-2")#+
+                  #scale_color_manual(values=c("red", "lightblue"))
+
+
+ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Fig_7e_new_Colon_UMAP_TCRBset",
+                           "_",
+                                today,
+                             ".pdf",
+                                sep="")),
+       plot=pd,
+       width=12,
+       height=9,
+       unit="cm",
+       device="pdf")
+
+print(pd)
+```
+
+## TCRBset analysis in Colon
+
+```{r TCRBset2analysis,eval=T,echo=F}
+################################################################
+# TCRBset analysis #
+################################################################
+TCRset2def<-c("TRBV26","TRBV12-1")
+SOcol@meta.data$TCRBset2<-rep(NA,length(SOcol@meta.data[,1]))
+SOcol@meta.data$TCRBset2[!is.na(SOcol@meta.data$TCRbeta)]<-"TCRnonset"
+SOcol@meta.data$TCRBset2[as.character(SOcol@meta.data$TCRbeta)%in%TCRset2def]<-"TCRset2"
+SOcol@meta.data$TCRBset2<-as.factor(SOcol@meta.data$TCRBset2)
+
+Idents(SOcol)<-"seurat_clusters"
+
+pd<-DimPlot(SOcol, reduction = "umap",
+            group.by="TCRBset2",pt.size=0.05,cols=c("grey","red"),na.value="grey90")+
+            theme(plot.title=element_text(size=txtsize+2),
+                  axis.title.x = element_text(size=txtsize),
+                  axis.title.y = element_text(size=txtsize),
+                  axis.text.x = element_text(size=(txtsize-2)),
+                  axis.text.y = element_text(size=(txtsize-2)),
+                  legend.text=element_text(size=(txtsize-2)))+
+                  theme(legend.key.size=unit(0.5,"cm"),
+                        legend.key.height=unit(0.5,"cm"),
+                        legend.key.width=unit(0.5,"cm"))+
+                  xlim(xlimits)+ylim(ylimits)+
+                  coord_fixed(ratio=1)+
+                  labs(title="TCRB:26,12-1")#+
+                  #scale_color_manual(values=c("red", "lightblue"))
+
+ggsave(filename=file.path(colondirs[["vis"]],
+                          paste("Colon_UMAP_TCRBset_26_12-1",
+                           "_",
+                                today,
+                             ".pdf",
+                                sep="")),
+       plot=pd,
+       width=12,
+       height=9,
+       unit="cm",
+       device="pdf")
+```
+
+### Enrichment of TCRset or TCRset1 in any of the cluster:
+
+
+
+## Fisherexact test two sided
+
+```{r Fisherexact0vsallcolon,eval=T,echo=F}
+######################
+## Fig 7e right
+## Enrichment of TCRBset per cluster lollipop plot
+###################
+
+## Select only TRBV26","TRBV12-1","TRBV12-2"
+## redo fisherexact test for the set of 3 versus rest and each cluster against all other clusters
+
+
+# Functions definded for all clusters fishertest
+
+TCRset2_Fish<-TCR_fishertest(SOcol,
+                             "TCRBset2",
+                             level1="TCRset2",
+                             level2="TCRnonset",
+                             outname="SubclustColon_TCRBset_26_12-1vsTCRBall",
+                             tabpath=colondirs[["table"]])
+
+Enrichplotfun(TCRset2_Fish,
+              outName="SubclustColon_TCRBset_26_12-1vsTCRBall",
+              outpath=colondirs[["vis"]],
+              TCRset="Colon TRBVs\n(26,12-1)")
+
+
+TCRset_Fish<-TCR_fishertest(SOcol,
+                             "TCRBset",
+                             level1="TCRset",
+                             level2="TCRnonset",
+                             outname="SubclustColon_TCRBset_26_12-1_12-2vsTCRBall",
+                             tabpath=colondirs[["table"]])
+
+Enrichplotfun(TCRset_Fish,
+              outName="SubclustColon_TCRBset_26_12-1_12-2vsTCRBall",
+              outpath=colondirs[["vis"]],
+              TCRset="Colon TRBVs\n(26,12-1,12-2)")
+
+
+
+```
+
+
+
+
+```{r DEtestsTCRsetColon,eval=T,echo=F}
+
+# make specific annotation column for comparisons
+
+SOcol@meta.data$Clust_TCRset <- paste(SOcol@meta.data$seurat_clusters,
+                                     SOcol@meta.data$TCRBset,
+                                     sep="_")
+
+SOcol@meta.data$Clust_TCRset <- factor(SOcol@meta.data$Clust_TCRset)
+
+# Output TCRlist of colon:
+SOcolTCRdf<-SOcol@meta.data[,c("seurat_clusters",
+                               "TCRalpha",
+                               "TCRbeta",
+                               "TCRBset",
+                               "Clust_TCRset",
+                               "orig.ident")]
+
+write.csv(SOcolTCRdf,file.path(colonTCRdirs[["table"]],
+                               paste("Colon_Subclustering_TCRIDs_",
+                               today,
+                               ".csv",
+                               sep=""))
+)
+
+# Reset idents
+Idents(object=SOcol) <- "Clust_TCRset"
+
+testclust<-levels(SOcol@meta.data$seurat_clusters)
+
+DE_TCRsetcol<-list()
+for( i in testclust){
+identsuse<-levels(Idents(SOcol))[grep(paste("^",i,"_TCR",sep=""),
+                                     levels(Idents(SOcol)))]
+DE_TCRsetcol[[i]]<-FindMarkers(SOcol,
+                            ident.1 = identsuse[2],
+                            ident.2 = identsuse[1],
+                            only.pos=F,
+                            min.pct=0.25,
+                            logfc.threshold=0.25)
+}
+
+
+
+names(DE_TCRsetcol) <- paste("Cluster_",
+                                   testclust,
+                                   "_TCRset_vs_nonSet_",
+                                   sep="")
+
+
+
+#DE_TCRsetcol[[i]]$sel<-
+
+
+## DEresfunction
+colonTCRdirs <- lapply(dirslist,function(x) dircreatefun(x,"sub_cluster_colonTCR"))
+names(colonTCRdirs) <- c("data","vis","table")
+
+source("scAnalysis_function2_b.R")
+library("WriteXLS")
+for( l in 1:length(DE_TCRsetcol)){
+DEresfun(datset=DE_TCRsetcol[[l]],
+         namedatset=names(DE_TCRsetcol)[l],
+         tablepath=colonTCRdirs[["table"]],
+         vispath=colonTCRdirs[["vis"]],
+         dayuse=today,dbs=NULL,fgseafdr=0.05)}
+
+#########################################################
+# Tissue comparison Colon
+
+
+# Reset idents
+Idents(object=SOcol) <- "TCRBset"
+
+
+i="colon"
+DE_TCRsetcol<-list()
+identsuse<-levels(Idents(SOcol))
+DE_TCRsetcol[[i]]<-FindMarkers(SOcol,
+                            ident.1 = identsuse[2],
+                            ident.2 = identsuse[1],
+                            only.pos=F,
+                            min.pct=0.25,
+                            logfc.threshold=0)
+
+sel<-FindMarkers(SOcol,
+                            ident.1 = identsuse[2],
+                            ident.2 = identsuse[1],
+                            only.pos=F,
+                            min.pct=0.25,
+                            logfc.threshold=0.25)
+DE_TCRsetcol[[i]]$sel<-0
+DE_TCRsetcol[[i]][rownames(sel),"sel"]<-1
+
+indx<-grep(i,names(DE_TCRsetcol))
+names(DE_TCRsetcol)[indx] <- paste(i,
+                                   "_TCRBset_vs_nonSet_",
+                                   sep="")
+rm(indx)
+
+source("scAnalysis_function2_b.R")
+library("WriteXLS")
+for( l in 1:length(DE_TCRsetcol)){
+DEresfun(datset=DE_TCRsetcol[[l]],
+         namedatset=names(DE_TCRsetcol)[l],
+         tablepath=colonTCRdirs[["table"]],
+         vispath=colonTCRdirs[["vis"]],
+         dayuse=today,dbs=NULL,fgseafdr=0.05)}
+
+```
+
+
+## Fig7f Colon Volcano Plot Pvalue TCRBset vs TCRBnonset
+
+```{r VolcanoColTCRBsetvsTCRBnonset,eval=T,echo=F}
+####################
+## Fig 7f Pvalue
+## Volcano plot
+############
+
+fdr=0.05
+#BiocManager::install("EnhancedVolcano",lib=libs)
+
+library('EnhancedVolcano',lib.loc=libs)
+for(j in 1:length(DE_TCRsetcol)){
+
+## save data
+    datXLS=DE_TCRsetcol[[j]]
+    datXLS$gene_names<-rownames(datXLS)
+    datXLS<-datXLS[,unique(c("gene_names",colnames(datXLS)))]
+    colnames(datXLS)[grep("sel",colnames(datXLS))]<-"logfc.threshold=0.25"
+   WriteXLS(datXLS,
+            ExcelFileName=file.path(colonTCRdirs[["table"]],
+            paste("DEgenes_Volc",
+                  names(DE_TCRsetcol)[j],
+                  today,
+                  ".xlsx",sep="")),
+                   row.names=FALSE)
+ 
+   write.table(datXLS,
+            file=file.path(colonTCRdirs[["table"]],
+            paste("DEgenes_Volc",
+                  names(DE_TCRsetcol)[j],
+                  today,
+                  ".tsv",sep="")),
+                   row.names=FALSE,
+                   quote=F,sep="\t")
+
+datpl<-as.data.frame(DE_TCRsetcol[[j]])
+markgenes<-rownames(datpl[datpl$sel==1,])
+names(markgenes)<-markgenes
+
+    ylim<-c(0,40)
+    xlim<-c(-1,1)
+    
+    summary(datpl[which(datpl$p_val_adj<fdr),"p_val"])
+    pvaluethres<-(-log10(max(datpl[which(datpl$p_val_adj<fdr),"p_val"])))
+    log2FCthres<-0.25
+    datpl$pvalplot<-(-log10(datpl$p_val))
+    triangle<-datpl$pvalplot>ylim[2]
+    datpl$pvalplot[triangle]<-ylim[2]
+    circle1<-datpl$avg_log2FC>xlim[2]
+    circle2<-datpl$avg_log2FC<xlim[1]
+    datpl$avg_log2FC[circle1]<-xlim[2]
+    datpl$avg_log2FC[circle2]<-xlim[1]
+    datpl$shape<-16
+    datpl$shape[triangle]<-6
+    datpl$shape[circle1]<-1
+    datpl$shape[circle2]<-1
+    datpl$col<-"grey"
+    datpl$col[abs(datpl$avg_log2FC)>log2FCthres&datpl$pvalplot>pvaluethres]<-"lightblue"
+                        
+    dattext<-datpl[markgenes,]    
+    datpl$col[which(rownames(datpl)%in%markgenes)]<-"green"
+    #install.packages("ggrepel",lib=libs)
+    library("ggrepel",lib.loc=libs)
+    pd<-ggplot(datpl,aes(x=avg_log2FC,y=pvalplot))+
+        geom_point(col=datpl$col,shape=datpl$shape)+
+        geom_hline(yintercept=pvaluethres,linetype="dotdash")+
+        geom_vline(xintercept=range(-log2FCthres,log2FCthres),linetype="dotdash")+
+        geom_text_repel(data=dattext,aes(x=avg_log2FC,y=pvalplot,label=rownames(dattext)),size=3)+
+        xlim(xlim)+
+        labs(x=expression(Log["2"]*"fold change"),y=expression(-Log["10"]*"Pvalue"))+
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour = "black"))
+    print(pd)
+    ggsave(file.path(colonTCRdirs[["vis"]],paste("Volc_pval_",names(DE_TCRsetcol)[1],today,".pdf",sep="")),pd)
+    #rm(pd)
+}
+
+```
+
+## Volcanoplot Fig7fpadj Colon Volcano Plot TCRBset vs TCRBnonset
+
+```{r VolcanoColTCRBsetvsTCRBnonset_pval,eval=T,echo=F}
+fdr=0.05
+#BiocManager::install("EnhancedVolcano",lib=libs)
+
+library('EnhancedVolcano',lib.loc=libs)
+for(j in 1:length(DE_TCRsetcol)){
+
+## save data
+    datXLS=DE_TCRsetcol[[j]]
+   WriteXLS(datXLS,
+            ExcelFileName=file.path(colonTCRdirs[["table"]],
+            paste("DEgenes_Volc",
+                  names(DE_TCRsetcol)[j],
+                  today,
+                  ".xlsx",sep="")),
+                   row.names=TRUE)
+
+datpl<-as.data.frame(DE_TCRsetcol[[j]])
+markgenes<-rownames(datpl[datpl$sel==1,])
+names(markgenes)<-markgenes
+
+    ylim<-c(0,40)
+    xlim<-c(-1,1)
+    
+    summary(datpl[which(datpl$p_val_adj<fdr),"p_val"])
+    pvaluethres<--log10(fdr)#(-log10(max(datpl[which(datpl$p_val_adj<fdr),"p_val"])))
+    log2FCthres<-0.25
+    datpl$pvalplot<-(-log10(datpl$p_val_adj))
+    triangle<-datpl$pvalplot>ylim[2]
+    datpl$pvalplot[triangle]<-ylim[2]
+    circle1<-datpl$avg_log2FC>xlim[2]
+    circle2<-datpl$avg_log2FC<xlim[1]
+    datpl$avg_log2FC[circle1]<-xlim[2]
+    datpl$avg_log2FC[circle2]<-xlim[1]
+    datpl$shape<-16
+    datpl$shape[triangle]<-6
+    datpl$shape[circle1]<-1
+    datpl$shape[circle2]<-1
+    datpl$col<-"grey"
+    datpl$col[abs(datpl$avg_log2FC)>log2FCthres&datpl$pvalplot>pvaluethres]<-"lightblue"
+                        
+    dattext<-datpl[markgenes,]    
+    datpl$col[which(rownames(datpl)%in%markgenes)]<-"green"
+    #install.packages("ggrepel",lib=libs)
+    library("ggrepel",lib.loc=libs)
+    pd<-ggplot(datpl,aes(x=avg_log2FC,y=pvalplot))+
+        geom_point(col=datpl$col,shape=datpl$shape)+
+        geom_hline(yintercept=pvaluethres,linetype="dotdash")+
+        geom_vline(xintercept=range(-log2FCthres,log2FCthres),linetype="dotdash")+
+        geom_text_repel(data=dattext,aes(x=avg_log2FC,y=pvalplot,label=rownames(dattext)),size=3)+
+        xlim(xlim)+
+        labs(x=expression(Log["2"]*"fold change"),y=expression(-Log["10"]*"Padj"))+
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour = "black"))
+    print(pd)
+    ggsave(file.path(colonTCRdirs[["vis"]],paste("Volc_padj_",names(DE_TCRsetcol)[1],today,".pdf",sep="")),pd)
+    #rm(pd)
+
+
+
+```
+
+## QC pval histogramm
+
+
+```{r QCpval,eval=F,echo=F}
+for(i in names(DE_TCRset)){
+    pdf(file=file.path(vispath,
+                       paste("QC_PvalHist_DE_",
+                             i,
+                             today,
+                             ".pdf",
+                             sep="")
+                       )
+       )
+    hist(DE_TCRset[[i]]$p_val)
+    dev.off()
+}
+
+
+#    ggsave(pd,file=file.path(vispath,paste("TRBV_colon_",today,".pdf")),device="pdf")
+#    WriteXLS(as.data.frame(datu),
+#             ExcelFileName=file.path(tablepath,
+#                                     paste("TRBV_colon_",today,".xlsx")))
+
+# Output of DE results and enrichR and fgsea
+
+
+
+for (k in names(DE_TCRset)){
+    print(k)
+    DEresfun(datset=DE_TCRset[[k]],
+             namedatset=k,
+             tablepath=tablepath,
+             vispath=vispath,
+             dayuse=today,
+             dbs=NULL)}
+    
+
+
+
+pd<-FeaturePlot(SOcol,feature="")+featscale
+
+
+    ggsave(filename=file.path(vispath,
+                          paste("Colon_Feat_TCRBset",
+                                "_",
+                                today,
+                                ".pdf",
+                                sep="")),
+       plot=pd,
+       #width=12,
+       #height=7,
+       #unit="cm",
+       device="pdf")
+    
+
+
+
+
+```
+
+## Slingshot analysis
+
+```{r Slingshot, eval=F,echo=F}
+library(Slingshot,lib=libs)
+library("SingleCellExperiment")
+## transform into SingleCellExperiemnt
+# https://satijalab.org/seurat/archive/v3.1/conversion_vignette.html
+
+SObj.sce<-as.SingleCellExperiment(SObj)
+
+
+## perform slingshot analysis: Trajectory inference for singlecell data
+# https://bioconductor.org/packages/release/bioc/vignettes/slingshot/inst/doc/vignette.html
+
+## Gene Filtering
+## remove uninteresting genes, speed up analyis
+#geneFilter <- apply(assays(SObj.sce)$counts,1,function(x){
+#                            sum(x >= 3) >= 10
+#       })
+#SObj.sce <- SObj.sce[geneFilter, ]
+
+
+## Normalisation
+# There are different methods mentioned here, ZINB-WaVE, MNN,QuantileNormalisation=FQnorm
+# will use the logcounts
+# lognormalization is fine
+# https://github.com/ncborcherding/ccRCC/blob/master/CD4.Tcells.Rmd
+
+# calculating slingshot trajectory based on UMAP embeddings
+# it does use 
+# source:https://kstreet13.github.io/bioc2020trajectories/articles/workshopTrajectories.html
+
+# calculate imbalance score
+
+
+# slingshot function
+slingshotfun<-function(data,outname,datpath){
+dfsling<-data.frame(data@reductions$umap@cell.embeddings,
+                    data@meta.data[,c("tissueidents","seurat_clusters")])
+
+
+sds <- slingshot(as.matrix(dfsling[,1:2]), clusterLabels =as.character(dfsling$seurat_clusters), allow.breaks = TRUE, stretch = 0) #Calcualting the trajectory
+
+outfilesds <- file.path(datpath,paste("SlingObj_",outname,"_",projID,"_",today,".rds",sep=""))
+saveRDS(sds,outfilesds)
+}
+
+
+
+## colon data set
+SObjfin<-subset(x=SObj,subset=(tissueidents=="colon"))
+slingshotfun(SObjfin,outname="colon",datpath=datapath)
+rm(SObjfin)
+
+## full dataset without cluster 9 and 12
+SObjfin<-subset(x=SObj,subset=seurat_clusters%in%c(0:8,10,11))
+slingshotfun(SObjfin,outname="wo_cl9cl12",datpath=datapath)
+rm(SObjfin)
+
+## liverspleen
+
+SObjfin<-subset(x=SObj,subset=(tissueidents%in%c("liver","spleen")))
+slingshotfun(SObjfin,outname="liver_spleen",datpath=datapath)
+rm(SObjfin)
+
+
+
+#summary(sds$slingPseudotime_1)
+
+
+flssling<-list.files(datapath,pattern="SlingObj")
+flssling<-file.path(datapath,flssling)
+names(flssling)<-sub("_p036_11_02_2022.rds","",sub("SlingObj_","",basename(flssling)))
+
+```
+
+# plotting the data
+In order to visualize the UMAP with the computed trajectories overlaid, we need a quick function cell_pal and then can assign cluster colors by using the scales *hue_pal()* function.
+
+```{r plotslingshot,eval=F,echo=F}
+
+library(scales)
+#Making plots more siminmar to ggplot outputs of Seurat
+cell_pal <- function(cell_vars, pal_fun,...) {
+      if (is.numeric(cell_vars)) {
+              pal <- pal_fun(100, ...)
+    return(pal[cut(cell_vars, breaks = 100)])
+      } else {
+              categories <- sort(unique(cell_vars))
+        pal <- setNames(pal_fun(length(categories), ...), categories)
+            return(pal[cell_vars])
+          }
+}
+
+
+#We need color palettes Leiden clusters. These would be the same colors seen in the Seurat plots.
+
+sl="liver_spleen"    
+sds<-readRDS(flssling[sl])
+SObjfin<-subset(x=SObj,subset=(tissueidents%in%c("liver","spleen")))
+
+cell_colors_clust <- cell_pal(Idents(SObjfin), hue_pal())
+pdf(file.path(vispath,paste("Slingshot_Trajectory_seurat_clusters_",sl,"_",today,".pdf",sep="")),height=6,width=6)
+plot(reducedDim(sds), col = cell_colors_clust, pch = 16, cex = 0.25)
+lines(sds, lwd = 2, type = 'lineages', col = 'black')
+dev.off()
+
+
+pdf(file.path(vispath,paste("Slingshot_Trajectory2_seurat_clusters_",sl,"_",today,".pdf",sep="")),height=6,width=6)
+plot(reducedDim(sds), col = cell_colors_clust, pch = 16, cex = 0.5)
+lines(sds, lwd = 2, col = 'black')
+dev.off()
+
+
+sl="colon"
+sds<-readRDS(flssling[sl])
+SObjfin<-subset(x=SObj,subset=(tissueidents=="colon"))
+
+cell_colors_clust <- cell_pal(Idents(SObjfin), hue_pal())
+pdf(file.path(vispath,paste("Slingshot_Trajectory_seurat_clusters_",sl,"_",today,".pdf",sep="")),height=6,width=6)
+plot(reducedDim(sds), col = cell_colors_clust, pch = 16, cex = 0.25)
+lines(sds, lwd = 2, type = 'lineages', col = 'black')
+dev.off()
+
+
+pdf(file.path(vispath,paste("Slingshot_Trajectory2_seurat_clusters_",sl,"_",today,".pdf",sep="")),height=6,width=6)
+plot(reducedDim(sds), col = cell_colors_clust, pch = 16, cex = 0.5)
+lines(sds, lwd = 2, col = 'black')
+dev.off()
+
+
+
+sl="wo_cl9cl12"
+sds<-readRDS(flssling[sl])
+SObjfin<-subset(x=SObj,subset=seurat_clusters%in%c(0:8,10,11))
+
+
+cell_colors_clust <- cell_pal(Idents(SObjfin), hue_pal())
+pdf(file.path(vispath,paste("Slingshot_Trajectory_seurat_clusters_",sl,"_",today,".pdf",sep="")),height=6,width=6)
+plot(reducedDim(sds), col = cell_colors_clust, pch = 16, cex = 0.25)
+lines(sds, lwd = 2, type = 'lineages', col = 'black')
+dev.off()
+
+
+pdf(file.path(vispath,paste("Slingshot_Trajectory2_seurat_clusters_",sl,"_",today,".pdf",sep="")),height=6,width=6)
+plot(reducedDim(sds), col = cell_colors_clust, pch = 16, cex = 0.5)
+lines(sds, lwd = 2, col = 'black')
+dev.off()
+
+
+
+
+
+
+
+library(grDevices)
+
+colors <- colorRampPalette(brewer.pal(11,'Spectral')[-6])(100)
+plotcol <- colors[cut(sds$slingPseudotime_1, breaks=100)]
+
+pdf(file.path(vispath,paste("Slingshot_Trajectory_seurat_clusters_",sl,"_",today,".pdf",sep="")))
+plot(sds@reducedDim, col = plotcol, pch=16, asp = 1)
+for (i in 1:length(slingPseudotime(sds)[1,])){
+lines(sds), lwd=2, col='black')
+dev.off()
+
+
+
+
+```
+## RNA Velocity analysis was performed using Kallisto Bustools
+
+following: [Basil Khuder](https://github.com/basilkhuder/Seurat-to-RNA-Velocity)
+
+
+
+
+## Session Info
+
+```{r eval=T,echo=F}
+sessionInfo()
+```
