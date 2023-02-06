@@ -35,8 +35,6 @@ bibliography: reference/DeSeq_Nstrieder_kbibtex.bib
 
 #load data
 source("loadLibandObjects_Seurat4.1.0.R")
-# manuscript:https://docs.google.com/document/d/1HG4pGL0HiG7bKwuAnsq6ltiT4FouCfmX/edit
-# supplement:https://drive.google.com/file/d/1jqPpfmW1-VzccS6PfBl4CiW-Zp9zJeoi/view?usp=sharing
 
 ```
 
