@@ -85,11 +85,47 @@ Contains R markdown scripts (*.rmd) that are rendered as part of the analyses co
 
 <h2 id="scRNA">3. scRNAseq_analyses</h2>
 
-Description provided by Nick....
+
+The code for processing and analysis of the scRNA data and scTCR data mapped to scRNA data is provided in a bash script, which either call to .R or .Rmd scripts for analyses, or directly by .Rmd scripts.
+The following figures are covered:  
+
+* **Figure 6 a-d**
+* **Figure 6 g-h**
+* **Supplementary Figure 6 a-f**
+* **Figure 7 a-f**
+* **Supplementary Figure 7 a-b**
+
+<h4>RcallDoubletfinder.R</h4>
+Removing of doublets per dataset.
+Depends on: `helperscripts/scAnalysis/.`
+
+* cellranger_doublets.csv
+* doubletFinder.R
+* elbowPoint.R
+* doubletFinder.html (example plus session info)	 
+* doubletFinder.Rmd
+* ElbPlxy.txt
+
+
+<h4>Analysis_Seurat_20210212_S4_noDoub_fin.Rmd</h4>
+Primary processing of data processed through `doubletfinder`, QC, quality filtering and clustering of 10x data processed by cellranger count. Depends on `scAnalysis_function2_b.R` to load functions.
+
+
+<h4>Analysis_Seurat_20210212_S4_noDoub_Pub_fin.Rmd</h4>
+Code for figures of the publication, merging with scTCR data and clustering and figures of the colon subset of the data. Depends on `loadLibandObjects_Seurat3.1.0.R` and `scAnalysis_function2_b.R` to load libraries,functions and .rds data object.
+
+
+<h4>RNAvelocity</h4>
+Code for primary processing of scRNA data for RNA velocity analysis and figure creation:
+
+* environment_kb-python_0.26.4.yml (conda environment)
+* kb_tools_RNAVelocityanalysis.ipynb (kb_tools_RNAVelocityanalysis.py)
+* velofigure.sh (depends on: `scVelo.py`) 
+
 
 <h2 id="scTCR">4. scTCRseq_analyses</h2>
 
-The code for processing and analysis of the TCR data is provided in a bash script, which either call perl or R scripts for analyses and plotting and xxxx (Nick to fill in here).
+The code for processing and analysis of the TCR data is provided in a bash script, which either call perl or R scripts for analyses.
 The following figures are covered:  
 
 * **Figure 6 e-i**
