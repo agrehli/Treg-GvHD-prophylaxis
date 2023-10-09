@@ -18,50 +18,84 @@ knitr::write_bib(.packages(), "Figure1c_TregExpansion-TCRdiversity_TRB.packages.
 
 This Rscript is called in the CommandsB07_bulkTCR_TregExpansion.sh script 
 
-## Figure showing TRB TCR diversities of allo and poly Treg expansion cultures compared to d0 Treg isolated from spleen
+# Figure showing TRB TCR diversities of allo and poly Treg expansion cultures compared to d0 Treg isolated from spleen
 
 R packages
 
 ```{r, warning=FALSE, message=FALSE}
-library("immunarch")
+library(tidyverse)
+library(immunarch)
+library(PMCMRplus) 
+library(car)
 ```
 
-data loading
+**Data loading**
 
 ```{r, warning=FALSE, message=FALSE}
 file_path = "./MixcrData/Treg_TRB_donors_merged"
 immdata <- repLoad(file_path)
 ```
 
-extracting clone counts
+**Extracting clone counts**
 
 ```{r}
 exp_umi <- repExplore(immdata$data, .method = "clones")
 exp_umi
 ```
 
-calculating diversity (Simpson Index)
+# Calculating diversity (Simpson Index)
 
 ```{r}
 down <- repSample(immdata$data, .method = "downsample")
 sapply(down, nrow)
 div_simp <- repDiversity(down, "inv.simp")
 div_simp$Type <- c(rep("adonor",6),rep("allo",6),rep("poly",6))
+div_simp$Type <- as.factor(div_simp$Type)
 div_simp
 ```
 
-generating the plot for Figure 1C
+**Statistics**
+
+running statistical testing 
+homogeneity of variance assumption: levene
+normality assumpttion: shapiro
+
+```{r}
+shapiro.test(div_simp$Value[1:6]) 						 # n.s.
+shapiro.test(div_simp$Value[7:12])						 # n.s.
+shapiro.test(div_simp$Value[13:18])            # n.s.
+div_simp.aov <- aov(Value~Type, data=div_simp)
+summary (div_simp.aov)
+```
+
+```{r}
+TukeyHSD(div_simp.aov)
+```
+                  diff       lwr        upr     p adj
+allo-adonor -20039.809 -24328.42 -15751.199 0.0000000
+poly-adonor  -7450.588 -11739.20  -3161.978 0.0011302
+poly-allo    12589.221   8300.61  16877.831 0.0000044
+
+
+## generating the plot for Figure 1C
 
 ```{r, fig.width=1.75, fig.height=3}
-p <- ggplot(div_simp , aes(Type, Value, fill=Type)) 
-p <- p + theme_classic() + theme(panel.grid.major.y = element_line(linetype="dashed", color = "gray")) + theme(legend.position = "none")
-p <- p + geom_bar(stat = "summary", fun = "mean", colour="black", size = .5) 
-p <- p + scale_fill_manual(values = c("gray50", "orange", "steelblue"))
-p <- p + ggtitle("TRA Clonotype\nDiversity",subtitle = "downsampled (n=33K)") + ylim(0,25000)
-p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(1), dotsize=2.0, colour="black", binwidth=500) 
-p <- p + stat_summary(fun.data = mean_se, geom = "errorbar", width=.6)
-p <- p + theme(axis.text = element_text(size=12, colour="black"), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-p <- p + ylab("Inverse Simpson index") + xlab("")
+p <- ggplot(div_simp , aes(Type, Value, fill=Type)) +
+      theme_classic() + theme(panel.grid.major.y = element_line(linetype="dashed", color = "gray")) + theme(legend.position = "none") +
+      geom_bar(stat = "summary", fun = "mean", colour="black", size = .5) +
+      scale_fill_manual(values = c("gray50", "orange", "steelblue")) +
+      ggtitle("TRB Clonotype\nDiversity",subtitle = "downsampled (n=33K)") + ylim(0,28000) +
+      scale_y_continuous(breaks = seq(0, 25000, by = 5000)) +
+      geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(1), dotsize=2.0, colour="black", binwidth=500) +
+      stat_summary(fun.data = mean_se, geom = "errorbar", width=.6) +
+      theme(axis.text = element_text(size=12, colour="black"), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+      ylab("Inverse Simpson index") + xlab("") +
+      annotate("segment", x = 1, y = 25000, xend = 2, yend = 25000) +
+      annotate("segment", x = 1, y = 28000, xend = 3, yend = 28000) +
+      annotate("segment", x = 2, y = 22000, xend = 3, yend = 22000) +
+      annotate("text", x = 1.5, y = 25500, label = "***", size = 4) +
+      annotate("text", x = 2, y = 28500, label = "**", size = 4) +
+      annotate("text", x = 2.5, y = 22500, label = "***", size = 4)
 p
 pdf(file="./figures/Treg_TRB_donors_merged_diversity_invSimp_33K.pdf", height=3, width=1.75)
 p

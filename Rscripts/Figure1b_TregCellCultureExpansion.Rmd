@@ -35,7 +35,32 @@ data <- gather(table.exp, key = "timepoint", value = "counts", d0, d7, d12)
 data$timepoint <- factor(data$timepoint,levels = c("d0","d7","d12"))
 ```
 
-generating the plot for Figure 1B
+t-test d7
+
+```{r}
+d7.data <- subset(data, timepoint == "d7")
+# check validity first (Shapiro)
+shapiro.test(d7.data$counts[1:12]) 						 # n.s.
+shapiro.test(d7.data$counts[13:24]) 					 # n.s.
+# t-test
+d7.data.test <- t.test(counts~type, data=d7.data, var.equal = TRUE)
+d7.data.test
+```
+
+t-test d12
+
+```{r}
+d12.data <- subset(data, timepoint == "d12")
+# check validity first (Shapiro)
+shapiro.test(d12.data$counts[1:12]) 						 # n.s.
+shapiro.test(d12.data$counts[13:24]) 						 # n.s.
+# t-test
+d12.data.test <- t.test(counts~type, data=d12.data, var.equal = TRUE)
+d12.data.test
+```
+
+
+## generating the plot for Figure 1B
 
 ```{r, fig.width=3.2, fig.height=2.5}
 p <- ggplot(data, aes(x=timepoint, y=counts, color=type, fill=type, group=experiment))
@@ -47,6 +72,9 @@ p <- p + scale_fill_manual(values = c("darkorange2","steelblue"))
 p <- p + geom_line()
 p <- p + geom_point(shape = 21, colour = "black")
 p <- p + labs(title="Treg expansion",x="days in culture", y = "x-fold expansion")
+p <- p + annotate("text", x = 2, y = 30, label = "***", size = 4)
+p <- p + annotate("text", x = 3, y = 90, label = "***", size = 4)
+
 p
 pdf("./figures/TregExpansionExp.pdf", height=2.5, width=3.2)
 p

@@ -1,0 +1,66 @@
+---
+title: "FigureRev_addTregFACSstains"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::write_bib(.packages(), "FigureRev_addTregFACSstains.packages.bib")
+```
+
+## Bar charts showing the percentage of positive cells in allo and poly Treg expansion cultures
+
+R packages
+
+```{r, message=FALSE, warnings=FALSE}
+library(tidyr)
+library(ggplot2)
+library(scales)
+```
+
+### data FoxP3
+
+```{r}
+Facs.data <- read.delim("./data/AddFacsData.txt", header=TRUE)
+Facs.data$type <- factor(Facs.data$type,levels = c("ivExp","BM","Spleen","Liver","mLN","Colon"))
+Facs.data$exp <- factor(Facs.data$exp,levels = c("allo","poly"))
+Facs.data$marker <- factor(Facs.data$marker,levels = c("Ki-67","CD62L+","CCR9+","CD103+","LPAM-1+","KLRG-1+"))
+```
+
+
+```{r, fig.width=12.5, fig.height=3.5}
+p <- ggplot(Facs.data, aes(x=type, y=count, fill=exp)) + coord_cartesian(ylim = c(0,100))
+p <- p + stat_summary(fun = mean, geom = "bar", position = "dodge")
+p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=5, stackratio = .5, binwidth=.75) 
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), 
+                            panel.grid.minor = element_blank(),
+                            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), 
+                            text = element_text(size = 24))
+p <- p + scale_fill_manual(values = c("darkorange2","steelblue"))
+p <- p + scale_y_continuous(expand=c(0,0))
+p <- p + labs(x="", y="% pos. among Treg")
+p <- p + facet_wrap(~marker, nrow=1)
+
+p
+pdf("./figures/Stains_percentPos.pdf", height=3.5, width=12.5)
+p
+dev.off()
+```
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureRev_addTregFACSstains_SessionInfo.txt")
+```
+
+
+

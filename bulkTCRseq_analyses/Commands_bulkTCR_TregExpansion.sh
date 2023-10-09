@@ -20,7 +20,7 @@ DIR_SOFT="/misc/software"
 
 # setting homer environment
 
-PATH_R=${DIR_SOFT}/package/RBioC/stretch_R-4.0.3_Bioc-3.12_intel-mkl-64bit-2020.1-102/lib/R/bin
+PATH_R=${DIR_SOFT}/package/RBioC/buster_R-4.0.3_Bioc-3.12_intel-mkl-64bit-2020.1-102/lib/R/bin
 export PATH=${PATH_R}:${PATH}
 #export PATH
 

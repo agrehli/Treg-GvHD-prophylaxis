@@ -52,11 +52,11 @@ TAB=$(echo -e "\t")
 
 # creating directories
 
-mkdir -p ${WORKDIR_scTCR}/figures
+mkdir -p ${WORKDIR_scTCR}/figures/downsampled
 mkdir ${CRDATA}
 mkdir ${CRDATATRB}
-mkdir -p ${IADATA}/reformated
-mkdir ${ANALYSISDIR}
+mkdir -p ${IADATA}/reformated/downsampled
+mkdir -p ${ANALYSISDIR}/downsampled
 mkdir ${CRDATACSUB}
 
                           ###############################
@@ -134,17 +134,51 @@ EOF
 
 # extract data tables after import into immunarch
 
+# downsampling to prophylaxis numbers
+#           thr     pro
+# donor:    4190    13667  
+# colon :   3029    12482   
+# spleen:   3328    12989
+# liver:    3618     8627
+
+cd ${DATAREFORM}
+
+# number of clones in each sample
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.adonor_1.pairedChainsOnly.txt #3172
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.adonor_2.pairedChainsOnly.txt #10495
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.colon_1.pairedChainsOnly.txt #4607
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.colon_2.pairedChainsOnly.txt #4021
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.colon_3.pairedChainsOnly.txt #3854
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.liver_1.pairedChainsOnly.txt #3409
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.liver_2.pairedChainsOnly.txt #2907
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.liver_3.pairedChainsOnly.txt #2311
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.spleen_1.pairedChainsOnly.txt #4375
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.spleen_2.pairedChainsOnly.txt #4779
+awk -F'\t' '{sum+=$2;} END{print sum;}' scTCR_IAcountTable.spleen_3.pairedChainsOnly.txt #3835
+
+
+# include downsampling to therapy-samples (output 3 random drawings)
+declare a CLONES=(1118 1430 1121 976 1219 1224 935 969 983 3218 972)
+COUNT=0
 _DATE=$(date +%s)
 cat >"${TMPDIR}/R.immunarch.${_DATE}.R" <<EOF
 library("immunarch")
 file_path = "${CRDATA}"
 immdata <- repLoad(file_path)
 EOF
-for NAME in ${NAMES[@]}
-do
+for NAME in ${NAMES[@]}; do
+CLONE=${CLONES[$COUNT]}
 cat >>"${TMPDIR}/R.immunarch.${_DATE}.R" <<EOF
 write.table(immdata\$data\$${NAME}, file = "${IADATA}/${NAME}.immunarch.txt", sep = "\t", col.names=NA, quote=FALSE)
+tmp <- immdata\$data\$${NAME} %>% dplyr::filter(chain == "TRA;TRB")
+${NAME} <- repSample(tmp, .n = $CLONE)
+write.table(${NAME}, file = "${IADATA}/${NAME}.immunarch.pdown1.txt", sep = "\t", col.names=NA, quote=FALSE)
+${NAME} <- repSample(tmp, .n = $CLONE)
+write.table(${NAME}, file = "${IADATA}/${NAME}.immunarch.pdown2.txt", sep = "\t", col.names=NA, quote=FALSE)
+${NAME} <- repSample(tmp, .n = $CLONE)
+write.table(${NAME}, file = "${IADATA}/${NAME}.immunarch.pdown3.txt", sep = "\t", col.names=NA, quote=FALSE)
 EOF
+COUNT=$((COUNT+=1))  
 done
 R < "${TMPDIR}/R.immunarch.${_DATE}.R"  --no-save
 rm "${TMPDIR}/R.immunarch.${_DATE}.R"
@@ -156,6 +190,14 @@ for NAME in ${NAMES[@]}
 do
 scTCRparseImmunArch.pl ${IADATA}/${NAME}.immunarch.txt ${DATAREFORM} ${NAME}
 done
+
+for NAME in ${NAMES[@]}
+do
+scTCRparseImmunArch.pl ${IADATA}/${NAME}.immunarch.pdown1.txt ${DATAREFORM}/downsampled ${NAME}.pdown1
+scTCRparseImmunArch.pl ${IADATA}/${NAME}.immunarch.pdown2.txt ${DATAREFORM}/downsampled ${NAME}.pdown2
+scTCRparseImmunArch.pl ${IADATA}/${NAME}.immunarch.pdown3.txt ${DATAREFORM}/downsampled ${NAME}.pdown3
+done
+rm ${DATAREFORM}/downsampled/*.pairedChainsOnly.txt # removes duplicated files  
 
 
                           ###############################
@@ -212,12 +254,123 @@ scTCRCirculizeFreq4Samples.pl scTCRxTregDCLS.clonotypeTable.groups.txt \
 -colors 255,0,0 160,82,45 70,130,180 255,20,147 \
 -shortNames donor colon liver spleen -dvt 2>/dev/null
 
+# ran same analysis with exactly paired clonotypes 
+
+cd ${DATAREFORM}
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR} scTCRxTregDCLS.pairedChainsOnly \
+-mergeFiles \
+scTCR_IAcountTable.adonor_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.adonor_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.colon_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.colon_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.colon_3.pairedChainsOnly.txt \
+scTCR_IAcountTable.liver_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.liver_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.liver_3.pairedChainsOnly.txt \
+scTCR_IAcountTable.spleen_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.spleen_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.spleen_3.pairedChainsOnly.txt \
+-sampleNames \
+donor1 \
+donor2 \
+colon1 \
+colon2 \
+colon3 \
+liver1 \
+liver2 \
+liver3 \
+spleen1 \
+spleen2 \
+spleen3 \
+-groupNames \
+donor \
+donor \
+colon \
+colon \
+colon \
+liver \
+liver \
+liver \
+spleen \
+spleen \
+spleen 
+
+# Circos plots (devided)
+
+cd ${ANALYSISDIR}
+scTCRCirculizeFreq4Samples.pl scTCRxTregDCLS.pairedChainsOnly.clonotypeTable.groups.txt \
+-name scTCRxTregDCLS.pairedChainsOnly.groups \
+-outDir ${FIGURESDIR} \
+-colors 255,0,0 160,82,45 70,130,180 255,20,147 \
+-shortNames donor colon liver spleen -dvt 2>/dev/null
+
+
+# downsampled to prophylaxis (three versions)
+
+# creating merged count table
+
+for i in {1..3} ; do
+
+cd ${DATAREFORM}/downsampled
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR}/downsampled scTCRxTregDCLS.pdown${i} \
+-mergeFiles \
+scTCR_IAcountTable.adonor_1.pdown${i}.txt \
+scTCR_IAcountTable.adonor_2.pdown${i}.txt \
+scTCR_IAcountTable.colon_1.pdown${i}.txt \
+scTCR_IAcountTable.colon_2.pdown${i}.txt \
+scTCR_IAcountTable.colon_3.pdown${i}.txt \
+scTCR_IAcountTable.liver_1.pdown${i}.txt \
+scTCR_IAcountTable.liver_2.pdown${i}.txt \
+scTCR_IAcountTable.liver_3.pdown${i}.txt \
+scTCR_IAcountTable.spleen_1.pdown${i}.txt \
+scTCR_IAcountTable.spleen_2.pdown${i}.txt \
+scTCR_IAcountTable.spleen_3.pdown${i}.txt \
+-sampleNames \
+donor1 \
+donor2 \
+colon1 \
+colon2 \
+colon3 \
+liver1 \
+liver2 \
+liver3 \
+spleen1 \
+spleen2 \
+spleen3 \
+-groupNames \
+donor \
+donor \
+colon \
+colon \
+colon \
+liver \
+liver \
+liver \
+spleen \
+spleen \
+spleen 
+
+cd ${ANALYSISDIR}/downsampled
+scTCRCirculizeFreq4Samples.pl scTCRxTregDCLS.pdown${i}.clonotypeTable.groups.txt \
+-name scTCRxTregDCLS.pdown${i}.groups \
+-outDir ${FIGURESDIR}/downsampled \
+-colors 255,0,0 160,82,45 70,130,180 255,20,147 \
+-shortNames donor colon liver spleen -dvt 2>/dev/null
+
+done
+
+
+
+
+
+
 
 
 
                       ####################################
                       #  Overlap via barycentric plots   #
                       ####################################
+
 
 cd ${DATAREFORM}
 scTCRcreateJoinedCountTable.pl ${ANALYSISDIR} scTCRxTregCLS -norm 5 \
@@ -298,6 +451,191 @@ spleen3
 
 cd ${ANALYSISDIR}
 scTCRtriangle.pl scTCRcountTable.scTCRxTregS.norm5K.txt ${FIGURESDIR} scTCRxTregS.norm5K -top 250 -color deeppink
+
+
+
+
+
+# ran same analysis with exactly paired clonotypes 
+
+cd ${DATAREFORM}
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR} scTCRxTregCLS.pairedChainsOnly -norm 5 \
+-mergeFiles \
+scTCR_IAcountTable.colon_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.colon_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.colon_3.pairedChainsOnly.txt \
+scTCR_IAcountTable.liver_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.liver_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.liver_3.pairedChainsOnly.txt \
+scTCR_IAcountTable.spleen_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.spleen_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.spleen_3.pairedChainsOnly.txt \
+-sampleNames \
+colon1 \
+colon2 \
+colon3 \
+liver1 \
+liver2 \
+liver3 \
+spleen1 \
+spleen2 \
+spleen3 \
+-groupNames \
+colon \
+colon \
+colon \
+liver \
+liver \
+liver \
+spleen \
+spleen \
+spleen
+
+cd ${ANALYSISDIR}
+scTCRtriangle.pl scTCRxTregCLS.pairedChainsOnly.clonotypeTable.groups.norm5K.txt ${FIGURESDIR} scTCRxTregCLS.pairedChainsOnly.norm5K -top 500 -color red
+
+# analysis for individual organs
+
+cd ${DATAREFORM}
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR} scTCRxTregC.pairedChainsOnly -norm 5 \
+-mergeFiles \
+scTCR_IAcountTable.colon_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.colon_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.colon_3.pairedChainsOnly.txt \
+-sampleNames \
+colon1 \
+colon2 \
+colon3
+
+cd ${ANALYSISDIR}
+scTCRtriangle.pl scTCRcountTable.scTCRxTregC.pairedChainsOnly.norm5K.txt ${FIGURESDIR} scTCRxTregC.pairedChainsOnly.norm5K -top 250 -color sienna
+
+cd ${DATAREFORM}
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR} scTCRxTregL.pairedChainsOnly -norm 5 \
+-mergeFiles \
+scTCR_IAcountTable.liver_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.liver_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.liver_3.pairedChainsOnly.txt \
+-sampleNames \
+liver1 \
+liver2 \
+liver3
+
+cd ${ANALYSISDIR}
+scTCRtriangle.pl scTCRcountTable.scTCRxTregL.pairedChainsOnly.norm5K.txt ${FIGURESDIR} scTCRxTregL.pairedChainsOnly.norm5K -top 250 -color steelblue
+
+cd ${DATAREFORM}
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR} scTCRxTregS.pairedChainsOnly -norm 5 \
+-mergeFiles \
+scTCR_IAcountTable.spleen_1.pairedChainsOnly.txt \
+scTCR_IAcountTable.spleen_2.pairedChainsOnly.txt \
+scTCR_IAcountTable.spleen_3.pairedChainsOnly.txt \
+-sampleNames \
+spleen1 \
+spleen2 \
+spleen3
+
+cd ${ANALYSISDIR}
+scTCRtriangle.pl scTCRcountTable.scTCRxTregS.pairedChainsOnly.norm5K.txt ${FIGURESDIR} scTCRxTregS.pairedChainsOnly.norm5K -top 250 -color deeppink
+
+
+# ... and for downsampled data
+
+
+for i in {1..3} ; do
+
+cd ${DATAREFORM}/downsampled
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR}/downsampled scTCRxTregCLS.pdown${i} -norm 5 \
+-mergeFiles \
+scTCR_IAcountTable.colon_1.pdown${i}.txt \
+scTCR_IAcountTable.colon_2.pdown${i}.txt \
+scTCR_IAcountTable.colon_3.pdown${i}.txt \
+scTCR_IAcountTable.liver_1.pdown${i}.txt \
+scTCR_IAcountTable.liver_2.pdown${i}.txt \
+scTCR_IAcountTable.liver_3.pdown${i}.txt \
+scTCR_IAcountTable.spleen_1.pdown${i}.txt \
+scTCR_IAcountTable.spleen_2.pdown${i}.txt \
+scTCR_IAcountTable.spleen_3.pdown${i}.txt \
+-sampleNames \
+colon1 \
+colon2 \
+colon3 \
+liver1 \
+liver2 \
+liver3 \
+spleen1 \
+spleen2 \
+spleen3 \
+-groupNames \
+colon \
+colon \
+colon \
+liver \
+liver \
+liver \
+spleen \
+spleen \
+spleen
+
+cd ${ANALYSISDIR}/downsampled
+scTCRtriangle.pl scTCRxTregCLS.pdown${i}.clonotypeTable.groups.norm5K.txt ${FIGURESDIR}/downsampled scTCRxTregCLS.pdown${i}.norm5K -top 500 -color red
+
+# analysis for individual organs
+
+cd ${DATAREFORM}/downsampled
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR}/downsampled scTCRxTregC.pdown${i} -norm 5 \
+-mergeFiles \
+scTCR_IAcountTable.colon_1.pdown${i}.txt \
+scTCR_IAcountTable.colon_2.pdown${i}.txt \
+scTCR_IAcountTable.colon_3.pdown${i}.txt \
+-sampleNames \
+colon1 \
+colon2 \
+colon3
+
+cd ${ANALYSISDIR}/downsampled
+scTCRtriangle.pl scTCRcountTable.scTCRxTregC.pdown${i}.norm5K.txt ${FIGURESDIR}/downsampled scTCRxTregC.pdown${i}.norm5K -top 250 -color sienna
+
+cd ${DATAREFORM}/downsampled
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR}/downsampled scTCRxTregL.pdown${i} -norm 5 \
+-mergeFiles \
+scTCR_IAcountTable.liver_1.pdown${i}.txt \
+scTCR_IAcountTable.liver_2.pdown${i}.txt \
+scTCR_IAcountTable.liver_3.pdown${i}.txt \
+-sampleNames \
+liver1 \
+liver2 \
+liver3
+
+cd ${ANALYSISDIR}/downsampled
+scTCRtriangle.pl scTCRcountTable.scTCRxTregL.pdown${i}.norm5K.txt ${FIGURESDIR}/downsampled scTCRxTregL.pdown${i}.norm5K -top 250 -color steelblue
+
+cd ${DATAREFORM}/downsampled
+scTCRcreateJoinedCountTable.pl ${ANALYSISDIR}/downsampled scTCRxTregS.pdown${i} -norm 5 \
+-mergeFiles \
+scTCR_IAcountTable.spleen_1.pdown${i}.txt \
+scTCR_IAcountTable.spleen_2.pdown${i}.txt \
+scTCR_IAcountTable.spleen_3.pdown${i}.txt \
+-sampleNames \
+spleen1 \
+spleen2 \
+spleen3
+
+cd ${ANALYSISDIR}/downsampled
+scTCRtriangle.pl scTCRcountTable.scTCRxTregS.pdown${i}.norm5K.txt ${FIGURESDIR}/downsampled scTCRxTregS.pdown${i}.norm5K -top 250 -color deeppink
+
+done
+
+
+
+
+
+
+
+
+
+
+
 
 
                       ####################################
