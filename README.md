@@ -3,6 +3,7 @@
 
 Code repository for data processing and plotting included in our study characterizing donor Treg in the prophylactic treatment of acute GvHD.
 
+>Donor regulatory T cells rapidly adapt to recipient tissues to control acute graft-versus-host disease
 
 ## Description 
 
@@ -21,9 +22,9 @@ This directory contains **data** and **code** for the analyses underlying the **
 The following figures are covered:  
 
 * **Figure 1 e, f**
-* **Supplementary Figure 1 b**
-* **Figure 3 a - c, e - g**
-* **Supplementary Figure 3 c - l**
+* **Supplementary Figure 1 d**
+* **Figure 3 a - c, e, f**
+* **Supplementary Figure 3 c - m**
 * **Figure 4 a - d**
 * **Supplementary Figure 4 a - d**
 
@@ -58,7 +59,7 @@ The following figures are covered:
 
 * **Figure 1 c**
 * **Supplementary Figure 1 a**
-* **Figure 5 a-g**
+* **Figure 5 a - g**
 * **Supplementary Figure 5 a - n**
 
 <h4>Commands_bulkTCR_mapping.sh</h4>
@@ -89,11 +90,11 @@ Contains R markdown scripts (*.rmd) that are rendered as part of the analyses co
 The code for processing and analysis of the scRNA data and scTCR data mapped to scRNA data is provided in a bash script, which either call to .R or .Rmd scripts for analyses, or directly by .Rmd scripts.
 The following figures are covered:  
 
-* **Figure 6 a-d**
-* **Figure 6 g-h**
-* **Supplementary Figure 6 a-f**
-* **Figure 7 a-f**
-* **Supplementary Figure 7 a-b**
+* **Figure 6 a - d**
+* **Figure 6 g - h**
+* **Supplementary Figure 6 a - f**
+* **Figure 7 a - f**
+* **Supplementary Figure 7 a - b**
 
 <h4>RcallDoubletfinder.R</h4>
 Removing of doublets per dataset.
@@ -128,8 +129,8 @@ Code for primary processing of scRNA data for RNA velocity analysis and figure c
 The code for processing and analysis of the TCR data is provided in a bash script, which either call perl or R scripts for analyses.
 The following figures are covered:  
 
-* **Figure 6 e-i**
-* **Supplementary Figure 6 c-f**
+* **Figure 6 e - i**
+* **Supplementary Figure 6 c - f**
 * **Figure 7 e, f**
 
 <h4>Commands_scTCR_GvHD.sh</h4>
@@ -146,6 +147,7 @@ The following figures are covered:
 
 * **Figure 1 b, d**
 * **Figure 2 b - e**
+* **Supplementary Figure 1 c**
 * **Supplementary Figure 2 b, c**
 
 <h2 id="data">6. data</h2>

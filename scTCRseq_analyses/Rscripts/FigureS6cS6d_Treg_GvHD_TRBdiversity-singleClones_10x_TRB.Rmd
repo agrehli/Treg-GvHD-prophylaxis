@@ -87,6 +87,31 @@ pdf(file="./figures/scTCRxTregDCLS_diversity_invSimp_3.4K.pdf", height=3, width=
 p
 dev.off()
 ```
+**Statistics**
+
+running statistical testing with triplicate tissue samples only
+Anova with Tukey
+
+(adding corresponding bars and asterisks to the plot in Adobe Illustrator)
+
+```{r}
+stat.data <- div_simp[3:11,]
+res.aov <- aov(Value~Type, data=stat.data)
+summary (res.aov)
+```
+
+```{r}
+TukeyHSD(res.aov)
+```
+
+                p adj
+liver-colon   0.0047997
+spleen-colon  0.0116720
+spleen-liver  0.6720884
+
+
+
+
 
 ## alternative visualization of repertoire overlap (Figure S6d)
 

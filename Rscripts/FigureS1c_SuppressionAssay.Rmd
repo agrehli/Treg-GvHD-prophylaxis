@@ -1,5 +1,5 @@
 ---
-title: "FigureXX_SuppressionAssay"
+title: "FigureS1c_SuppressionAssay"
 author: Michael Rehli
 output: 
   html_document:
@@ -14,10 +14,10 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "FigureRev_SuppressionAssay.packages.bib")
+knitr::write_bib(.packages(), "FigureS1c_SuppressionAssay.packages.bib")
 ```
 
-# GvHD scores in BMT experiments
+# Suppression Assays
 
 R packages
 
@@ -219,7 +219,7 @@ dev.off()
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureRev_SuppressionAssay_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureS1c_SuppressionAssay_SessionInfo.txt")
 ```
 
 

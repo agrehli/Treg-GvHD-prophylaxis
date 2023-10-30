@@ -18,7 +18,7 @@ knitr::write_bib(.packages(), "FigureS6e_Treg_GvHD_TRBVanalysis_10x_TRB.packages
 
 This Rscript is called in the CommandsB07_bulkTCR_BMT.sh script
 
-# Data analysis for Figures 6j
+# Data analysis for Figures S6e
 
 
 R packages
@@ -86,6 +86,43 @@ pdf(file="./figures/allTRB_10x_barplot_TRBV.pdf", height=3, width=4)
 plot(p)
 dev.off()
 ```
+
+
+**Statistics**
+
+running statistical testing with triplicate tissue samples only
+Anova with Tukey
+
+(adding corresponding bars and asterisks to the plot in Adobe Illustrator)
+
+
+TRBV12-1
+```{r}
+stat.data.12.1 <- melted_gu %>% filter(Class!='d' & variable == 'TRBV12-1') 
+res.aov.12.1 <- aov(value~Class, data=stat.data.12.1)
+summary (res.aov.12.1)
+TukeyHSD(res.aov.12.1)
+```
+
+TRBV12-2
+```{r}
+stat.data.12.2 <- melted_gu %>% filter(Class!='d' & variable == 'TRBV12-2') 
+res.aov.12.2 <- aov(value~Class, data=stat.data.12.2)
+summary (res.aov.12.2)
+TukeyHSD(res.aov.12.2)
+```
+
+TRBV26
+```{r}
+stat.data.26 <- melted_gu %>% filter(Class!='d' & variable == 'TRBV26') 
+res.aov.26 <- aov(value~Class, data=stat.data.26)
+summary (res.aov.26)
+TukeyHSD(res.aov.26)
+```
+
+
+
+
 
 
 

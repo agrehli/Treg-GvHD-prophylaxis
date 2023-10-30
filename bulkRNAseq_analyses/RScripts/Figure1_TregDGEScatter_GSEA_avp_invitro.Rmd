@@ -254,6 +254,8 @@ write.table(rownames(avp.ivt.tr.qstat.scat.filt.DN),
 aubert.treg.intersect<-readRDS(file = "./PUBDATDIR/aubert.treg.intersect.rds")
 # Extension of the GOI by Itgb7 and Sell
 aubert.treg.intersect<-c(aubert.treg.intersect,"Itgb7","Sell")
+# Further added examples of differentially regulated genes
+aubert.treg.intersect<-c(aubert.treg.intersect,"Lag3","Nrn1","Nrgn","Rbpj","Ccdc184")
 aubert.treg.intersect
 ```
 * Also export GOI as tab-delimited text file

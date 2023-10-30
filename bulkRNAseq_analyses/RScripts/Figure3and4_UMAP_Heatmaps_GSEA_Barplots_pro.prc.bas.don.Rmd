@@ -508,8 +508,7 @@ cl6.goi<-c("Pycard","Arhgef2","Cap1")
 cl7.goi<-c("Tcf7","Lef1","Foxp1")
 cl8.goi<-c("Pgk1","Eno1","Ldha")
 cl9.goi<-c("Irf7","Stat2","Trim21")
-avp.goi<-c("Penk","Tgm2","Lag3","Rbpj","Gpld1",
-           "Trbv16","Nrn1","Nrgn","Ccdc184") # potential new GOIs for avp preserved barplots
+avp.goi<-c("Penk","Nrn1","Nrgn","Ccdc184")
 ```
 
 ### List
@@ -606,280 +605,19 @@ bar.p.mod.avp.Penk<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Pe
         plot.background = element_rect(fill="white",colour = "white"),
         panel.background = element_rect(fill = NA,color = "black", size=.236),
         panel.border = element_rect(colour = "black", fill=NA, size=.236),
-        legend.position = "none")+
+        legend.position = "none",
+        aspect.ratio = 1)+
   labs(x="Treg group", 
        y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Penk
 ```
 
-* Also, the plot is exported into the figure directory.
-```{r}
-pdf(file = "./FIGDIR/SupplementaryFigure3c_pcbd.avp.Penk.barplot.expression.4+shift.pdf", width = 1.5, height = 2)
-bar.p.mod.avp.Penk
-dev.off()
-```
-
-
-#### Rbpj
-* Log~2~RPKM values are used to represent Rbpj gene expression levels as a bar plot.
+#### Ccdc184
 ```{r, fig.height=2.0, fig.width=1.5}
-bar.p.mod.avp.Rbpj<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Rbpj",], 
-                       aes(x = group,
-                           y = 2^(LOG.2.RPKM-4),
-                           fill = group,
-                           shape = group))+
-  coord_cartesian(clip = "off")+
-  scale_y_continuous(trans = log2_trans(),
-                     expand = c(0,0.1),
-                     limits = c(1,24),
-                     breaks = c(1,2,4,8,16),
-                     labels = trans_format(trans = function(x) log2(x),
-                                           format = math_format(2^.x)))+
-   annotation_logticks(outside = T,
-                      sides = "l",
-                      short = unit(0.01,"mm"), 
-                      mid = unit(.5,"mm"),   
-                      long = unit(1,"mm"),
-                      size=.236)+
-  stat_summary(fun=mean,
-               geom="col",
-               position = "dodge",
-               width = 0.85,
-               alpha=0.5)+
-  geom_point(size=1,
-             stroke=.236,
-             colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, 
-                                             dodge.width = 1.0,
-                                             seed = 1234
-                                             ))+
-  stat_summary(fun.data = mean_se, 
-               fun.args = list(mult=1), 
-               geom = "errorbar", 
-               color ="black", 
-               linetype = "solid",
-               size=0.25, 
-               width=0.8, 
-               position = "dodge")+
-  scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
-  scale_shape_manual(values = pcbd.shp.4)+
-  theme_bw() + 
-    theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(size = 8, face = "bold", colour = "black"),
-        axis.title.y = element_text(size = 8, colour = "black"),
-        axis.title.x = element_text(size = 8, colour = "black"),
-        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
-        axis.text.y = element_text(size = 6, colour = "black"),
-        axis.ticks = element_line(size=.236),
-        axis.line = element_line(size=.236),
-        strip.background = element_blank(),
-        strip.text = element_text(size = 8, face = "italic",color = "black"),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill = NA,color = "black", size=.236),
-        panel.border = element_rect(colour = "black", fill=NA, size=.236),
-        legend.position = "none")+
-  labs(x="Treg group", 
-       y = "RPKM") +
- facet_wrap(~gene_symbol, ncol = 1)
-bar.p.mod.avp.Rbpj
-```
-
-* Also, the plot is exported into the figure directory.
-
-```{r}
-pdf(file = "./FIGDIR/SupplementaryFigure3c_pcbd.avp.Rbpj.barplot.expression.noshift.pdf", width = 1.5, height = 2)
-bar.p.mod.avp.Rbpj
-dev.off()
-```
-
-
-#### Lag3
-* Log~2~RPKM values are used to represent Lag3 gene expression levels as a bar plot.
-```{r, fig.height=2.0, fig.width=1.5}
-bar.p.mod.avp.Lag3<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Lag3",], 
-                       aes(x = group,
-                           y = 2^(LOG.2.RPKM+2),
-                           fill = group,
-                           shape = group))+
-  coord_cartesian(clip = "off")+
-  scale_y_continuous(trans = log2_trans(),
-                     expand = c(0,0.1),
-                     limits = c(1,16384),
-                     breaks = c(1,4,16,64,256,1024,4096,16384),
-                     labels = trans_format(trans = function(x) log2(x)-6,
-                                           format = math_format(2^.x)))+
-   annotation_logticks(outside = T,
-                      sides = "l",
-                      short = unit(0.01,"mm"), 
-                      mid = unit(.5,"mm"),   
-                      long = unit(1,"mm"),
-                      size=.236)+
-  stat_summary(fun=mean,
-               geom="col",
-               position = "dodge",
-               width = 0.85,
-               alpha=0.5)+
-  geom_point(size=1,
-             stroke=.236,
-             colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, 
-                                             dodge.width = 1.0,
-                                             seed = 1234
-                                             ))+
-  stat_summary(fun.data = mean_se, 
-               fun.args = list(mult=1), 
-               geom = "errorbar", 
-               color ="black", 
-               linetype = "solid",
-               size=0.25, 
-               width=0.8, 
-               position = "dodge")+
-  scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
-  scale_shape_manual(values = pcbd.shp.4)+
-  theme_bw() + 
-    theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(size = 8, face = "bold", colour = "black"),
-        axis.title.y = element_text(size = 8, colour = "black"),
-        axis.title.x = element_text(size = 8, colour = "black"),
-        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
-        axis.text.y = element_text(size = 6, colour = "black"),
-        axis.ticks = element_line(size=.236),
-        axis.line = element_line(size=.236),
-        strip.background = element_blank(),
-        strip.text = element_text(size = 8, face = "italic",color = "black"),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill = NA,color = "black", size=.236),
-        panel.border = element_rect(colour = "black", fill=NA, size=.236),
-        legend.position = "none")+
-  labs(x="Treg group", 
-       y = "RPKM") +
- facet_wrap(~gene_symbol, ncol = 1)
-bar.p.mod.avp.Lag3
-```
-
-* Also, the plot is exported into the figure directory.
-
-```{r}
-pdf(file = "./FIGDIR/SupplementaryFigure3c_pcbd.avp.Lag3.barplot.expression.6+shift.pdf", width = 1.5, height = 2)
-bar.p.mod.avp.Lag3
-dev.off()
-```
-
-#### Gpld1
-* Log~2~RPKM values are used to represent Gpld1 gene expression levels as a bar plot.
-
-```{r,fig.height=2.0, fig.width=1.5}
-bar.p.mod.avp.Gpld1<-ggplot(data = bar.df.mod.avp[bar.df.mod.avp$gene_symbol=="Gpld1",], 
-                       aes(x = group,
-                           y = 2^(LOG.2.RPKM+2),
-                           fill = group,
-                           shape = group))+
-  coord_cartesian(clip = "off")+
-  scale_y_continuous(trans = log2_trans(),
-                     expand = c(0,0.1),
-                     limits = c(1,1024),
-                     breaks = c(1,4,16,64,256,1024),
-                     labels = trans_format(trans = function(x) log2(x)-6,
-                                           format = math_format(2^.x)))+
-   annotation_logticks(outside = T,
-                      sides = "l",
-                      short = unit(0.01,"mm"), 
-                      mid = unit(.5,"mm"),   
-                      long = unit(1,"mm"),
-                      size=.236)+
-  stat_summary(fun=mean,
-               geom="col",
-               position = "dodge",
-               width = 0.85,
-               alpha=0.5)+
-  geom_point(size=1,
-             stroke=.236,
-             colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, 
-                                             dodge.width = 1.0,
-                                             seed = 1234
-                                             ))+
-  stat_summary(fun.data = mean_se, 
-               fun.args = list(mult=1), 
-               geom = "errorbar", 
-               color ="black", 
-               linetype = "solid",
-               size=0.25, 
-               width=0.8, 
-               position = "dodge")+
-  scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
-  scale_shape_manual(values = pcbd.shp.4)+
-  theme_bw() + 
-    theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(size = 8, face = "bold", colour = "black"),
-        axis.title.y = element_text(size = 8, colour = "black"),
-        axis.title.x = element_text(size = 8, colour = "black"),
-        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
-        axis.text.y = element_text(size = 6, colour = "black"),
-        axis.ticks = element_line(size=.236),
-        axis.line = element_line(size=.236),
-        strip.background = element_blank(),
-        strip.text = element_text(size = 8, face = "italic",color = "black"),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill = NA,color = "black", size=.236),
-        panel.border = element_rect(colour = "black", fill=NA, size=.236),
-        legend.position = "none")+
-  labs(x="Treg group", 
-       y = "RPKM") +
- facet_wrap(~gene_symbol, ncol = 1)
-bar.p.mod.avp.Gpld1
-```
-
-* Also, the plot is exported into the figure directory.
-
-```{r}
-pdf(file = file.path(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.Gpld1.barplot.expression.6+shift.pdf"), width = 1.5, height = 2)
-bar.p.mod.avp.Gpld1
-dev.off()
-```
-
-#### Combined Plot
-
-* All generated bar plots are arranged as plot grid, hereafter.
-
-```{r, fig.height=2, fig.width=6}
-bar.p.mod.avp.grid <- plot_grid(bar.p.mod.avp.Penk,
-                                 bar.p.mod.avp.Rbpj,
-                                 bar.p.mod.avp.Lag3,
-                                 bar.p.mod.avp.Gpld1,
-                                 ncol=4, align="v")
-bar.p.mod.avp.grid
-```
-
-* The bar plot arrangement is also exported into the figure directory.
-
-```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.combined.barplot.expression.correct.yaxis.labels.pdf", 
-    height=2, width=6)
-bar.p.mod.avp.grid
-dev.off()
-```
-
-### Potential additional barplots
-
-* different genes were retained different between allo and poly when therapy samples were included
-* this is why, hereafter, all genes interesecting between ivt.allo.up and tpc.allo.up are plotted
-* for now, I exclude the baseline samples from the plot, stressing the allo vs. poly differences in transplanted Treg
-*"Penk"    "Trbv16"  "Nrn1"    "Nrgn"    "Ccdc184"
-
-#### Penk
-* Log~2~RPKM values are used to represent Penk gene expression levels as a bar plot.
-```{r, fig.height=2.0, fig.width=1.5}
-bar.p.mod.avp.Penk.n<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Penk"),
+bar.p.mod.avp.Ccdc184<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Ccdc184"),
                            aes(x = group,
-                               y = 2^(LOG.2.RPKM+0),
+                               y = 2^(LOG.2.RPKM+2),
                                fill = group,
                                shape = group))+
   coord_cartesian(clip = "off")+
@@ -887,73 +625,7 @@ bar.p.mod.avp.Penk.n<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Penk"
                      expand = c(0,0.1),
                      limits = c(1,4096),
                      breaks = c(1,4,16,64,256,1024,4096),
-                     labels = trans_format(trans = function(x) log2(x)-4,
-                                           format = math_format(2^.x)))+
-   annotation_logticks(outside = T,
-                      sides = "l",
-                      short = unit(0.01,"mm"), 
-                      mid = unit(.5,"mm"),   
-                      long = unit(1,"mm"),
-                      size=.236)+
-  stat_summary(fun=mean,
-               geom="col",
-               position = "dodge",
-               width = 0.85,
-               alpha=0.5)+
-  geom_point(size=1,
-             stroke=.236,
-             colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, 
-                                             dodge.width = 1.0,
-                                             seed = 1234
-                                             ))+
-  stat_summary(fun.data = mean_se, 
-               fun.args = list(mult=1), 
-               geom = "errorbar", 
-               color ="black", 
-               linetype = "solid",
-               size=0.25, 
-               width=0.8, 
-               position = "dodge")+
-  scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_colour_manual(values = alpha(pcbd.col,0.50))+
-  scale_shape_manual(values = pcbd.shp.4)+
-  theme_bw() + 
-    theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(size = 8, face = "bold", colour = "black"),
-        axis.title.y = element_text(size = 8, colour = "black"),
-        axis.title.x = element_text(size = 8, colour = "black"),
-        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
-        axis.text.y = element_text(size = 6, colour = "black"),
-        axis.ticks = element_line(size=.236),
-        axis.line = element_line(size=.236),
-        strip.background = element_blank(),
-        strip.text = element_text(size = 8, face = "italic",color = "black"),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill = NA,color = "black", size=.236),
-        panel.border = element_rect(colour = "black", fill=NA, size=.236),
-        legend.position = "none")+
-  labs(x="Treg group", 
-       y = "RPKM") +
- facet_wrap(~gene_symbol, ncol = 1)
-bar.p.mod.avp.Penk.n
-bar.p.mod.avp.Penk
-```
-
-#### Trbv16
-```{r, fig.height=2.0, fig.width=1.5}
-bar.p.mod.avp.Trbv16<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Trbv16"),
-                           aes(x = group,
-                               y = 2^(LOG.2.RPKM-4),
-                               fill = group,
-                               shape = group))+
-  coord_cartesian(clip = "off")+
-  scale_y_continuous(trans = log2_trans(),
-                     expand = c(0,0.1),
-                     limits = c(1,128),
-                     breaks = c(1,4,16,64),
-                     labels = trans_format(trans = function(x) log2(x),
+                     labels = trans_format(trans = function(x) log2(x)-6,
                                            format = math_format(2^.x)))+
    annotation_logticks(outside = T,
                       sides = "l",
@@ -1003,7 +675,7 @@ bar.p.mod.avp.Trbv16<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Trbv1
   labs(x="Treg group", 
        y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
-bar.p.mod.avp.Trbv16
+bar.p.mod.avp.Ccdc184
 ```
 
 
@@ -1141,117 +813,29 @@ bar.p.mod.avp.Nrgn<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Nrgn"),
  facet_wrap(~gene_symbol, ncol = 1)
 bar.p.mod.avp.Nrgn
 ```
-#### Ccdc184
-```{r,fig.height=2.0, fig.width=1.5}
-bar.p.mod.avp.Ccdc184<-ggplot(data = filter(bar.df.mod.avp, gene_symbol == "Ccdc184"),
-                           aes(x = group,
-                               y = 2^(LOG.2.RPKM+2),
-                               fill = group,
-                               shape = group))+
-  coord_cartesian(clip = "off")+
-  scale_y_continuous(trans = log2_trans(),
-                     expand = c(0,0.1),
-                     limits = c(1,4096),
-                     breaks = c(1,4,16,64,256,1024,4096),
-                     labels = trans_format(trans = function(x) log2(x)-6,
-                                           format = math_format(2^.x)))+
-   annotation_logticks(outside = T,
-                      sides = "l",
-                      short = unit(0.01,"mm"), 
-                      mid = unit(.5,"mm"),   
-                      long = unit(1,"mm"),
-                      size=.236)+
-  stat_summary(fun=mean,
-               geom="col",
-               position = "dodge",
-               alpha = 0.50,
-               width = 0.85)+
-  geom_point(size=1,
-             stroke=.236,
-             colour = "black",
-             position = position_jitterdodge(jitter.width=2.0, 
-                                             dodge.width = 1.0,
-                                             seed = 1234))+
-  stat_summary(fun.data = mean_se, 
-               fun.args = list(mult=1), 
-               geom = "errorbar", 
-               color ="black", 
-               linetype = "solid",
-               size=0.25, 
-               width=0.8, 
-               position = "dodge")+
-  scale_fill_manual(values = alpha(pcbd.col,0.75))+
-  scale_shape_manual(values = pcbd.shp.4)+
-  theme_bw() + 
-    theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(size = 8, face = "bold", colour = "black"),
-        axis.title.y = element_text(size = 8, colour = "black"),
-        axis.title.x = element_text(size = 8, colour = "black"),
-        axis.text.x = element_text(size = 6, colour = "black", angle = 90, 
-                                   hjust=1, vjust=0.5),
-        axis.text.y = element_text(size = 6, colour = "black"),
-        axis.ticks = element_line(size=.236),
-        axis.line = element_line(size=.236),
-        strip.background = element_blank(),
-        strip.text = element_text(size = 8, face = "italic",color = "black"),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill = NA,color = "black", size=.236),
-        panel.border = element_rect(colour = "black", fill=NA, size=.236),
-        legend.position = "none",
-        aspect.ratio = 1)+
-  labs(x="Treg group", 
-       y = "RPKM") +
- facet_wrap(~gene_symbol, ncol = 1)
-bar.p.mod.avp.Ccdc184
-```
+
 
 #### Combined Plot
 
 * All generated bar plots are arranged as plot grid, hereafter.
 
 ```{r, fig.height=2, fig.width=7.5}
-bar.p.mod.avp.grid.thesis <- plot_grid(bar.p.mod.avp.Penk.n,
-                                 bar.p.mod.avp.Trbv16,
+bar.p.mod.avp.grid <- plot_grid(bar.p.mod.avp.Penk,
+                                 bar.p.mod.avp.Ccdc184,
                                  bar.p.mod.avp.Nrn1,
                                  bar.p.mod.avp.Nrgn,
-                                bar.p.mod.avp.Ccdc184,
-                                 ncol=5, align="v")
-bar.p.mod.avp.grid.thesis
+                                 ncol=4, align="v")
+bar.p.mod.avp.grid
 ```
 
 * export the preliminary plot arrangement
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.combined.barplot.expression.correct.yaxis.labels.potential.pdf", 
-    height=2, width=7.5)
-bar.p.mod.avp.grid.thesis
+pdf(file="./FIGDIR/SupplementaryFigure3c_pcbd.avp.combined.barplot.expression.correct.yaxis.labels.pdf", 
+    height=2, width=6)
+bar.p.mod.avp.grid
 dev.off()
 ```
-
-* single plots with blank background
-
-```{r}
-pdf(file = "./FIGDIR/03.pcbd.Penk.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
-bar.p.mod.avp.Penk
-dev.off()
-pdf(file = "./FIGDIR/03.pcbd.Trbv16.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
-bar.p.mod.avp.Trbv16
-dev.off()
-pdf(file = "./FIGDIR/03.pcbd.Nrn1.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
-bar.p.mod.avp.Nrn1
-dev.off()
-pdf(file = "./FIGDIR/03.pcbd.Nrgn.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
-bar.p.mod.avp.Nrgn
-dev.off()
-pdf(file = "./FIGDIR/03.pcbd.Ccdc184.Log2RPKM.barplot.pdf",height = 4, width = 3.6)
-bar.p.mod.avp.Ccdc184
-dev.off()
-```
-
-
-***
-
 
 
 ***
@@ -1262,7 +846,7 @@ dev.off()
 
 ## Data Preparation
 * Hereafter, the pcr2CyNo-corrected Zscore values are defined as data frame.
-* A column containing GeneIDs is appended, as well, follwed by a consitency check.
+* A column containing GeneIDs is appended, as well, followed by a consistency check.
 ```{r}
 pcbd.hm.df<-as.data.frame(pcbd.log.cpm.scaled.cor)
 an.df<-as.data.frame(strsplit2(rownames(pcbd.hm.df),split = "[$]"))
@@ -1399,13 +983,35 @@ dev.off()
 
 ***
 
-# Metascape Results (Figure 3 f)
-* Enrichment results generated using Metascape are presented as barplots, hereafter.
+# Metascape Results (Supplementary Figure 3 m)
+* Enrichment results generated using Metascape/Enrichr are presented as barplots, hereafter.
 * Be aware that clusters 1-3 in the manuscript equal clusters 1-3 herein, while clusters 4-9 in the manuscript equal clusters 5-10 herein, respectively.
 
+**defining a theme function**
+```{r}
+theme_gobar <- function(){ 
+    theme(aspect.ratio=1.2,
+          plot.title = element_text(size = 10, face = "bold"),
+          plot.subtitle = element_text(size = 6, face = "bold"),
+          axis.title = element_text(size = 8),
+          axis.text.x = element_text(size = 6, colour = "black"), 
+          axis.text.y =element_text(size = 6, colour = "black"),
+          axis.ticks.length.x = unit(0.1,"cm"),
+          axis.ticks.length.y = unit(0.1,"cm"),
+          axis.ticks = element_line(size=.236),
+          plot.background = element_rect(fill="white",colour = "white"),
+          panel.background = element_rect(fill ="white",colour = NA),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()
+    )
+}
+```
+
+
+
 ## Cluster 1
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl1 <- read_excel("./METASCAPE/Figure3e_cl1.metascape_result.xlsx", sheet=2)
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl1 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl1.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl1.main <- subset(pcbd.cl.metascape.cl1, grepl("Summary", pcbd.cl.metascape.cl1$GroupID))
 colnames(pcbd.cl.metascape.cl1.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl1.main$Description <- factor(pcbd.cl.metascape.cl1.main$Description, level=pcbd.cl.metascape.cl1.main$Description)
@@ -1416,25 +1022,49 @@ pcbd.cl.metascape.cl1.bar <- ggplot(pcbd.cl.metascape.cl1.sig) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="forestgreen") +
     ggtitle(label = "Cluster 1") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl1.bar
 ```
 
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl1 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl1_MSigDB_Hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl1$Term <- factor(pcbd.cl.hallmark.cl1$Term, level=pcbd.cl.hallmark.cl1$Term)
+pcbd.cl.hallmark.cl1.sig <- subset(pcbd.cl.hallmark.cl1, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl1.bar <- ggplot(pcbd.cl.hallmark.cl1.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="forestgreen") +
+    ggtitle(label = "Cluster 1") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl1.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl1 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl1_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl1$Term <- factor(pcbd.cl.bioplanet.cl1$Term, level=pcbd.cl.bioplanet.cl1$Term)
+pcbd.cl.bioplanet.cl1.sig <- subset(pcbd.cl.bioplanet.cl1, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl1.bar <- ggplot(pcbd.cl.bioplanet.cl1.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="forestgreen") +
+    ggtitle(label = "Cluster 1") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl1.bar
+```
+
+
+
+
+
 ## Cluster 2
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl2 <- read_excel("./METASCAPE/Figure3e_cl2.metascape_result.xlsx", sheet=2)
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl2 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl2.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl2.main <- subset(pcbd.cl.metascape.cl2, grepl("Summary", pcbd.cl.metascape.cl2$GroupID))
 colnames(pcbd.cl.metascape.cl2.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl2.main$Description <- factor(pcbd.cl.metascape.cl2.main$Description, level=pcbd.cl.metascape.cl2.main$Description)
@@ -1445,25 +1075,49 @@ pcbd.cl.metascape.cl2.bar <- ggplot(pcbd.cl.metascape.cl2.sig[1:5,]) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="darkorange1") +
     ggtitle(label = "Cluster 2") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl2.bar
 ```
 
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl2 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl2_MSigDB_Hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl2$Term <- factor(pcbd.cl.hallmark.cl2$Term, level=pcbd.cl.hallmark.cl2$Term)
+pcbd.cl.hallmark.cl2.sig <- subset(pcbd.cl.hallmark.cl2, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl2.bar <- ggplot(pcbd.cl.hallmark.cl2.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="darkorange1") +
+    ggtitle(label = "Cluster 2") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl2.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl2 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl2_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl2$Term <- factor(pcbd.cl.bioplanet.cl2$Term, level=pcbd.cl.bioplanet.cl2$Term)
+pcbd.cl.bioplanet.cl2.sig <- subset(pcbd.cl.bioplanet.cl2, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl2.bar <- ggplot(pcbd.cl.bioplanet.cl2.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="darkorange1") +
+    ggtitle(label = "Cluster 2") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl2.bar
+```
+
+
+
+
+
 ## Cluster 3
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl3 <- read_excel("./METASCAPE/Figure3e_cl3.metascape_result.xlsx", sheet=2)
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl3 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl3.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl3.main <- subset(pcbd.cl.metascape.cl3, grepl("Summary", pcbd.cl.metascape.cl3$GroupID))
 colnames(pcbd.cl.metascape.cl3.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl3.main$Description <- factor(pcbd.cl.metascape.cl3.main$Description, level=pcbd.cl.metascape.cl3.main$Description)
@@ -1474,25 +1128,46 @@ pcbd.cl.metascape.cl3.bar <- ggplot(pcbd.cl.metascape.cl3.sig[1:5,]) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="darkmagenta") +
     ggtitle(label = "Cluster 3") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl3.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl3 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl3_MSigDB_hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl3$Term <- factor(pcbd.cl.hallmark.cl3$Term, level=pcbd.cl.hallmark.cl3$Term)
+pcbd.cl.hallmark.cl3.sig <- subset(pcbd.cl.hallmark.cl3, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl3.bar <- ggplot(pcbd.cl.hallmark.cl3.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="darkmagenta") +
+    ggtitle(label = "Cluster 3") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl3.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl3 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl3_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl3$Term <- factor(pcbd.cl.bioplanet.cl3$Term, level=pcbd.cl.bioplanet.cl3$Term)
+pcbd.cl.bioplanet.cl3.sig <- subset(pcbd.cl.bioplanet.cl3, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl3.bar <- ggplot(pcbd.cl.bioplanet.cl3.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="darkmagenta") +
+    ggtitle(label = "Cluster 3") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl3.bar
 ```
 
 ## Cluster 5
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl5 <- read_excel("./METASCAPE/Figure3e_cl5.metascape_result.xlsx", sheet=2)
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl5 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl5.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl5.main <- subset(pcbd.cl.metascape.cl5, grepl("Summary", pcbd.cl.metascape.cl5$GroupID))
 colnames(pcbd.cl.metascape.cl5.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl5.main$Description <- factor(pcbd.cl.metascape.cl5.main$Description, level=pcbd.cl.metascape.cl5.main$Description)
@@ -1503,25 +1178,47 @@ pcbd.cl.metascape.cl5.bar <- ggplot(pcbd.cl.metascape.cl5.sig[1:5,]) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="cyan2") +
     ggtitle(label = "Cluster 4") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl5.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl5 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl5_MSigDB_Hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl5$Term <- factor(pcbd.cl.hallmark.cl5$Term, level=pcbd.cl.hallmark.cl5$Term)
+pcbd.cl.hallmark.cl5.sig <- subset(pcbd.cl.hallmark.cl5, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl5.bar <- ggplot(pcbd.cl.hallmark.cl5.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="cyan2") +
+    ggtitle(label = "Cluster 4") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl5.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl5 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl5_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl5$Term <- factor(pcbd.cl.bioplanet.cl5$Term, level=pcbd.cl.bioplanet.cl5$Term)
+pcbd.cl.bioplanet.cl5.sig <- subset(pcbd.cl.bioplanet.cl5, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl5.bar <- ggplot(pcbd.cl.bioplanet.cl5.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="cyan2") +
+    ggtitle(label = "Cluster 4") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl5.bar
 ```
 
 ## Cluster 6
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl6 <- read_excel("./METASCAPE/Figure3e_cl6.metascape_result.xlsx", sheet=2)
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl6 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl6.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl6.main <- subset(pcbd.cl.metascape.cl6, grepl("Summary", pcbd.cl.metascape.cl6$GroupID))
 colnames(pcbd.cl.metascape.cl6.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl6.main$Description <- factor(pcbd.cl.metascape.cl6.main$Description, level=pcbd.cl.metascape.cl6.main$Description)
@@ -1532,25 +1229,47 @@ pcbd.cl.metascape.cl6.bar <- ggplot(pcbd.cl.metascape.cl6.sig[1:5,]) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="yellow2") +
     ggtitle(label = "Cluster 5") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl6.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl6 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl6_MSigDB_Hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl6$Term <- factor(pcbd.cl.hallmark.cl6$Term, level=pcbd.cl.hallmark.cl6$Term)
+pcbd.cl.hallmark.cl6.sig <- subset(pcbd.cl.hallmark.cl6, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl6.bar <- ggplot(pcbd.cl.hallmark.cl6.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="yellow2") +
+    ggtitle(label = "Cluster 5") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl6.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl6 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl6_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl6$Term <- factor(pcbd.cl.bioplanet.cl6$Term, level=pcbd.cl.bioplanet.cl6$Term)
+pcbd.cl.bioplanet.cl6.sig <- subset(pcbd.cl.bioplanet.cl6, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl6.bar <- ggplot(pcbd.cl.bioplanet.cl6.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="yellow2") +
+    ggtitle(label = "Cluster 5") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl6.bar
 ```
 
 ## Cluster 7 
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl7 <- read_excel("./METASCAPE/Figure3e_cl7.metascape_result.xlsx", sheet=2)
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl7 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl7.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl7.main <- subset(pcbd.cl.metascape.cl7, grepl("Summary", pcbd.cl.metascape.cl7$GroupID))
 colnames(pcbd.cl.metascape.cl7.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl7.main$Description <- factor(pcbd.cl.metascape.cl7.main$Description, level=pcbd.cl.metascape.cl7.main$Description)
@@ -1561,25 +1280,47 @@ pcbd.cl.metascape.cl7.bar <- ggplot(pcbd.cl.metascape.cl7.sig[1:5,]) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="red") +
     ggtitle(label = "Cluster 6") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl7.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl7 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl7_MSigDB_Hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl7$Term <- factor(pcbd.cl.hallmark.cl7$Term, level=pcbd.cl.hallmark.cl7$Term)
+pcbd.cl.hallmark.cl7.sig <- subset(pcbd.cl.hallmark.cl7, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl7.bar <- ggplot(pcbd.cl.hallmark.cl7.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="red") +
+    ggtitle(label = "Cluster 6") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl7.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl7 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl7_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl7$Term <- factor(pcbd.cl.bioplanet.cl7$Term, level=pcbd.cl.bioplanet.cl7$Term)
+pcbd.cl.bioplanet.cl7.sig <- subset(pcbd.cl.bioplanet.cl7, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl7.bar <- ggplot(pcbd.cl.bioplanet.cl7.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="red") +
+    ggtitle(label = "Cluster 6") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl7.bar
 ```
 
 ## Cluster 8
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl8 <- read_excel("./METASCAPE/Figure3e_cl8.metascape_result.xlsx", sheet=2)
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl8 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl8.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl8.main <- subset(pcbd.cl.metascape.cl8, grepl("Summary", pcbd.cl.metascape.cl8$GroupID))
 colnames(pcbd.cl.metascape.cl8.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl8.main$Description <- factor(pcbd.cl.metascape.cl8.main$Description, level=pcbd.cl.metascape.cl8.main$Description)
@@ -1590,25 +1331,47 @@ pcbd.cl.metascape.cl8.bar <- ggplot(pcbd.cl.metascape.cl8.sig) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="hotpink") +
     ggtitle(label = "Cluster 7") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl8.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl8 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl8_MSigDB_Hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl8$Term <- factor(pcbd.cl.hallmark.cl8$Term, level=pcbd.cl.hallmark.cl8$Term)
+pcbd.cl.hallmark.cl8.sig <- subset(pcbd.cl.hallmark.cl8, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl8.bar <- ggplot(pcbd.cl.hallmark.cl8.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="hotpink") +
+    ggtitle(label = "Cluster 7") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl8.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl8 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl8_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl8$Term <- factor(pcbd.cl.bioplanet.cl8$Term, level=pcbd.cl.bioplanet.cl8$Term)
+pcbd.cl.bioplanet.cl8.sig <- subset(pcbd.cl.bioplanet.cl8, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl8.bar <- ggplot(pcbd.cl.bioplanet.cl8.sig) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="hotpink") +
+    ggtitle(label = "Cluster 7") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl8.bar
 ```
 
 ## Cluster 9
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl9 <- read_excel("./METASCAPE/Figure3e_cl9.metascape_result.xlsx", sheet=2)
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl9 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl9.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl9.main <- subset(pcbd.cl.metascape.cl9, grepl("Summary", pcbd.cl.metascape.cl9$GroupID))
 colnames(pcbd.cl.metascape.cl9.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl9.main$Description <- factor(pcbd.cl.metascape.cl9.main$Description, level=pcbd.cl.metascape.cl9.main$Description)
@@ -1619,25 +1382,47 @@ pcbd.cl.metascape.cl9.bar <- ggplot(pcbd.cl.metascape.cl9.sig[1:5,]) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="blue") +
     ggtitle(label = "Cluster 8") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl9.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl9 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl9_MSigDB_Hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl9$Term <- factor(pcbd.cl.hallmark.cl9$Term, level=pcbd.cl.hallmark.cl9$Term)
+pcbd.cl.hallmark.cl9.sig <- subset(pcbd.cl.hallmark.cl9, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl9.bar <- ggplot(pcbd.cl.hallmark.cl9.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="blue") +
+    ggtitle(label = "Cluster 8") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl9.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl9 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl9_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl9$Term <- factor(pcbd.cl.bioplanet.cl9$Term, level=pcbd.cl.bioplanet.cl9$Term)
+pcbd.cl.bioplanet.cl9.sig <- subset(pcbd.cl.bioplanet.cl9, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl9.bar <- ggplot(pcbd.cl.bioplanet.cl9.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="blue") +
+    ggtitle(label = "Cluster 8") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl9.bar
 ```
 
 ## Cluster 10
-```{r, fig.height=1.3, fig.width=2.2, out.width="20%"}
-pcbd.cl.metascape.cl10 <- read_excel("./METASCAPE/Figure3e_cl10.metascape_result.xlsx", sheet=2)
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.metascape.cl10 <- read_excel("./METASCAPE/SupplementaryFigure3m_cl10.metascape_result.xlsx", sheet=2)
 pcbd.cl.metascape.cl10.main <- subset(pcbd.cl.metascape.cl10, grepl("Summary", pcbd.cl.metascape.cl10$GroupID))
 colnames(pcbd.cl.metascape.cl10.main) <- c("GroupID","Category","Term","Description","LogP","LogQ","InTerm_InList	Genes","Symbols")
 pcbd.cl.metascape.cl10.main$Description <- factor(pcbd.cl.metascape.cl10.main$Description, level=pcbd.cl.metascape.cl10.main$Description)
@@ -1648,26 +1433,47 @@ pcbd.cl.metascape.cl10.bar <- ggplot(pcbd.cl.metascape.cl10.sig[1:5,]) +
     scale_y_continuous(expand = c(0,0)) +
     geom_bar(stat="identity", fill="lawngreen") +
     ggtitle(label = "Cluster 9") +
-        ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
-    theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 6, face = "bold"),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(size = 6, colour = "black"), 
-        axis.text.y =element_text(size = 6, colour = "black"),
-        axis.ticks.length.x = unit(0.1,"cm"),
-        axis.ticks.length.y = unit(0.1,"cm"),
-        axis.ticks = element_line(size=.236),
-        plot.background = element_rect(fill="white",colour = "white"),
-        panel.background = element_rect(fill ="white",colour = NA),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        )
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.metascape.cl10.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.hallmark.cl10 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl10_MSigDB_Hallmark_2020_table.txt")
+pcbd.cl.hallmark.cl10$Term <- factor(pcbd.cl.hallmark.cl10$Term, level=pcbd.cl.hallmark.cl10$Term)
+pcbd.cl.hallmark.cl10.sig <- subset(pcbd.cl.hallmark.cl10, Adjusted.P.value < 0.05)
+pcbd.cl.hallmark.cl10.bar <- ggplot(pcbd.cl.hallmark.cl10.sig) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="lawngreen") +
+    ggtitle(label = "Cluster 9") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.hallmark.cl10.bar
+```
+
+
+```{r, fig.height=1, fig.width=6, out.width="20%"}
+pcbd.cl.bioplanet.cl10 <- read.delim("./METASCAPE/SupplementaryFigure3m_cl10_BioPlanet_2019_table.txt")
+pcbd.cl.bioplanet.cl10$Term <- factor(pcbd.cl.bioplanet.cl10$Term, level=pcbd.cl.bioplanet.cl10$Term)
+pcbd.cl.bioplanet.cl10.sig <- subset(pcbd.cl.bioplanet.cl10, Adjusted.P.value < 0.05)
+pcbd.cl.bioplanet.cl10.bar <- ggplot(pcbd.cl.bioplanet.cl10.sig[1:5,]) + 
+    aes(x=Term, y=-log10(Adjusted.P.value) ) + coord_flip() + 
+    scale_x_discrete(limits=rev) +
+    scale_y_continuous(expand = c(0,0)) +
+    geom_bar(stat="identity", fill="lawngreen") +
+    ggtitle(label = "Cluster 9") +
+    ylab(bquote(italic(P)[adj.] *"("*-log[10]*")")) + xlab("") +
+    theme_gobar()
+pcbd.cl.bioplanet.cl10.bar
 ```
 
 ## Plot Grid
 * All flipped bar plots are arranged in a plot grid, hereafter.
-```{r fig.height=14, fig.width=4.6}
-pcbd.cl.metascape.plot.grid <- plot_grid(pcbd.cl.metascape.cl1.bar,
+```{r fig.height=9, fig.width=18, out.width="50%"}
+metascape.grid <- cowplot::plot_grid(pcbd.cl.metascape.cl1.bar,
                                        pcbd.cl.metascape.cl2.bar,
                                        pcbd.cl.metascape.cl3.bar,
                                        pcbd.cl.metascape.cl5.bar,
@@ -1676,22 +1482,49 @@ pcbd.cl.metascape.plot.grid <- plot_grid(pcbd.cl.metascape.cl1.bar,
                                        pcbd.cl.metascape.cl8.bar,
                                        pcbd.cl.metascape.cl9.bar,
                                        pcbd.cl.metascape.cl10.bar,
-                                       ncol=1, align="v", 
-                                       rel_heights = c(1.35,1.6,1.6,1.6,1.6,1.6,1.6,1.6,1.6))
-pcbd.cl.metascape.plot.grid
+                                       ncol=1, align="v")
+hallmark.grid <- cowplot::plot_grid(pcbd.cl.hallmark.cl1.bar,
+                                       pcbd.cl.hallmark.cl2.bar,
+                                       pcbd.cl.hallmark.cl3.bar,
+                                       pcbd.cl.hallmark.cl5.bar,
+                                       pcbd.cl.hallmark.cl6.bar,
+                                       pcbd.cl.hallmark.cl7.bar,
+                                       pcbd.cl.hallmark.cl8.bar,
+                                       pcbd.cl.hallmark.cl9.bar,
+                                       pcbd.cl.hallmark.cl10.bar,
+                                       ncol=1, align="v") 
+bioplanet.grid <- cowplot::plot_grid(pcbd.cl.bioplanet.cl1.bar,
+                                       pcbd.cl.bioplanet.cl2.bar,
+                                       pcbd.cl.bioplanet.cl3.bar,
+                                       pcbd.cl.bioplanet.cl5.bar,
+                                       pcbd.cl.bioplanet.cl6.bar,
+                                       pcbd.cl.bioplanet.cl7.bar,
+                                       pcbd.cl.bioplanet.cl8.bar,
+                                       pcbd.cl.bioplanet.cl9.bar,
+                                       pcbd.cl.bioplanet.cl10.bar,
+                                       ncol=1, align="v") 
+cowplot::plot_grid(metascape.grid,
+                   hallmark.grid,
+                   bioplanet.grid,
+                   labels = c("","",""),
+                   rel_widths = c(1, 1, 1),
+                   ncol=3
+                    ) 
 ```
-
 
 * The plot grid is exported into the figure directory.
 ```{r}
-pdf(file="./FIGDIR/Figure3f_pcbd.graphia.clusters.metascape.pdf", height=14, width=4.6)
-pcbd.cl.metascape.plot.grid
-dev.off()
+cowplot::ggsave2("./FIGDIR/SupplementaryFigure3m_pcbd.graphia.clusters.metascape.enrichr.pdf",
+  scale = 1,
+  width = 18,
+  height = 9,
+  )
+
 ```
 
 ***
 
-# Transcription Factors Zscore Heatmap of Graphia-Clusters (Figure 3 g)
+# Transcription Factors Zscore Heatmap of Graphia-Clusters (Figure 3 f)
 * Shown expression data represents per-group-averaged batch-corrected individual and successively scaled expression data.
 * For each cluster transcription factors were chosen for the representation.
 
@@ -1722,7 +1555,7 @@ TF.sig<-c("Arnt","Runx3","Klf6","Stat3","Stat5a","Stat5b", "Bcl6", "Ets2","Mxi1"
 
 ## heatmap.2
 * First, an index is created based on the transcription factor signature.
-```{r, fig.height=8.6, fig.width=3.8}
+```{r, fig.height=8.6, fig.width=6.8}
 # index
 ind.TF.sig<-pcbd.log.cpmbygroup.scaled.cor$GeneSymbol %in% TF.sig
 # subsetting and ordering
@@ -1776,7 +1609,7 @@ heatmap.2(x = TF.sig.hm.matrix,
 * The visualization is also exported into the figure directory.
 
 ```{r}
-pdf(file = "./FIGDIR/Figure3g_pcbd.Zscore.heatmap.TFs.in.graphia.clusters.pdf",height = 8.6,width = 3.8)
+pdf(file = "./FIGDIR/Figure3f_pcbd.Zscore.heatmap.TFs.in.graphia.clusters.pdf",height = 8.6,width = 3.8)
 heatmap.2(x = TF.sig.hm.matrix, 
           Rowv=NA, 
           Colv=NA,
@@ -1820,7 +1653,7 @@ supp.sig<-c("Gzmb","Il10","Gzma","Fasl","Prf1","Ctla4","Entpd1","Tgfb1","Tgfb3",
 
 ## Heatmap (Figure 4 d)
 * Heatmap presenting hierarchically clustered and scaled expression data of genes associated with suppressiv Treg functions.
-```{r, fig.height=3.6, fig.width=3.8}
+```{r, fig.height=3.6, fig.width=6.8}
 # index generation
 ind.supp.sig<-pcbd.log.cpmbygroup.scaled.cor$GeneSymbol %in% supp.sig
 # subsetting
@@ -3130,7 +2963,7 @@ bar.p.mod.Ahr <- ggplot(data = filter(bar.df.mod, gene_symbol ==
   labs(x="Treg group", 
        y = "RPKM") +
  facet_wrap(~gene_symbol, ncol = 1)
-bar.p.mod.supp.Ahr
+bar.p.mod.Ahr
 ```
 
 ## Gpr15
