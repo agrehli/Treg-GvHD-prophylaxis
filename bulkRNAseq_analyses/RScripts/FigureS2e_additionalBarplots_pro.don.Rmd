@@ -1,0 +1,843 @@
+---
+title: "Figure S2e additional Gene Expression Barplots"
+author: "Michael Rehli"
+date: "`r Sys.Date()`"
+bibliography: Rscripts.bib
+nocite: '@Zhou2019'
+output:
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide 
+---
+
+***
+
+```{r, include=FALSE}
+# Load required libraries
+library(edgeR)
+library(AnnotationDbi)
+library(org.Mm.eg.db) #for mouse
+library(ggplot2)
+library(ggrepel)
+library(dplyr)
+library(tibble)
+library(reshape2)
+library(scales)
+library(readr)
+library(pheatmap)
+library(readxl)
+library(cowplot)
+library(gplots)
+```
+
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE, include = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+# ...packages.bib file is also written here
+knitr::write_bib(.packages(), "FigureS2e_additionalBarplots_pro.don_packages.bib")
+```
+
+```{r}
+# Load required counts, metadata and annotaion RDS files
+counts.m<-readRDS("./RCTDIR/counts.m.rds")
+metad.m<-readRDS("./METADIR/metad.m.rds")
+stid<-readRDS("./METADIR/stid.rds")
+```
+* First, required data objects (counts, metadata, short transcript ID) and R packages are loaded. 
+* This is the starting point for most analyses conducted on bulk RNA-seq data for the associated manuscript.
+
+***
+
+# Data Preparation
+* For the analysis, the data and metadata have to be prepared and properly annotated.
+
+## Annotation Data Frame
+* An annotation data frame with 4 columns is constructed.
+* The additional EntrezID column is required for possible downstream pathway analyses or annotation operations.
+```{r}
+genes.df<-as.data.frame(strsplit2(stid,"[$]"))
+colnames(genes.df)<-c("EnsemblID","GeneSymbol","Length","GeneType")
+genes.df$EnsemblID<-as.character(genes.df$EnsemblID)
+genes.df$GeneSymbol<-as.character(genes.df$GeneSymbol)
+genes.df$Length<-as.numeric(as.character(genes.df$Length))
+genes.df$GeneType<-as.character(genes.df$GeneType)
+genes.df$EntrezID<- mapIds(org.Mm.eg.db,
+                    keys=genes.df$GeneSymbol,
+                    column="ENTREZID",
+                    keytype="SYMBOL",
+                    multiVals="first")
+rownames(genes.df)<-stid
+head(genes.df, n=5L)
+#See if the gene length values are still as they should, so this should yield an empty vector
+which(strsplit2(stid,"[$]")[,3] %in% genes.df$Length==FALSE)
+```
+
+## Subsetting Index
+* In this analysis, we focus on donor Treg re-isolated from recipient organs 7d after transfer (BMT w Tconv).
+* A subsetting index is generated accordingly.
+
+```{r}
+pd.ind<-grepl("d",metad.m$org)|grepl("pro",metad.m$appl)&
+  (grepl("S", metad.m$org)|grepl("C", metad.m$org)|grepl("L", metad.m$org))
+print(paste(sum(pd.ind),"samples enter the analysis!"))
+```
+
+## Counts
+* Here, the comprehensive counts data frame is reduced using the subsetting index.
+```{r}
+#Subsetting the respective counts object (counts.m)
+counts.pd<-counts.m[,pd.ind]
+paste(ncol(counts.pd),"samples are selected:")
+colnames(counts.pd)
+```
+
+## Metadata
+* The metadata has to be reduced accordingly. 
+* The original order of samples is introduced for downstream re-ordering of the read count table.
+* A globally used group variable is introduced, as well.
+```{r, echo= FALSE}
+metad.pd<-metad.m[pd.ind,]
+metad.pd$orig.ord<-1:nrow(metad.pd)
+metad.pd<-metad.pd[order(metad.pd$grp),]
+counts.pd.ind<-metad.pd$orig.ord
+#the whole group description
+group.pd<-factor(as.character(metad.pd$grp), 
+                  levels = c("d_a","d_p",
+                             "pro_S_a","pro_S_p",
+                             "pro_L_a","pro_L_p",
+                             "pro_C_a","pro_C_p"))
+```
+
+## Re-ordering Counts Data Frame Columns
+* Here, read counts are re-ordered according to the metadata object.
+```{r}
+counts.pd.ord<-counts.pd[,counts.pd.ind]
+head(counts.pd.ord, n=4L)
+counts.pd<-counts.pd.ord
+rm(counts.pd.ord)
+```
+
+## Consistency Check
+* In order to avoid wrongful labelling, sample_IDs are used to confirm that the counts and metadata objects are consistent.
+```{r}
+if (sum(colnames(counts.pd)==metad.pd$sample_ID)==nrow(metad.pd)) {
+  print("Counts and metadata are properly subsetted and in accordance with each other. The analysis can be proceeded with")
+}else {
+  print("Something is inconsistent, check the code above for errors during subsetting!")
+}
+```
+
+
+## DGE List Object
+* A DGEList object is generated, the main class of the edgeR package. 
+* For full functionality, the counts.pdt, group.avp.pdt and genes.df variables are used to do so.
+```{r}
+dgel.pd<-DGEList(counts = counts.pd, group = group.pd, genes = genes.df)
+head(dgel.pd$samples, n=4L)
+head(dgel.pd$genes, n=4L)
+```
+
+## Exclusion of Rare Transcripts
+* We filter for transcripts with CPM > 1 in at least 8 samples.
+* Only genes fulfilling that criterion are kept and also normalization factors are calculated.
+```{r}
+keep.pd <- rowSums(cpm(dgel.pd)>1) >= 8 
+dgel.pd <- dgel.pd[keep.pd, , keep.lib.sizes=FALSE]
+dgel.pd <- calcNormFactors(dgel.pd)
+print(paste(table(keep.pd)[1],"genes are discarded while",table(keep.pd)[2], "genes are retained in the analysis!"))
+```
+
+## Raw LOG.CPM, LOG.RPKM & Zscores
+* In this step, log2-transformed counts per million (CPM) and reads per kilobase per million (RPKM) and respective scaled data are computed.
+* This will generate all non-batch-corrected data matrices for downstream analyses.
+```{r}
+# log.cpm with prior count = 2
+pd.log.cpm <- cpm(dgel.pd, normalized.lib.sizes = TRUE, log = TRUE, prior.count = 2)
+#log rpkm with prior count = 2
+pd.log.rpkm <- rpkm(dgel.pd, normalized.lib.sizes = TRUE, log = TRUE, prior.count = 2)
+#Zscore transformation of log.cpms
+pd.log.cpm.scaled.transposed<-(scale(t(pd.log.cpm)))
+pd.log.cpm.scaled<-data.matrix(t(pd.log.cpm.scaled.transposed))
+rm(pd.log.cpm.scaled.transposed)
+```
+
+## Batch-corrected LOG.CPM, LOG.RPKM & Zscores
+
+* It is hardly ever possible to perform library preparation in block design for a variety of sample conditions as large as in this data set.
+* Therefore the most feasible approach for batch-correction is the one that accounts for the number of pcr2 cycles applied.
+* Applying the the "removeBatchEffect()" function while also supplying a design comprising all groups of samples, interesting biological effects are made sure not to be removed from visualizations.
+```{r}
+# design
+pd.design.plots <- model.matrix(~group.pd)
+# removing batch effect
+pd.log.cpm.cor <- removeBatchEffect(pd.log.cpm, batch = metad.pd$PCR2.Cy, design = pd.design.plots)
+pd.log.rpkm.cor <- removeBatchEffect(pd.log.rpkm, batch = metad.pd$PCR2.Cy, design = pd.design.plots)
+# scaling corrected log.cpm for corrected scaled data
+pd.log.cpm.scaled.cor <- scale(t(pd.log.cpm.cor))
+pd.log.cpm.scaled.cor <- data.matrix(t(pd.log.cpm.scaled.cor))
+```
+
+```{r}
+# add annotation from DGEList object
+bulkRNA.seq.Log2.RPKM.PCR2.batch.cor <- as.data.frame(pd.log.rpkm.cor) %>% 
+  rownames_to_column(var = "longID") %>%
+  inner_join(rownames_to_column(dgel.pd$genes, var ="longID"))
+# export as .csv
+write.csv(bulkRNA.seq.Log2.RPKM.PCR2.batch.cor,
+          file = "./RCTDIR/bulkRNAseq.Log2.RPKM.PCR2.batch.corrected.internalID.csv",
+          row.names = FALSE)
+```
+
+
+***
+
+# Aesthetics Vectors
+* The definition of aesthetics vectors as named vectors is useful for proper labeling in downstream plots.
+
+## Named Color Vector
+* Hereafter, colors are defined that are consistently used for groups throughout the manuscript.
+```{r}
+pd.col<-c("red","firebrick",
+            "deeppink4","deeppink",
+            "steelblue","steelblue1",
+            "sienna","sienna3")
+names(pd.col)<-levels(group.pd)
+pd.col
+```
+
+## Named Shape Vector
+* Also, for shapes a vector is required.
+```{r}
+pd.shp.4<-c(rep(22,2),rep(23,6))
+names(pd.shp.4)<-levels(group.pd)
+pd.shp.4
+```
+## Legend Labels with correct replicate count
+* Following, legend labels are defined that also comprise the correct replicate count, based on the actual data structure used.
+```{r}
+pd.lab<-c(#donor 
+           paste0("donor, allo (n=",nrow(metad.pd[metad.pd$grp==levels(group.pd)[1],]),")"),
+           paste0("donor, poly (n=",nrow(metad.pd[metad.pd$grp==levels(group.pd)[2],]),")"),
+          #spleen 
+           paste0("prophylaxis, spleen, allo (n=",nrow(metad.pd[metad.pd$grp==levels(group.pd)[3],]),")"),
+           paste0("prophylaxis, spleen, poly (n=",nrow(metad.pd[metad.pd$grp==levels(group.pd)[4],]),")"),
+           #liver
+           paste0("prophylaxis, liver, allo (n=",nrow(metad.pd[metad.pd$grp==levels(group.pd)[5],]),")"),
+           paste0("prophylaxis, liver, poly (n=",nrow(metad.pd[metad.pd$grp==levels(group.pd)[6],]),")"),
+           #colon
+           paste0("prophylaxis, colon, allo (n=",nrow(metad.pd[metad.pd$grp==levels(group.pd)[7],]),")"),
+           paste0("prophylaxis, colon, poly (n=",nrow(metad.pd[metad.pd$grp==levels(group.pd)[8],]),")")
+          )
+names(pd.lab)<-levels(group.pd)
+pd.lab
+```
+***
+
+***
+
+# Barplots for Gene Expression Levels
+* log2-transformed RPKM barplots for selected genes are produced by the following code.
+* Before barplots can be generated, an appropriate data frame has to be created.
+
+## Additional Metadata Vectors
+* For grouping in the plots, multiple options for stratification are desired. 
+* Consequently, the group, only the organ, only the setting and the expansion mode for the Treg prior Tx plus CD62L+/- for physiologically tissue-resident Treg are required as subsequently defined variables.
+* Also, levels are adjusted for the desired order of samples in the plots, hereafter.
+```{r}
+#only setting and allo/poly or Sell+/-
+metad.pd<-metad.pd %>% 
+  mutate(
+    appl.treat=case_when(
+    org == "d" ~ paste0(org,"_",treat),
+    org != "d" ~paste0(appl,"_",treat)
+  ))
+appl.treat.pd <- factor(metad.pd$appl.treat, 
+                          levels = c("d_a","d_p","pro_a","pro_p"))
+appl.treat.pd
+#only organ 
+org.pd<-factor(as.character(metad.pd$org))
+org.pd
+
+df.test<-data.frame(appl.treat.pd,group.pd,org.pd)
+df.test
+```
+
+## Transposed Individual Observations and Annotation
+* Individual observations are transposed and properly annotated, hereafter.
+* This is an essential step in preparing the data for the melt() function of the reshape2 package.
+```{r, warning=FALSE}
+#We choose log.rpkm values corrected for pcr2 cy no. for the values to be visualized
+pd.log.rpkm.df.tp<-as.data.frame(t(pd.log.rpkm.cor)) %>%
+  tibble::rownames_to_column() %>%
+  as_tibble()
+  #as_data_frame()
+#we need a gene symbol annotation based on the column names, which are the short transcript ID entries at the moment
+pd.log.rpkm.df.tp.an<-as.data.frame(strsplit2(colnames(pd.log.rpkm.df.tp),"[$]"))
+colnames(pd.log.rpkm.df.tp)<-pd.log.rpkm.df.tp.an$V2
+colnames(pd.log.rpkm.df.tp)[1]<-"sample_ID"
+#rownames(pd.log.rpkm.df.tp)<-pd.log.rpkm.df.tp$sample_ID #setting row names to a tibble is deprecated
+#Addition of metadata columns
+pd.log.rpkm.df.tp<-add_column(pd.log.rpkm.df.tp, "group"= group.pd, .after = "sample_ID", .name_repair = "minimal")
+pd.log.rpkm.df.tp<-add_column(pd.log.rpkm.df.tp,"appl.exp"=appl.treat.pd, .after ="group", .name_repair = "minimal")
+pd.log.rpkm.df.tp<-add_column(pd.log.rpkm.df.tp, "organ"= org.pd, .after = "appl.exp", .name_repair = "minimal")
+pd.log.rpkm.df.tp<-add_column(pd.log.rpkm.df.tp, "color" = as.factor(pd.col[group.pd]), .after = "organ", .name_repair = "minimal")
+pd.log.rpkm.df.tp<-add_column(pd.log.rpkm.df.tp,"shape"=as.factor(pd.shp.4[group.pd]), .after = "color", .name_repair = "minimal")
+head(pd.log.rpkm.df.tp, n=4L)
+tail(pd.log.rpkm.df.tp, n=4L)
+```
+
+## Consistency Check
+* Here, a quick consistency check is performed.
+```{r}
+sum(pd.log.rpkm.df.tp$sample_ID == metad.pd$sample_ID)
+sum(pd.log.rpkm.df.tp$group == metad.pd$grp)
+sum(pd.log.rpkm.df.tp$organ == metad.pd$org)
+sum(pd.log.rpkm.df.tp$appl.exp == metad.pd$appl.treat)
+```
+
+## Reshaping with Melt
+* With the help of the reshape2 package and its melt() function we can stack the data frame. 
+* As a result, per gene subsets of our data frame will be appended instead of having observations per gene as individual columns. 
+* Also, we order the data frame alphabetically according to the gene symbol.
+```{r}
+bar.df<-reshape2::melt(pd.log.rpkm.df.tp,
+                       value.name="LOG.2.RPKM") %>%
+  mutate(variable = as.character(variable)) %>%
+  rename(gene_symbol = variable) %>% arrange(gene_symbol)
+head(bar.df)
+```
+
+## Definition of GOI
+
+### Selected Genes that were also used for FACS analysis
+* Hereafter, individual small gene sets are defined.
+```{r}
+facs.goi<-c("Mki67","Sell","Ccr9","Itgae","Itgb7","Itga4","Klrg1")
+```
+
+### Index for GOI
+* An index is generated for selected genes that remain differentially expressed in allo Treg as compared to poly Treg *in vivo*.
+```{r}
+pd.idx<-which(bar.df$gene_symbol %in% facs.goi)
+bar.df.pd<-bar.df[pd.idx,]
+```
+
+
+
+### Barplots (Supplementary Figure 3 e)
+* Hereafter, bar plots shown in supplementary figure 3 e are plotted and exported individually.
+
+#### Exporting data table 
+
+```{r}
+write.table (as.data.frame(bar.df.pd), file = "./ANALDIR/dataFigureS2e.AddFacsMarker.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+```
+
+
+#### Mki67
+* Log~2~RPKM values are used to represent Mki67 gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.pd.Mki67<-ggplot(data = bar.df.pd[bar.df.pd$gene_symbol=="Mki67",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,1024),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pd.col,0.75))+
+  scale_colour_manual(values = alpha(pd.col,0.50))+
+  scale_shape_manual(values = pd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, nrow = 1)
+bar.pd.Mki67
+```
+
+
+#### Sell (CD62L)
+* Log~2~RPKM values are used to represent Sell gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.pd.Sell<-ggplot(data = bar.df.pd[bar.df.pd$gene_symbol=="Sell",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM+4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,4096),
+                     breaks = c(1,4,16,64,256,1024,4096),
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pd.col,0.75))+
+  scale_colour_manual(values = alpha(pd.col,0.50))+
+  scale_shape_manual(values = pd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, nrow = 1)
+bar.pd.Sell
+```
+
+
+#### Ccr9
+* Log~2~RPKM values are used to represent Mki67 gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.pd.Ccr9<-ggplot(data = bar.df.pd[bar.df.pd$gene_symbol=="Ccr9",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM+6),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,1024),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format(trans = function(x) log2(x)-6,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pd.col,0.75))+
+  scale_colour_manual(values = alpha(pd.col,0.50))+
+  scale_shape_manual(values = pd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, nrow = 1)
+bar.pd.Ccr9
+```
+
+#### Itgae
+* Log~2~RPKM values are used to represent Itgae gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.pd.Itgae<-ggplot(data = bar.df.pd[bar.df.pd$gene_symbol=="Itgae",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,64),
+                     breaks = c(1,4,16,64),
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pd.col,0.75))+
+  scale_colour_manual(values = alpha(pd.col,0.50))+
+  scale_shape_manual(values = pd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, nrow = 1)
+bar.pd.Itgae
+```
+
+#### Itgb7
+* Log~2~RPKM values are used to represent Itgb7 gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.pd.Itgb7<-ggplot(data = bar.df.pd[bar.df.pd$gene_symbol=="Itgb7",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,1024),
+                     breaks = c(1,4,16,64,256,1024),
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pd.col,0.75))+
+  scale_colour_manual(values = alpha(pd.col,0.50))+
+  scale_shape_manual(values = pd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, nrow = 1)
+bar.pd.Itgb7
+```
+
+#### Itga4
+* Log~2~RPKM values are used to represent Mki67 gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.pd.Itga4<-ggplot(data = bar.df.pd[bar.df.pd$gene_symbol=="Itga4",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,256),
+                     breaks = c(1,4,16,64,256),
+                     labels = trans_format(trans = function(x) log2(x),
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pd.col,0.75))+
+  scale_colour_manual(values = alpha(pd.col,0.50))+
+  scale_shape_manual(values = pd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, nrow = 1)
+bar.pd.Itga4
+```
+
+#### Klrg1
+* Log~2~RPKM values are used to represent Klrg1 gene expression levels as a bar plot.
+```{r, fig.height=2.0, fig.width=1.5}
+bar.pd.Klrg1<-ggplot(data = bar.df.pd[bar.df.pd$gene_symbol=="Klrg1",], 
+                       aes(x = group,
+                           y = 2^(LOG.2.RPKM+4),
+                           fill = group,
+                           shape = group))+
+  coord_cartesian(clip = "off")+
+  scale_y_continuous(trans = log2_trans(),
+                     expand = c(0,0.1),
+                     limits = c(1,4096),
+                     breaks = c(1,4,16,64,256,1024,4096),
+                     labels = trans_format(trans = function(x) log2(x)-4,
+                                           format = math_format(2^.x)))+
+   annotation_logticks(outside = T,
+                      sides = "l",
+                      short = unit(0.01,"mm"), 
+                      mid = unit(.5,"mm"),   
+                      long = unit(1,"mm"),
+                      size=.236)+
+  stat_summary(fun=mean,
+               geom="col",
+               position = "dodge",
+               width = 0.85,
+               alpha=0.5)+
+  geom_point(size=1,
+             stroke=.236,
+             colour = "black",
+             position = position_jitterdodge(jitter.width=2.0, 
+                                             dodge.width = 1.0,
+                                             seed = 1234
+                                             ))+
+  stat_summary(fun.data = mean_se, 
+               fun.args = list(mult=1), 
+               geom = "errorbar", 
+               color ="black", 
+               linetype = "solid",
+               size=0.25, 
+               width=0.8, 
+               position = "dodge")+
+  scale_fill_manual(values = alpha(pd.col,0.75))+
+  scale_colour_manual(values = alpha(pd.col,0.50))+
+  scale_shape_manual(values = pd.shp.4)+
+  theme_bw() + 
+    theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(size = 8, face = "bold", colour = "black"),
+        axis.title.y = element_text(size = 8, colour = "black"),
+        axis.title.x = element_text(size = 8, colour = "black"),
+        axis.text.x = element_text(size = 6, colour = "black", angle = 90, hjust=1, vjust=0.5),
+        axis.text.y = element_text(size = 6, colour = "black"),
+        axis.ticks = element_line(size=.236),
+        axis.line = element_line(size=.236),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 8, face = "italic",color = "black"),
+        plot.background = element_rect(fill="white",colour = "white"),
+        panel.background = element_rect(fill = NA,color = "black", size=.236),
+        panel.border = element_rect(colour = "black", fill=NA, size=.236),
+        legend.position = "none")+
+  labs(x="Treg group", 
+       y = "RPKM") +
+ facet_wrap(~gene_symbol, nrow = 1)
+bar.pd.Klrg1
+```
+
+
+#### Combined Plot
+
+* All generated bar plots are arranged as plot grid, hereafter.
+
+```{r, fig.height=1.5, fig.width=7}
+bar.pd.grid <- plot_grid(bar.pd.Mki67,
+                        bar.pd.Sell,
+                        bar.pd.Ccr9,
+                        bar.pd.Itgae,
+                        bar.pd.Itga4,
+                        bar.pd.Itgb7,
+                        bar.pd.Klrg1,
+                        ncol=7, align="v")
+bar.pd.grid
+```
+
+* The bar plot arrangement is also exported into the figure directory.
+
+```{r}
+pdf(file="./FIGDIR/SupplementaryFigure2e.additionalbarplots.pdf", 
+    height=1.5, width=7)
+bar.pd.grid
+dev.off()
+```
+
+
+***
+
+# SessionInfo
+```{r, echo=FALSE, warning=FALSE}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureS2e_additionalBarplots_pro.don_SessionInfo.txt")
+```
+
+***
+
+# Bibliography

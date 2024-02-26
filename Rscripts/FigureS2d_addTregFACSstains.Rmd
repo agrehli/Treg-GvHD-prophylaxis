@@ -1,7 +1,7 @@
 ---
 title: "FigureS2d_addTregFACSstains"
-author: Michael Rehli
-output: 
+author: "Michael Rehli"
+output:
   html_document:
     df_print: paged
     fig_caption: yes
@@ -9,6 +9,8 @@ output:
     toc: yes
     toc_float: yes
     code_folding: hide
+  pdf_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -41,7 +43,7 @@ Facs.data$marker <- factor(Facs.data$marker,levels = c("Ki-67","CD62L+","CCR9+",
 p <- ggplot(Facs.data, aes(x=type, y=count, fill=exp)) + coord_cartesian(ylim = c(0,100))
 p <- p + stat_summary(fun = mean, geom = "bar", position = "dodge")
 p <- p + geom_dotplot(binaxis='y', stackdir='center', position=position_dodge(.9), dotsize=5, stackratio = .5, binwidth=.75) 
-p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + stat_summary(fun.data=mean_se, fun.args = list(mult=1), geom="errorbar", color="black", linewidth=0.5, width = 0.6, position=position_dodge(.9))
 p <- p + theme_bw() + theme(panel.grid.major = element_blank(), 
                             panel.grid.minor = element_blank(),
                             axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), 
