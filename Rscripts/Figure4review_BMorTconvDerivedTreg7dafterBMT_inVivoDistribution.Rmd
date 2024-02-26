@@ -1,0 +1,83 @@
+---
+title: "Figure4review_BMorTconvDerivedTreg7dafterBMT_inVivoDistribution"
+author: Michael Rehli
+output: 
+  html_document:
+    df_print: paged
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::write_bib(.packages(), "Figure4review_BMorTconvDerivedTreg7dafterBMT_inVivoDistribution.packages.bib")
+```
+
+## Bar charts showing the cell counts for re-isolated Treg 
+
+R packages
+
+```{r, message=FALSE, warnings=FALSE}
+library(ggplot2)
+library(scales)
+library(car)
+```
+
+data formating 
+
+```{r}
+Treg.data <- read.delim("./data/TregDistribution_BMorTconvDerived.txt", header=TRUE)
+Treg.data$organ <- factor(Treg.data$organ,
+                          levels = c("BM","Spleen","Liver","mLN","Colon"))
+Treg.data$category <- factor(Treg.data$category,
+                             levels = c("none_Tconv","none_Treg","allo_Tconv","allo_Treg","poly_Tconv","poly_Treg"))
+Treg.data$celltype <- factor(Treg.data$celltype,
+                             levels = c("none","allo","poly"))
+```
+
+generating the plot for reviewer Figure
+
+```{r, fig.width=12, fig.height=5.5, warning=FALSE}
+p <- ggplot(Treg.data, aes(x=celltype, y=count, fill=category)) + coord_cartesian(ylim = c(300,30000000))
+p <- p + stat_summary(fun = mean, geom = "bar",  position=position_dodge(.9))
+p <- p + geom_dotplot(binaxis='y', stackdir='center',  position=position_dodge(.9), dotsize=6.5, stackratio = 1, binwidth=.02) 
+p <- p + stat_summary(fun.data=mean_se, geom="errorbar", color="black", size=0.5, width = 0.6, position=position_dodge(.9))
+p <- p + scale_y_log10(breaks = c(1000,10000,100000,1000000,10000000),labels = trans_format("log10", math_format(10^.x)),expand = c(0, 0)) 
+p <- p + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color="black"), text = element_text(size = 24))
+p <- p + scale_fill_manual(values = c("none_Tconv" = "gray",
+                                      "none_Treg" = "gray",
+                                      "allo_Tconv" = "gray",
+                                      "allo_Treg" = "darkorange",
+                                      "poly_Tconv" = "gray",
+                                      "poly_Treg" = "steelblue3"),
+                           labels = c("none_Tconv" = "BM/Tconv-derived (Foxp3+/gfp-)",
+                                      "none_Treg" = "",
+                                      "allo_Tconv" = "",
+                                      "allo_Treg" = "alloTreg-derived (Foxp3+/gfp+)",
+                                      "poly_Tconv" = "",
+                                      "poly_Treg" = "polyTreg-derived (Foxp3+/gfp+)"))
+
+p <- p + scale_x_discrete(labels = c("none" = "BMT w/o Treg",
+                                      "allo" = "BMT with alloTreg",
+                                      "poly" = "BMT with polyTreg"))
+p <- p + annotation_logticks(sides="l", short = unit(.25,"mm"), mid = unit(.5,"mm"),   long = unit(1,"mm"))  
+p <- p + labs(title="re-isolated Treg\n(TCD-BM/Tconv- vs allo/polyTreg-derived)",x="organ", y = "cells per organ")
+#p <- p + theme(axis.text.x = element_text(vjust=1))
+p <- p + facet_wrap(~organ, nrow=1)
+p
+pdf("./figures/TregOrganDist_BMorTconvDerived.pdf", height=7, width=12)
+p
+dev.off()
+```
+
+
+
+
+```{r}
+sessionInfo(package = NULL)
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/Figure4review_BMorTconvDerivedTreg7dafterBMT_inVivoDistribution_SessionInfo.txt")
+```

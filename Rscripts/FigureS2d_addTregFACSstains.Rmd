@@ -1,5 +1,5 @@
 ---
-title: "FigureRev_addTregFACSstains"
+title: "FigureS2d_addTregFACSstains"
 author: Michael Rehli
 output: 
   html_document:
@@ -14,7 +14,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-knitr::write_bib(.packages(), "FigureRev_addTregFACSstains.packages.bib")
+knitr::write_bib(.packages(), "FigureS2d_addTregFACSstains.packages.bib")
 ```
 
 ## Bar charts showing the percentage of positive cells in allo and poly Treg expansion cultures
@@ -52,14 +52,14 @@ p <- p + labs(x="", y="% pos. among Treg")
 p <- p + facet_wrap(~marker, nrow=1)
 
 p
-pdf("./figures/Stains_percentPos.pdf", height=3.5, width=12.5)
+pdf("./figures/FigureS2d_addStains_percentPos.pdf", height=3.5, width=12.5)
 p
 dev.off()
 ```
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureRev_addTregFACSstains_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "./Rscripts/FigureS2d_addTregFACSstains_SessionInfo.txt")
 ```
 
 
