@@ -18,7 +18,7 @@ knitr::write_bib(.packages(), "Figure6i_Treg_GvHD_examplesCloneDistribution_10x_
 
 This Rscript is called in the Commands_scTCR_GvHD.sh script
 
-# Plot for Figures 6g - Frequency of major clones across tissues
+# Plot for Figures 6i - Frequency of major clones across tissues
 
 
 R packages

@@ -157,7 +157,7 @@ cp ${MIXDATA}/Treg_TRB_noTX_merged/metadata.txt ${MIXDATA}/Treg_TRA_noTX_merged/
 cd ${WORKDIR_TCR}
 R --no-restore --no-save
 library(rmarkdown)
-render("Figure5g_residentTreg-TRBVgeneUsage_TRB.Rmd", "html_document")
+render("Figure5f_residentTreg-TRBVgeneUsage_TRB.Rmd", "html_document")
 q()
 
 

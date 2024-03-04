@@ -1,5 +1,5 @@
 ---
-title: "Figure5e5fS5m_Treg_BMT_analyses_TRB"
+title: "Figure5eS5n_Treg_BMT_analyses_TRB"
 author: Michael Rehli
 output: 
   html_document:
@@ -13,12 +13,12 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::write_bib(.packages(), "Figure5e5fS5m_Treg_BMT_analyses_TRB.packages.bib")
+knitr::write_bib(.packages(), "Figure5eS5n_Treg_BMT_analyses_TRB.packages.bib")
 ```
 
 This Rscript is called in the Commands_bulkTCR_BMT.sh script
 
-# Data analysis for Figures 5e, 5g and S5m
+# Data analysis for Figures 5e, 5g and S5n
 
 
 R packages
@@ -77,7 +77,7 @@ exporting data table
 write.table (as.data.frame(div_simp), file = "./figures/allTRB_barplot_invSimp.data.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 ```
 
-generating the plot for Figure S5m
+generating the plot for Figure S5n
 
 ```{r, fig.width=4, fig.height=3}
 p <- ggplot(div_simp, aes(x= Class, y= Value))
@@ -93,7 +93,7 @@ plot(p)
 dev.off()
 ```
 
-### Statistics for Fig S5m
+### Statistics for Fig S5n
 
 Separating allo and poly data as well as GvHD and no GvHD
 
@@ -166,7 +166,7 @@ p
 
 TRBV26, TRBV12-1, TRBV12-2 are enriched in colon!
 
-### Figure 5e showing tSNE of TRBV distributions 
+### tSNE of TRBV distributions 
 
 ```{r}
 set.seed(42)
@@ -208,7 +208,7 @@ dev.off()
 ```
 
 
-### Figure 5f showing TRBV frequencies for colon enriched segments
+### Figure 5e showing TRBV frequencies for colon enriched segments
 
 
 ```{r}
@@ -231,7 +231,7 @@ melted_gu$Class <- factor(melted_gu$Class, levels= c('d','c','l','s','cc','cl','
 melted_gu$Colorlevels <- factor(melted_gu$Color, levels= c("red","sienna4","skyblue4","deeppink","peru","skyblue3","hotpink2"))
 ```
 
-generating the bar chart for Figure 5g
+generating the bar chart for Figure 5e
 
 ```{r, fig.width=10, fig.height=4}
 p <- ggplot(melted_gu, aes(x= Class, y= value))
@@ -247,7 +247,7 @@ plot(p)
 dev.off()
 ```
 
-### Statistics for Fig 5f
+### Statistics for Fig 5e
 
 Separating clonotype data and removing donors for testing
 
@@ -389,7 +389,7 @@ cl-cc p<0.001 ***
 
 ```{r}
 sessionInfo(package = NULL)
-writeLines(capture.output(sessionInfo(package = NULL)), "Figure5e5fS5m_Treg_BMT_analyses_TRB_SessionInfo.txt")
+writeLines(capture.output(sessionInfo(package = NULL)), "Figure5eS5n_Treg_BMT_analyses_TRB_SessionInfo.txt")
 ```
 
 

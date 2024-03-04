@@ -353,7 +353,7 @@ gst.camera <- camera.DGEList(dgel.avp.ivt,index=K.ind,design=avp.ivt.design.dge,
 gst.camera
 ```
 
-## Barcode plot visualizations (Supplementary Figure 1 b)
+## Barcode plot visualizations (Supplementary Figure 1 d)
 * Barcode plots representing the results for selected Hallmark and Kegg gene sets.
 * HALLMARK_HYPOXIA  
 ```{r, fig.height=3.2,fig.width=6}
@@ -374,7 +374,7 @@ text(-5,4,expression(italic(P)[adj.] *"<"* ~0.012), adj = c(0,.5))
 * Barcodeplot is exported.  
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_HYPOXIA.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure1d_avp.ivt.Barcodeplot_HALL_HYPOXIA.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=H.ind[["HALLMARK_HYPOXIA"]], 
             xlab = bquote(log[2]*"FC"),
@@ -408,7 +408,7 @@ text(-5,4,expression(italic(P)[adj.] *"<"* ~0.017), adj = c(0,.5))
 * Barcode plot is exported.  
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_HALL_IL2_STAT5.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure1d_avp.ivt.Barcodeplot_HALL_IL2_STAT5.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=H.ind[["HALLMARK_IL2_STAT5_SIGNALING"]], 
             xlab = bquote(log[2]*"FC"),
@@ -442,7 +442,7 @@ text(-5,4,expression(italic(P)[adj.] *"<"* ~8.7*"x10"^-3), adj = c(0,.5))
 * Barcode plot is exported. 
 
 ```{r}
-pdf(file="./FIGDIR/SupplementaryFigure1b_avp.ivt.Barcodeplot_KEGG_GLYCONEO.pdf", height=3.2, width=6)
+pdf(file="./FIGDIR/SupplementaryFigure1d_avp.ivt.Barcodeplot_KEGG_GLYCONEO.pdf", height=3.2, width=6)
 barcodeplot(avp.ivt.tr.res$table$logFC, 
             index=K.ind[["KEGG_GLYCOLYSIS_GLUCONEOGENESIS"]],
             xlab = bquote(log[2]*"FC"),

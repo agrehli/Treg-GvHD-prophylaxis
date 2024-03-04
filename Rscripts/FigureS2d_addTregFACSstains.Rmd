@@ -29,7 +29,7 @@ library(ggplot2)
 library(scales)
 ```
 
-### data FoxP3
+### Figure S2d
 
 ```{r}
 Facs.data <- read.delim("./data/AddFacsData.txt", header=TRUE)

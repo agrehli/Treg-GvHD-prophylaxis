@@ -3,7 +3,7 @@
 
 Code repository for data processing and plotting included in our study characterizing donor Treg in the prophylactic treatment of acute GvHD.
 
->Donor regulatory T cells rapidly adapt to recipient tissues to control acute graft-versus-host disease
+>Donor regulatory T cells rapidly adapt to recipient tissues to control murine acute graft-versus-host disease.
 
 ## Description 
 
@@ -23,6 +23,7 @@ The following figures are covered:
 
 * **Figure 1 e, f**
 * **Supplementary Figure 1 d**
+* **Supplementary Figure 2 e**
 * **Figure 3 a - c, e, f**
 * **Supplementary Figure 3 c - m**
 * **Figure 4 a - d**
@@ -43,13 +44,14 @@ A certain order of running the markdown files is recommended as some analyses re
 1. **bulkRNAseq_analyses_initial_setup.Rmd**
 2. **Figure1_TregDGEScatter_GSEA_avp_invitro**
 3. **Figure1_TregSigHeatmap_fresh.allo.poly.Rmd**
-4. **Figure3_TregDGEScatter_GSEA_Heatmap_Metascape_cvnc.b.Cd62Lneg.Rmd**
-5. **Figure3_GSEA_prc.pro_avp.c.l.s.indiv.Rmd**
-6. **Figure3_TregDGEScatter_GSEA_cvnc.pc_BMT.Rmd**
-7. **Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd**
-8. **Figure4_TregDGEScatter_GSEA_pvc.cls.Rmd**
+4. **FigureS2e_additionalBarplots_pro.don.Rmd**
+5. **Figure3_TregDGEScatter_GSEA_Heatmap_Metascape_cvnc.b.Cd62Lneg.Rmd**
+6. **Figure3_GSEA_prc.pro_avp.c.l.s.indiv.Rmd**
+7. **Figure3_TregDGEScatter_GSEA_cvnc.pc_BMT.Rmd**
+8. **Figure3and4_UMAP_Heatmaps_GSEA_Barplots_pro.prc.bas.don.Rmd**
+9. **Figure4_TregDGEScatter_GSEA_pvc.cls.Rmd**
 
-Of note, for scripts **2., 3., 4., 5.,** the order is arbitrary. As long as they have been run after **1.** and before **6.**. Also, for .Rmd files **7., 8.** can be run as soon as **1.** has been executed.
+Of note, for scripts **2., 3., 4., 5., 6.,** the order is arbitrary. As long as they have been run after **1.** and before **7.**. Also, for .Rmd files **8., 9.** can be run as soon as **1.** has been executed.
 
 
 <h2 id="bulkTCR">2. bulkTCRseq_analyses</h2>
@@ -59,8 +61,9 @@ The following figures are covered:
 
 * **Figure 1 c**
 * **Supplementary Figure 1 a**
-* **Figure 5 a - g**
-* **Supplementary Figure 5 a - n**
+* **Supplementary Figure 1 c**
+* **Figure 5 a - f**
+* **Supplementary Figure 5 a - l, n, o**
 
 <h4>Commands_bulkTCR_mapping.sh</h4>
 Includes the code for mapping the TCRseq data using the MIXCR pipeline. This is required for all other analyses.
@@ -69,16 +72,16 @@ Includes the code for mapping the TCRseq data using the MIXCR pipeline. This is 
 Includes the code for the processing of TRA/TRB clonotype data of in vitro expansions of Treg cells. Calls two Rscripts to generate Figures 1c and S1a.
 
 <h4>Commands_bulkTCR_GvHD.sh</h4>
-Includes the code for the processing of TRA/TRB clonotype data of Treg reisolated from transplantations in the prophylaxis (GvHD) setting. It generates circos plots of clonotype overlaps (Figures 5a & S5a)and triangular presentations of clonotype weights in barycentric coordinates (Figures 5b,c & S5d,e).
+Includes the code for the processing of TRA/TRB clonotype data of Treg reisolated from transplantations in the prophylaxis (GvHD) setting. It generates circos plots of clonotype overlaps (Figures 5a & S5a) and triangular presentations of clonotype weights in barycentric coordinates (Figures 5b,c & S5d,e).
 
 <h4>Commands_bulkTCR_noGvHD.sh</h4>
 Includes the code for the processing of TRA/TRB clonotype data of Treg reisolated from transplantations in the control (no Tconv, noGvHD) setting. It generates circos plots of clonotype overlaps (Figures S5b-c) and triangular presentations of clonotype weights in barycentric coordinates (Figures S5f-i).
 
 <h4>Commands_bulkTCR_noBMT.sh</h4>
-Includes the code for the processing of TRA/TRB clonotype data of resident Treg isolated from wildtype donor mice. Calls an Rscripts to generate Figure 5g.
+Includes the code for the processing of TRA/TRB clonotype data of resident Treg isolated from wildtype donor mice. Calls an Rscripts to generate Figure 5f.
 
 <h4>Commands_bulkTCR_BMT.sh</h4>
-Includes the code for the analysing combined TRA/TRB clonotype data of Treg reisolated from transplantations in the noGvHD & GvHD settings. Generates barcode plots for TRB clonotype distributions shown in Figures 5d, and Figures S5j,k,l. Also provides code for Figures related to TRBV segment analyses including plots shown in Figure 5e,f & S5m (generated using Rscript) as well as additional barcode plots shown in Figure S5n.
+Includes the code for the analysing combined TRA/TRB clonotype data of Treg reisolated from transplantations in the noGvHD & GvHD settings. Generates barcode plots for TRB clonotype distributions shown in Figures 5d, and Figures S5j,k,l. Also provides code for Figures related to TRBV segment analyses including plots shown in Figure 5e & S5n (generated using Rscript) as well as additional barcode plots shown in Figure S5o.
 
 <h4>Rscripts folder</h4>
 Contains R markdown scripts (*.rmd) that are rendered as part of the analyses commands described above as well as corresponding Session Infos.
